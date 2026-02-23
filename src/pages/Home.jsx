@@ -628,10 +628,8 @@ const Home = () => {
             fontSize: isMobile ? '14px' : '16px',
             fontWeight: 400,
             color: '#000',
-            marginBottom: isMobile ? '24px' : '40px',
             maxWidth: '500px',
-            margin: '0 auto',
-            marginBottom: isMobile ? '24px' : '40px',
+            margin: `0 auto ${isMobile ? '24px' : '40px'}`,
           }}>
             {pageContent.partnerTitle}
           </p>
