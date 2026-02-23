@@ -275,7 +275,7 @@ const HomePageEditor = ({ onClose, onSave }) => {
 
             <label style={labelStyle}>Hero Inline Image (pill shape in title)</label>
             {formData.heroImage && (
-              <img src={formData.heroImage.startsWith('http') ? formData.heroImage : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${formData.heroImage}`} alt="Hero" style={imagePreviewStyle} />
+              <img src={formData.heroImage.startsWith('http') ? formData.heroImage : `${import.meta.env.VITE_API_URL || ''}${formData.heroImage}`} alt="Hero" style={imagePreviewStyle} />
             )}
             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'heroImage')} style={{ marginBottom: '16px' }} />
 
@@ -427,7 +427,7 @@ const HomePageEditor = ({ onClose, onSave }) => {
             </div>
             <label style={labelStyle}>Stat 5 Image</label>
             {formData.stat5Image && (
-              <img src={formData.stat5Image.startsWith('http') ? formData.stat5Image : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${formData.stat5Image}`} alt="Stat 5" style={{ ...imagePreviewStyle, width: '80px', height: '80px' }} />
+              <img src={formData.stat5Image.startsWith('http') ? formData.stat5Image : `${import.meta.env.VITE_API_URL || ''}${formData.stat5Image}`} alt="Stat 5" style={{ ...imagePreviewStyle, width: '80px', height: '80px' }} />
             )}
             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'stat5Image')} />
           </div>
@@ -469,7 +469,7 @@ const HomePageEditor = ({ onClose, onSave }) => {
                 <textarea name={`service${num}Description`} value={formData[`service${num}Description`]} onChange={handleChange} style={{ ...inputStyle, minHeight: '80px' }} />
                 <label style={labelStyle}>Image</label>
                 {formData[`service${num}Image`] && (
-                  <img src={formData[`service${num}Image`].startsWith('http') ? formData[`service${num}Image`] : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${formData[`service${num}Image`]}`} alt={`Service ${num}`} style={imagePreviewStyle} />
+                  <img src={formData[`service${num}Image`].startsWith('http') ? formData[`service${num}Image`] : `${import.meta.env.VITE_API_URL || ''}${formData[`service${num}Image`]}`} alt={`Service ${num}`} style={imagePreviewStyle} />
                 )}
                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `service${num}Image`)} />
               </div>

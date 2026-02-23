@@ -4,7 +4,7 @@ import { uploadAPI } from '../../../services/api';
 const getImageUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   return `${baseUrl}${path}`;
 };
 
