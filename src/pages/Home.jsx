@@ -660,7 +660,7 @@ const Home = () => {
           textAlign: 'center',
         }}>
           <p style={{
-            fontFamily: "'Gilroy-SemiBold', 'Plus Jakarta Sans', sans-serif",
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: isMobile ? '20px' : '28px',
             fontWeight: 400,
             fontStyle: 'normal',

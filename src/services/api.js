@@ -28,7 +28,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't auto-logout for these endpoints (they handle 401 errors themselves)
+    const url = error.config?.url || '';
+    const skipAutoLogout =
+      url.includes('change-password') ||
+      url.includes('/auth/login') ||
+      url.includes('/auth/register');
+
+    if (error.response?.status === 401 && !skipAutoLogout) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/admin/login';
@@ -43,6 +50,16 @@ export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   getMe: () => api.get('/auth/me'),
   logout: () => api.get('/auth/logout'),
+  changePassword: (data) => api.put('/auth/change-password', data),
+};
+
+// Users API (Admin)
+export const usersAPI = {
+  getAll: () => api.get('/users'),
+  getOne: (id) => api.get(`/users/${id}`),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+  create: (data) => api.post('/auth/register', data),
 };
 
 // Works API

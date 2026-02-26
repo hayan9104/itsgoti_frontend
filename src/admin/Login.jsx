@@ -19,7 +19,13 @@ const Login = () => {
       await login(data.email, data.password);
       navigate('/admin');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials');
+      // Show user-friendly error message
+      const serverMessage = err.response?.data?.message;
+      if (serverMessage === 'Invalid credentials' || err.response?.status === 401) {
+        setError('Email or password is invalid');
+      } else {
+        setError(serverMessage || 'Email or password is invalid');
+      }
     }
   };
 

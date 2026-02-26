@@ -324,7 +324,7 @@ const LandingPage2 = () => {
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#fff',
-      fontFamily: "'Inter', 'Gilroy', sans-serif",
+      fontFamily: "'Inter', 'Plus Jakarta Sans', sans-serif",
       overflowX: 'hidden',
       scrollBehavior: 'smooth',
     }}>

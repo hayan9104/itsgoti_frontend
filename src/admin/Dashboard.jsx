@@ -4,7 +4,45 @@ import WorksManager from './WorksManager';
 import CaseStudiesManager from './CaseStudiesManager';
 import ContactsManager from './ContactsManager';
 import PagesManager from './PagesManager';
+import AccountManager from './AccountManager';
 import VisualPageEditor from './pageEditor/VisualPageEditor';
+
+// Icon components
+const DashboardIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+  </svg>
+);
+
+const WorksIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+  </svg>
+);
+
+const CaseStudyIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+
+const ContactsIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
+
+const PagesIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+  </svg>
+);
+
+const AccountIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -16,11 +54,15 @@ const Dashboard = () => {
   };
 
   const navItems = [
-    { to: '/admin', label: 'Dashboard', exact: true },
-    { to: '/admin/works', label: 'Works' },
-    { to: '/admin/case-studies', label: 'Case Studies' },
-    { to: '/admin/contacts', label: 'Contacts' },
-    { to: '/admin/pages', label: 'Pages' },
+    { to: '/admin', label: 'Dashboard', exact: true, icon: DashboardIcon },
+    { to: '/admin/works', label: 'Works', icon: WorksIcon },
+    { to: '/admin/case-studies', label: 'Case Studies', icon: CaseStudyIcon },
+    { to: '/admin/contacts', label: 'Contacts', icon: ContactsIcon },
+    { to: '/admin/pages', label: 'Pages', icon: PagesIcon },
+  ];
+
+  const bottomNavItems = [
+    { to: '/admin/account', label: 'Account', icon: AccountIcon },
   ];
 
   return (
@@ -52,28 +94,73 @@ const Dashboard = () => {
 
       <div style={{ display: 'flex' }}>
         {/* Sidebar */}
-        <aside style={{ width: '220px', backgroundColor: '#fff', boxShadow: '1px 0 3px rgba(0,0,0,0.05)', minHeight: 'calc(100vh - 65px)', padding: '16px' }}>
-          <nav>
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.exact}
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  marginBottom: '4px',
-                  textDecoration: 'none',
-                  backgroundColor: isActive ? '#eff6ff' : 'transparent',
-                  color: isActive ? '#2563eb' : '#374151',
-                  fontWeight: isActive ? 500 : 400,
-                })}
-              >
-                {item.label}
-              </NavLink>
-            ))}
+        <aside style={{
+          width: '220px',
+          backgroundColor: '#fff',
+          boxShadow: '1px 0 3px rgba(0,0,0,0.05)',
+          minHeight: 'calc(100vh - 65px)',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          {/* Main Navigation */}
+          <nav style={{ flex: 1 }}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.exact}
+                  style={({ isActive }) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '4px',
+                    textDecoration: 'none',
+                    backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                    color: isActive ? '#2563eb' : '#374151',
+                    fontWeight: isActive ? 500 : 400,
+                    transition: 'background-color 0.15s ease',
+                  })}
+                >
+                  <Icon />
+                  {item.label}
+                </NavLink>
+              );
+            })}
           </nav>
+
+          {/* Bottom Navigation - Account */}
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px', marginTop: '16px' }}>
+            {bottomNavItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  style={({ isActive }) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    marginBottom: '4px',
+                    textDecoration: 'none',
+                    backgroundColor: isActive ? '#eff6ff' : 'transparent',
+                    color: isActive ? '#2563eb' : '#374151',
+                    fontWeight: isActive ? 500 : 400,
+                    transition: 'background-color 0.15s ease',
+                  })}
+                >
+                  <Icon />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </div>
         </aside>
 
         {/* Main Content */}
@@ -85,6 +172,7 @@ const Dashboard = () => {
             <Route path="/contacts/*" element={<ContactsManager />} />
             <Route path="/pages/:pageName/edit" element={<VisualPageEditor />} />
             <Route path="/pages/*" element={<PagesManager />} />
+            <Route path="/account" element={<AccountManager />} />
           </Routes>
         </main>
       </div>

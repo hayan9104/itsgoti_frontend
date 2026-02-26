@@ -636,18 +636,14 @@ const CaseStudyDetail = () => {
                 }}>
                   Industry
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <p style={{
                     fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
                     fontSize: '16px',
                     fontStyle: 'normal',
                     fontWeight: 400,
                     color: '#000',
-                    lineHeight: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
+                    lineHeight: '24px',
                   }}>
                     {caseStudy.industry || 'Technology'}
                   </p>
@@ -658,11 +654,7 @@ const CaseStudyDetail = () => {
                       fontStyle: 'normal',
                       fontWeight: 400,
                       color: '#000',
-                      lineHeight: '30px',
-                      height: '30px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
+                      lineHeight: '24px',
                     }}>
                       {caseStudy.platform}
                     </p>
@@ -677,6 +669,7 @@ const CaseStudyDetail = () => {
                 gap: '18px',
                 width: '200px',
                 marginLeft: 'auto',
+                paddingLeft: '16px',
               }}>
                 <h3 style={{
                   fontFamily: "'Plus Jakarta Sans-Bold', 'Plus Jakarta Sans', sans-serif",
@@ -688,7 +681,7 @@ const CaseStudyDetail = () => {
                 }}>
                   Services
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(caseStudy.services || ['User Research', 'UX Strategy', 'UI Design']).map((service, idx) => (
                     <p key={idx} style={{
                       fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
@@ -696,12 +689,7 @@ const CaseStudyDetail = () => {
                       fontStyle: 'normal',
                       fontWeight: 400,
                       color: '#000',
-                      lineHeight: '30px',
-                      height: '30px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'center',
-                      alignSelf: 'stretch',
+                      lineHeight: '24px',
                     }}>
                       {service}
                     </p>
