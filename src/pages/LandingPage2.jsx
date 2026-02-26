@@ -247,6 +247,23 @@ const LandingPage2 = () => {
 
   const content = { ...defaultContent, ...pageContent };
 
+  // Helper to check if section is visible
+  const isSectionVisible = (sectionId) => {
+    const visibilityKey = `${sectionId}Visible`;
+    return pageContent[visibilityKey] !== false;
+  };
+
+  // Helper to check if section should be rendered (always render in editor mode)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true;
+    return isSectionVisible(sectionId);
+  };
+
+  // Helper to check if section is hidden (for blur effect)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
+
   // Helper to convert string (from textarea) to array
   const toArray = (value) => {
     if (Array.isArray(value)) return value;
@@ -312,63 +329,68 @@ const LandingPage2 = () => {
       scrollBehavior: 'smooth',
     }}>
       {/* Header */}
-      <EditableSection
-        sectionId="header"
-        label="Header"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'header'}
-        style={{
-          backgroundColor: '#000',
-          height: `${headerHeight}px`,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          position: 'fixed',
-          top: headerVisible ? '0px' : `${-(headerHeight * 0.8)}px`,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          transition: 'top 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)',
-        }}
-      >
-        {content.logoImage ? (
-          <img
-            src={content.logoImage.startsWith('http') ? content.logoImage : `${import.meta.env.VITE_API_URL || ''}${content.logoImage}`}
-            alt="Logo"
-            style={{
-              width: '85px',
-              height: '85px',
-              objectFit: 'contain',
-            }}
-          />
-        ) : (
-          <div style={{
-            color: '#2558BF',
-            fontSize: isMobile ? '28px' : '36px',
-            fontWeight: 700,
-            fontFamily: "'Inter', sans-serif",
-            letterSpacing: '-1px',
-          }}>
-            {content.logoText || 'goti'}
-          </div>
-        )}
-      </EditableSection>
+      {shouldRenderSection('header') && (
+        <EditableSection
+          sectionId="header"
+          label="Header"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'header'}
+          isHidden={isSectionHidden('header')}
+          style={{
+            backgroundColor: '#000',
+            height: `${headerHeight}px`,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'fixed',
+            top: headerVisible ? '0px' : `${-(headerHeight * 0.8)}px`,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            transition: 'top 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)',
+          }}
+        >
+          {content.logoImage ? (
+            <img
+              src={content.logoImage.startsWith('http') ? content.logoImage : `${import.meta.env.VITE_API_URL || ''}${content.logoImage}`}
+              alt="Logo"
+              style={{
+                width: '85px',
+                height: '85px',
+                objectFit: 'contain',
+              }}
+            />
+          ) : (
+            <div style={{
+              color: '#2558BF',
+              fontSize: isMobile ? '28px' : '36px',
+              fontWeight: 700,
+              fontFamily: "'Inter', sans-serif",
+              letterSpacing: '-1px',
+            }}>
+              {content.logoText || 'goti'}
+            </div>
+          )}
+        </EditableSection>
+      )}
 
       {/* Header spacer to prevent content jump */}
       <div style={{ height: `${headerHeight}px` }} />
 
       {/* Hero Section */}
-      <EditableSection
-        sectionId="hero"
-        label="Hero Section"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'hero'}
-        style={{
-          padding: isMobile ? '50px 20px 40px' : isTablet ? '110px 40px 40px' : '110px 100px 40px',
-          textAlign: 'center',
-          backgroundColor: '#fff',
-        }}
-      >
+      {shouldRenderSection('hero') && (
+        <EditableSection
+          sectionId="hero"
+          label="Hero Section"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'hero'}
+          isHidden={isSectionHidden('hero')}
+          style={{
+            padding: isMobile ? '50px 20px 40px' : isTablet ? '110px 40px 40px' : '110px 100px 40px',
+            textAlign: 'center',
+            backgroundColor: '#fff',
+          }}
+        >
         {/* Hero Content Wrapper - Single animation for all elements */}
         <div style={{
           transform: heroAnimated ? 'translateY(0)' : 'translateY(-60px)',
@@ -573,19 +595,22 @@ const LandingPage2 = () => {
           )}
         </div>
       </EditableSection>
+      )}
 
       {/* Guarantees Section */}
-      <EditableSection
-        sectionId="guarantees"
-        label="Guarantees Section"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'guarantees'}
-        style={{
-          padding: isMobile ? '0px 20px 60px' : '0px 40px 80px',
-          backgroundColor: '#fff',
-          textAlign: 'center',
-        }}
-      >
+      {shouldRenderSection('guarantees') && (
+        <EditableSection
+          sectionId="guarantees"
+          label="Guarantees Section"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'guarantees'}
+          isHidden={isSectionHidden('guarantees')}
+          style={{
+            padding: isMobile ? '0px 20px 60px' : '0px 40px 80px',
+            backgroundColor: '#fff',
+            textAlign: 'center',
+          }}
+        >
         <div
           ref={guaranteesRef}
           style={{
@@ -730,28 +755,31 @@ const LandingPage2 = () => {
           </div>
         </div>
       </EditableSection>
+      )}
 
       {/* Clients Section with Marquee Animation */}
-      <EditableSection
-        sectionId="clients"
-        label="Clients Section"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'clients'}
-        style={{
-          backgroundColor: '#000',
-          height: '387px',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          overflow: 'hidden',
-          margin: 0,
-          padding: 0,
-          borderRadius: '15px',
-        }}
-      >
+      {shouldRenderSection('clients') && (
+        <EditableSection
+          sectionId="clients"
+          label="Clients Section"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'clients'}
+          isHidden={isSectionHidden('clients')}
+          style={{
+            backgroundColor: '#000',
+            height: '387px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center',
+            overflow: 'hidden',
+            margin: 0,
+            padding: 0,
+            borderRadius: '15px',
+          }}
+        >
         <h2 style={{
           color: '#FFFFFF',
           fontSize: isMobile ? '32px' : isTablet ? '44px' : '56px',
@@ -851,19 +879,22 @@ const LandingPage2 = () => {
           }
         `}</style>
       </EditableSection>
+      )}
 
       {/* Pricing Section */}
-      <div id="pricing-section">
-      <EditableSection
-        sectionId="pricing"
-        label="Pricing Plans Section"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'pricing'}
-        style={{
-          padding: isMobile ? '40px 20px 10px' : isTablet ? '60px 100px 10px' : '80px 200px 10px',
-          backgroundColor: '#fff',
-        }}
-      >
+      {shouldRenderSection('pricing') && (
+        <div id="pricing-section">
+        <EditableSection
+          sectionId="pricing"
+          label="Pricing Plans Section"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'pricing'}
+          isHidden={isSectionHidden('pricing')}
+          style={{
+            padding: isMobile ? '40px 20px 10px' : isTablet ? '60px 100px 10px' : '80px 200px 10px',
+            backgroundColor: '#fff',
+          }}
+        >
         {/* Pricing Cards Container with Headers */}
         <div style={{
           display: 'flex',
@@ -1119,12 +1150,14 @@ const LandingPage2 = () => {
         </div>
       </EditableSection>
       </div>
+      )}
 
       {/* Call Now Section - below pricing cards */}
-      <div style={{
-        padding: isMobile ? '0 20px 50px' : isTablet ? '0 100px 150px' : '0 200px 150px',
-        backgroundColor: '#fff',
-      }}>
+      {shouldRenderSection('callNow') && (
+        <div style={{
+          padding: isMobile ? '0 20px 50px' : isTablet ? '0 100px 150px' : '0 200px 150px',
+          backgroundColor: '#fff',
+        }}>
         <div
           ref={ctaRef}
           style={{
@@ -1182,19 +1215,22 @@ const LandingPage2 = () => {
           </button>
         </div>
       </div>
+      )}
 
       {/* Contact Form Section */}
-      <div id="contact-form">
-      <EditableSection
-        sectionId="contactForm"
-        label="Contact Form Section"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'contactForm'}
-        style={{
-          padding: isMobile ? '40px 20px' : isTablet ? '60px 100px' : '80px 200px',
-          backgroundColor: '#fff',
-        }}
-      >
+      {shouldRenderSection('contactForm') && (
+        <div id="contact-form">
+        <EditableSection
+          sectionId="contactForm"
+          label="Contact Form Section"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'contactForm'}
+          isHidden={isSectionHidden('contactForm')}
+          style={{
+            padding: isMobile ? '40px 20px' : isTablet ? '60px 100px' : '80px 200px',
+            backgroundColor: '#fff',
+          }}
+        >
         <div style={{
           width: '100%',
           display: 'grid',
@@ -1449,19 +1485,22 @@ const LandingPage2 = () => {
         </div>
       </EditableSection>
       </div>
+      )}
 
       {/* Footer */}
-      <EditableSection
-        sectionId="footer"
-        label="Footer Section"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'footer'}
-        style={{
-          backgroundColor: '#f3f4f6',
-          padding: isMobile ? '60px 20px 40px' : '80px 40px 60px',
-          textAlign: 'center',
-        }}
-      >
+      {shouldRenderSection('footer') && (
+        <EditableSection
+          sectionId="footer"
+          label="Footer Section"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'footer'}
+          isHidden={isSectionHidden('footer')}
+          style={{
+            backgroundColor: '#f3f4f6',
+            padding: isMobile ? '60px 20px 40px' : '80px 40px 60px',
+            textAlign: 'center',
+          }}
+        >
         {/* Heart Icon */}
         <div style={{
           display: 'flex',
@@ -1514,6 +1553,7 @@ const LandingPage2 = () => {
           {content.copyrightText}
         </p>
       </EditableSection>
+      )}
     </div>
   );
 };

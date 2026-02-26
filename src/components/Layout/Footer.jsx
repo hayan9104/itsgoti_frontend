@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useWindowSize from '../../hooks/useWindowSize';
+import usePageVisibility from '../../hooks/usePageVisibility';
 import vectorIcon from '../../assets/Vector.png';
 import { pagesAPI } from '../../services/api';
 
 const Footer = () => {
   const { isMobile, isTablet } = useWindowSize();
+  const { isPageVisible } = usePageVisibility();
 
   // Page content from CMS
   const [content, setContent] = useState({
@@ -83,44 +85,48 @@ const Footer = () => {
             >
               {content.sayHelloTitle}
             </h2>
-            <Link
-              to="/contact"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid #FFF',
-                backgroundColor: 'transparent',
-                color: '#fff',
-                width: '223px',
-                height: '56px',
-                padding: '12px 24px',
-                gap: '12px',
-                borderRadius: '200px',
-                fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                fontSize: '20px',
-                fontWeight: isMobile ? 400 : 600,
-                lineHeight: '24px',
-                textDecoration: 'none',
-                marginBottom: '16px',
-              }}
-            >
-              {content.buttonText}
-            </Link>
-            <div
-              style={{
-                color: '#fff',
-                fontSize: isMobile ? '14px' : '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '11px',
-                marginTop: '9px',
-              }}
-            >
-              <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0) invert(1)' }} />
-              <span style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>{content.instantResponseText}</span>
-            </div>
+            {isPageVisible('contact') && (
+              <>
+                <Link
+                  to="/contact"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #FFF',
+                    backgroundColor: 'transparent',
+                    color: '#fff',
+                    width: '223px',
+                    height: '56px',
+                    padding: '12px 24px',
+                    gap: '12px',
+                    borderRadius: '200px',
+                    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                    fontSize: '20px',
+                    fontWeight: isMobile ? 400 : 600,
+                    lineHeight: '24px',
+                    textDecoration: 'none',
+                    marginBottom: '16px',
+                  }}
+                >
+                  {content.buttonText}
+                </Link>
+                <div
+                  style={{
+                    color: '#fff',
+                    fontSize: isMobile ? '14px' : '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '11px',
+                    marginTop: '9px',
+                  }}
+                >
+                  <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0) invert(1)' }} />
+                  <span style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>{content.instantResponseText}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer Links Grid */}
@@ -294,58 +300,66 @@ const Footer = () => {
                 Quick Links
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '18px' }}>
-                <Link
-                  to="/work"
-                  style={{
-                    color: '#fff',
-                    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                    fontSize: isMobile ? '14px' : '20px',
-                    lineHeight: '26px',
-                    letterSpacing: '0.2px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Our Work
-                </Link>
-                <Link
-                  to="/case-studies"
-                  style={{
-                    color: '#fff',
-                    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                    fontSize: isMobile ? '14px' : '20px',
-                    lineHeight: '26px',
-                    letterSpacing: '0.2px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Case Study
-                </Link>
-                <Link
-                  to="/approach"
-                  style={{
-                    color: '#fff',
-                    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                    fontSize: isMobile ? '14px' : '20px',
-                    lineHeight: '26px',
-                    letterSpacing: '0.2px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Approach
-                </Link>
-                <Link
-                  to="/about"
-                  style={{
-                    color: '#fff',
-                    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                    fontSize: isMobile ? '14px' : '20px',
-                    lineHeight: '26px',
-                    letterSpacing: '0.2px',
-                    textDecoration: 'none',
-                  }}
-                >
-                  About Us
-                </Link>
+                {isPageVisible('work') && (
+                  <Link
+                    to="/work"
+                    style={{
+                      color: '#fff',
+                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                      fontSize: isMobile ? '14px' : '20px',
+                      lineHeight: '26px',
+                      letterSpacing: '0.2px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Our Work
+                  </Link>
+                )}
+                {isPageVisible('case-study') && (
+                  <Link
+                    to="/case-studies"
+                    style={{
+                      color: '#fff',
+                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                      fontSize: isMobile ? '14px' : '20px',
+                      lineHeight: '26px',
+                      letterSpacing: '0.2px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Case Study
+                  </Link>
+                )}
+                {isPageVisible('approach') && (
+                  <Link
+                    to="/approach"
+                    style={{
+                      color: '#fff',
+                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                      fontSize: isMobile ? '14px' : '20px',
+                      lineHeight: '26px',
+                      letterSpacing: '0.2px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Approach
+                  </Link>
+                )}
+                {isPageVisible('about') && (
+                  <Link
+                    to="/about"
+                    style={{
+                      color: '#fff',
+                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                      fontSize: isMobile ? '14px' : '20px',
+                      lineHeight: '26px',
+                      letterSpacing: '0.2px',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    About Us
+                  </Link>
+                )}
               </div>
             </div>
           </div>

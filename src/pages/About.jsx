@@ -115,6 +115,23 @@ const About = () => {
     },
   ]);
 
+  // Helper to check if section is visible
+  const isSectionVisible = (sectionId) => {
+    const visibilityKey = `${sectionId}Visible`;
+    return pageContent[visibilityKey] !== false;
+  };
+
+  // Helper to check if section should be rendered (always render in editor mode)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true;
+    return isSectionVisible(sectionId);
+  };
+
+  // Helper to check if section is hidden (for blur effect)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
+
   // Listen for updates from parent editor (when in editor mode)
   useEffect(() => {
     if (!isEditorMode) return;
@@ -273,22 +290,24 @@ const About = () => {
   return (
     <div style={{ backgroundColor: '#fff' }}>
       {/* Hero Section - Black Background */}
-      <EditableSection
-        sectionId="hero"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'hero'}
-        label="Hero Section"
-        style={{
-          backgroundColor: '#0F0F0F',
-          borderBottomLeftRadius: isMobile ? '0' : isTablet ? '200px' : '293px',
-          borderBottomRightRadius: isMobile ? '0' : isTablet ? '200px' : '293px',
-          paddingTop: isMobile ? '24px' : isTablet ? '60px' : '100px',
-          paddingLeft: isMobile ? '0' : isTablet ? '40px' : '100px',
-          paddingRight: isMobile ? '16px' : isTablet ? '40px' : '100px',
-          paddingBottom: isMobile ? '0' : isTablet ? '600px' : '800px',
-          position: 'relative',
-        }}
-      >
+      {shouldRenderSection('hero') && (
+        <EditableSection
+          sectionId="hero"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'hero'}
+          label="Hero Section"
+          isHidden={isSectionHidden('hero')}
+          style={{
+            backgroundColor: '#0F0F0F',
+            borderBottomLeftRadius: isMobile ? '0' : isTablet ? '200px' : '293px',
+            borderBottomRightRadius: isMobile ? '0' : isTablet ? '200px' : '293px',
+            paddingTop: isMobile ? '24px' : isTablet ? '60px' : '100px',
+            paddingLeft: isMobile ? '0' : isTablet ? '40px' : '100px',
+            paddingRight: isMobile ? '16px' : isTablet ? '40px' : '100px',
+            paddingBottom: isMobile ? '0' : isTablet ? '600px' : '800px',
+            position: 'relative',
+          }}
+        >
         <div style={{ maxWidth: '1320px', margin: '0 auto', paddingLeft: isMobile ? '16px' : '0' }}>
           {/* Hero Heading */}
           <h1
@@ -346,6 +365,7 @@ const About = () => {
           </div>
         )}
       </EditableSection>
+      )}
 
       {/* Mobile: Design Text Section on Black Background */}
       {isMobile && (
@@ -642,18 +662,20 @@ const About = () => {
       )}
 
       {/* You don't need 70+ people Section */}
-      <EditableSection
-        sectionId="youDontNeed"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'youDontNeed'}
-        label="You Don't Need Section"
-        style={{
-          marginTop: isMobile ? '0px' : '0px',
-          padding: isMobile ? '40px 20px' : isTablet ? '80px 40px' : '100px 100px',
-          textAlign: 'center',
-          backgroundColor: '#fff',
-        }}
-      >
+      {shouldRenderSection('youDontNeed') && (
+        <EditableSection
+          sectionId="youDontNeed"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'youDontNeed'}
+          label="You Don't Need Section"
+          isHidden={isSectionHidden('youDontNeed')}
+          style={{
+            marginTop: isMobile ? '0px' : '0px',
+            padding: isMobile ? '40px 20px' : isTablet ? '80px 40px' : '100px 100px',
+            textAlign: 'center',
+            backgroundColor: '#fff',
+          }}
+        >
         <div style={{ maxWidth: '1320px', margin: '0 auto' }}>
         {/* Heading */}
         <h2
@@ -887,15 +909,18 @@ const About = () => {
         )}
         </div>
       </EditableSection>
+      )}
 
       {/* 10 Minds Built Different Section - Sticky Scroll */}
-      <EditableSection
-        sectionId="tenMinds"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'tenMinds'}
-        label="10 Minds Section"
-        style={{ position: 'relative' }}
-      >
+      {shouldRenderSection('tenMinds') && (
+        <EditableSection
+          sectionId="tenMinds"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'tenMinds'}
+          label="10 Minds Section"
+          isHidden={isSectionHidden('tenMinds')}
+          style={{ position: 'relative' }}
+        >
       {(() => {
         // Filter only images that have been uploaded
         const uploadedImages = (pageContent.mindsImages || []).filter(img => img.image);
@@ -1041,17 +1066,20 @@ const About = () => {
         );
       })()}
       </EditableSection>
+      )}
 
       {/* Testimonial Section */}
-      <EditableSection
-        sectionId="testimonialHeading"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'testimonialHeading'}
-        label="Testimonial Heading"
-        style={{
-          padding: isMobile ? '60px 20px' : isTablet ? '80px 40px' : '100px 100px',
-          textAlign: 'center',
-        }}
+      {shouldRenderSection('testimonialHeading') && (
+        <EditableSection
+          sectionId="testimonialHeading"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'testimonialHeading'}
+          label="Testimonial Heading"
+          isHidden={isSectionHidden('testimonialHeading')}
+          style={{
+            padding: isMobile ? '60px 20px' : isTablet ? '80px 40px' : '100px 100px',
+            textAlign: 'center',
+          }}
       >
         <div style={{ maxWidth: '1320px', margin: '0 auto' }}>
           {/* GOTI Description - First word Italic, rest Normal */}
@@ -1508,23 +1536,26 @@ const About = () => {
           )}
         </div>
       </EditableSection>
+      )}
 
       {/* Ready to start a project CTA */}
-      <EditableSection
-        sectionId="cta"
-        isEditorMode={isEditorMode}
-        isSelected={selectedSection === 'cta'}
-        label="CTA Section"
-        style={{
-          paddingTop: '0px',
-          paddingBottom: isMobile ? '0px' : isTablet ? '70px' : '80px',
-          paddingLeft: isMobile ? '0' : isTablet ? '40px' : '100px',
-          paddingRight: isMobile ? '0' : isTablet ? '40px' : '100px',
-          marginTop: isMobile ? '0' : isTablet ? '-10px' : '0px',
-          marginBottom: isMobile ? '0' : isTablet ? '130px' : '120px',
-          overflow: isMobile ? 'hidden' : 'visible',
-        }}
-      >
+      {shouldRenderSection('cta') && (
+        <EditableSection
+          sectionId="cta"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'cta'}
+          label="CTA Section"
+          isHidden={isSectionHidden('cta')}
+          style={{
+            paddingTop: '0px',
+            paddingBottom: isMobile ? '0px' : isTablet ? '70px' : '80px',
+            paddingLeft: isMobile ? '0' : isTablet ? '40px' : '100px',
+            paddingRight: isMobile ? '0' : isTablet ? '40px' : '100px',
+            marginTop: isMobile ? '0' : isTablet ? '-10px' : '0px',
+            marginBottom: isMobile ? '0' : isTablet ? '130px' : '120px',
+            overflow: isMobile ? 'hidden' : 'visible',
+          }}
+        >
         <div style={{ maxWidth: '1320px', margin: '0 auto' }}>
           {isMobile ? (
             /* Mobile Layout - Vertical stacking */
@@ -1776,6 +1807,7 @@ const About = () => {
           )}
         </div>
       </EditableSection>
+      )}
     </div>
   );
 };

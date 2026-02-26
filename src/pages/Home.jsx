@@ -124,7 +124,35 @@ const Home = () => {
     faq5Answer: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     faqContactText: "Any more questions, we'll be happy to answer.",
     faqContactLink: 'CONTACT US',
+    // Section Visibility (default all visible)
+    heroVisible: true,
+    partnersVisible: true,
+    experienceVisible: true,
+    projectsVisible: true,
+    wantMoreVisible: true,
+    realNumbersVisible: true,
+    servicesVisible: true,
+    brandsVisible: true,
+    ctaVisible: true,
+    faqVisible: true,
   });
+
+  // Helper to check if section is visible
+  const isSectionVisible = (sectionId) => {
+    const visibilityKey = `${sectionId}Visible`;
+    return pageContent[visibilityKey] !== false;
+  };
+
+  // Helper to check if section should be rendered (always render in editor mode)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true; // Always render in editor mode (will show blurred if hidden)
+    return isSectionVisible(sectionId);
+  };
+
+  // Helper to check if section is hidden (for blur effect)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
 
   // Testimonial data from About page
   const [testimonialData, setTestimonialData] = useState({
@@ -400,7 +428,8 @@ const Home = () => {
       )}
 
       {/* Hero Section - Blue with Green Circles */}
-      <EditableSection sectionId="hero" label="Hero Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'hero'}>
+      {shouldRenderSection('hero') && (
+      <EditableSection sectionId="hero" label="Hero Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'hero'} isHidden={isSectionHidden('hero')}>
         <section
           ref={heroSectionRef}
           style={{
@@ -594,6 +623,7 @@ const Home = () => {
           )}
         </section>
       </EditableSection>
+      )}
 
       {/* Target Section for Animated Image - Full width image display */}
       {!isMobile && (
@@ -623,7 +653,8 @@ const Home = () => {
       )}
 
       {/* Partner Brands Section */}
-      <EditableSection sectionId="partners" label="Partner Brands" isEditorMode={isEditorMode} isSelected={selectedSection === 'partners'}>
+      {shouldRenderSection('partners') && (
+      <EditableSection sectionId="partners" label="Partner Brands" isEditorMode={isEditorMode} isSelected={selectedSection === 'partners'} isHidden={isSectionHidden('partners')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
           textAlign: 'center',
@@ -779,9 +810,11 @@ const Home = () => {
           })()}
         </section>
       </EditableSection>
+      )}
 
       {/* Experience Section */}
-      <EditableSection sectionId="experience" label="Experience Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'experience'}>
+      {shouldRenderSection('experience') && (
+      <EditableSection sectionId="experience" label="Experience Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'experience'} isHidden={isSectionHidden('experience')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
           textAlign: 'center',
@@ -812,9 +845,11 @@ const Home = () => {
           </p>
         </section>
       </EditableSection>
+      )}
 
       {/* Projects Showcase Section */}
-      <EditableSection sectionId="projects" label="Projects Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'projects'}>
+      {shouldRenderSection('projects') && (
+      <EditableSection sectionId="projects" label="Projects Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'projects'} isHidden={isSectionHidden('projects')}>
         <section style={{
           padding: isMobile ? '0 0 40px 0' : '0 0 60px 0',
         }}>
@@ -957,9 +992,11 @@ const Home = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Want To See More Section */}
-      <EditableSection sectionId="wantMore" label="Want To See More" isEditorMode={isEditorMode} isSelected={selectedSection === 'wantMore'}>
+      {shouldRenderSection('wantMore') && (
+      <EditableSection sectionId="wantMore" label="Want To See More" isEditorMode={isEditorMode} isSelected={selectedSection === 'wantMore'} isHidden={isSectionHidden('wantMore')}>
         <section style={{
           padding: isMobile ? '40px 20px' : '60px 100px',
           textAlign: 'center',
@@ -990,9 +1027,11 @@ const Home = () => {
           </Link>
         </section>
       </EditableSection>
+      )}
 
       {/* Real Numbers Section */}
-      <EditableSection sectionId="realNumbers" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'realNumbers'}>
+      {shouldRenderSection('realNumbers') && (
+      <EditableSection sectionId="realNumbers" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'realNumbers'} isHidden={isSectionHidden('realNumbers')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
           textAlign: 'center',
@@ -1148,9 +1187,11 @@ const Home = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Services Section */}
-      <EditableSection sectionId="services" label="Services Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'services'}>
+      {shouldRenderSection('services') && (
+      <EditableSection sectionId="services" label="Services Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'services'} isHidden={isSectionHidden('services')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
         }}>
@@ -1320,6 +1361,7 @@ const Home = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Testimonial Section - Connected to About Page */}
       <section style={{
@@ -1481,7 +1523,8 @@ const Home = () => {
       </section>
 
       {/* Brands Section */}
-      <EditableSection sectionId="brands" label="Brands Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'brands'}>
+      {shouldRenderSection('brands') && (
+      <EditableSection sectionId="brands" label="Brands Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'brands'} isHidden={isSectionHidden('brands')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
         }}>
@@ -1616,9 +1659,11 @@ const Home = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* CTA Section - Same as Work page */}
-      <EditableSection sectionId="cta" label="CTA Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'cta'}>
+      {shouldRenderSection('cta') && (
+      <EditableSection sectionId="cta" label="CTA Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'cta'} isHidden={isSectionHidden('cta')}>
         <section style={{ backgroundColor: '#fff', padding: isMobile ? '0' : '60px 100px', marginBottom: isMobile ? '-150px' : '0' }}>
           <div style={{
             maxWidth: isMobile ? '100%' : '1240px',
@@ -1745,9 +1790,11 @@ const Home = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* FAQ Section */}
-      <EditableSection sectionId="faq" label="FAQ Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'faq'}>
+      {shouldRenderSection('faq') && (
+      <EditableSection sectionId="faq" label="FAQ Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'faq'} isHidden={isSectionHidden('faq')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
           marginTop: isMobile ? '150px' : '0',
@@ -1840,6 +1887,7 @@ const Home = () => {
           </p>
         </section>
       </EditableSection>
+      )}
 
     </div>
   );

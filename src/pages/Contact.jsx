@@ -50,6 +50,23 @@ const Contact = () => {
     successButtonText: 'Send another message',
   });
 
+  // Helper to check if section is visible
+  const isSectionVisible = (sectionId) => {
+    const visibilityKey = `${sectionId}Visible`;
+    return pageContent[visibilityKey] !== false;
+  };
+
+  // Helper to check if section should be rendered (always render in editor mode)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true;
+    return isSectionVisible(sectionId);
+  };
+
+  // Helper to check if section is hidden (for blur effect)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
+
   const {
     register,
     handleSubmit,
@@ -127,11 +144,13 @@ const Contact = () => {
   return (
     <div style={{ backgroundColor: '#fff', minHeight: '100vh', position: 'relative', overflow: 'visible' }}>
       {/* Left Image Section - extends down behind footer */}
+      {shouldRenderSection('hero') && (
       <EditableSection
         sectionId="hero"
         label="Hero Image"
         isEditorMode={isEditorMode}
         isSelected={selectedSection === 'hero'}
+        isHidden={isSectionHidden('hero')}
       >
       {!isMobile && (
         <div
@@ -176,13 +195,16 @@ const Contact = () => {
         </div>
       )}
       </EditableSection>
+      )}
 
       {/* Hero Section */}
+      {shouldRenderSection('form') && (
       <EditableSection
         sectionId="form"
         label="Form Section"
         isEditorMode={isEditorMode}
         isSelected={selectedSection === 'form'}
+        isHidden={isSectionHidden('form')}
       >
       <section
         style={{
@@ -669,6 +691,7 @@ const Contact = () => {
         </div>
       </section>
       </EditableSection>
+      )}
       {/* Spacer for footer overlap on desktop */}
       {!isMobile && <div style={{ height: '100px' }} />}
     </div>

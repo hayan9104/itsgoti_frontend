@@ -28,6 +28,23 @@ const Work = () => {
     ctaInstantText: 'Get instant response',
   });
 
+  // Helper to check if section is visible
+  const isSectionVisible = (sectionId) => {
+    const visibilityKey = `${sectionId}Visible`;
+    return pageContent[visibilityKey] !== false;
+  };
+
+  // Helper to check if section should be rendered (always render in editor mode)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true;
+    return isSectionVisible(sectionId);
+  };
+
+  // Helper to check if section is hidden (for blur effect)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
+
   // Build categories array with "All" at the start
   // Handle both array and comma-separated string formats
   const parsedCategories = Array.isArray(pageContent.categories)
@@ -115,11 +132,13 @@ const Work = () => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fff' }}>
       {/* Hero Section */}
+      {shouldRenderSection('hero') && (
       <EditableSection
         sectionId="hero"
         label="Hero Section"
         isEditorMode={isEditorMode}
         isSelected={selectedSection === 'hero'}
+        isHidden={isSectionHidden('hero')}
       >
       <section style={{ width: '100%', padding: sectionPadding }}>
         <div style={{ maxWidth: '1320px', margin: '0 auto' }}>
@@ -212,6 +231,7 @@ const Work = () => {
         </div>
       </section>
       </EditableSection>
+      )}
 
       {/* Projects Grid */}
       <section style={{ width: '100%', padding: gridSectionPadding }}>
@@ -264,11 +284,13 @@ const Work = () => {
       </section>
 
       {/* CTA Section - Coral/Orange rounded container */}
+      {shouldRenderSection('cta') && (
       <EditableSection
         sectionId="cta"
         label="CTA Section"
         isEditorMode={isEditorMode}
         isSelected={selectedSection === 'cta'}
+        isHidden={isSectionHidden('cta')}
       >
       <section style={{ backgroundColor: '#fff', padding: isMobile ? '0' : '60px 100px', marginBottom: isMobile ? '-150px' : '150px' }}>
         <div
@@ -478,6 +500,7 @@ const Work = () => {
         </div>
       </section>
       </EditableSection>
+      )}
     </div>
   );
 };

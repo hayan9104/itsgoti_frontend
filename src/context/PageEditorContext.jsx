@@ -5,7 +5,36 @@ const PageEditorContext = createContext(null);
 
 // Default values for pages (shown in admin panel when page hasn't been saved yet)
 const pageDefaults = {
+  home: {
+    // Section Visibility (all visible by default)
+    heroVisible: true,
+    partnersVisible: true,
+    experienceVisible: true,
+    projectsVisible: true,
+    wantMoreVisible: true,
+    realNumbersVisible: true,
+    servicesVisible: true,
+    brandsVisible: true,
+    ctaVisible: true,
+    faqVisible: true,
+  },
   landing: {
+    // Section Visibility (all visible by default)
+    topBannerVisible: true,
+    heroVisible: true,
+    trustedByVisible: true,
+    portfolioVisible: true,
+    statsVisible: true,
+    hiddenCostVisible: true,
+    familiarVisible: true,
+    comparisonVisible: true,
+    processVisible: true,
+    valueVisible: true,
+    testimonialsVisible: true,
+    socialProofVisible: true,
+    faqVisible: true,
+    contactFormVisible: true,
+    landingFooterVisible: true,
     // Top Banner
     bannerText: 'Egestas facilisi commodo in sapien integer ut',
     bannerEndDate: '2026-03-01 00:00',
@@ -168,6 +197,15 @@ const pageDefaults = {
     siteUseLink: 'Site Use',
   },
   'landing-page-2': {
+    // Section Visibility (all visible by default)
+    headerVisible: true,
+    heroVisible: true,
+    guaranteesVisible: true,
+    clientsVisible: true,
+    pricingVisible: true,
+    callNowVisible: true,
+    contactFormVisible: true,
+    footerVisible: true,
     // Header
     logoText: 'goti',
     // Hero Section
@@ -218,6 +256,12 @@ const pageDefaults = {
     copyrightText: '© Goti 2025. All rights reserved.',
   },
   about: {
+    // Section Visibility (all visible by default)
+    heroVisible: true,
+    youDontNeedVisible: true,
+    tenMindsVisible: true,
+    testimonialHeadingVisible: true,
+    ctaVisible: true,
     // Hero Section
     heroTitle1: 'What matters',
     heroTitle1Italic: 'tomorrow,',
@@ -244,6 +288,16 @@ const pageDefaults = {
     ctaTitle: 'Ready to start a project?',
     ctaDescription: 'We combine strategy, design, and performance to create experiences that convert.',
     ctaButtonText: 'Schedule Call',
+  },
+  work: {
+    // Section Visibility (all visible by default)
+    heroVisible: true,
+    ctaVisible: true,
+  },
+  contact: {
+    // Section Visibility (all visible by default)
+    heroVisible: true,
+    formVisible: true,
   },
 };
 

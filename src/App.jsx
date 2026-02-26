@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
+import PageVisibilityWrapper from './components/PageVisibilityWrapper';
 import {
   Home,
   Work,
@@ -24,66 +25,88 @@ function App() {
       <Routes>
         {/* Public Routes */}
         {/* Landing Page - First/Default Page */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={
+          <PageVisibilityWrapper pageName="landing" fallbackPath="/home">
+            <Landing />
+          </PageVisibilityWrapper>
+        } />
 
         {/* Landing Page 2 - Shopify Design Focus */}
-        <Route path="/landing_page2" element={<LandingPage2 />} />
+        <Route path="/landing_page2" element={
+          <PageVisibilityWrapper pageName="landing-page-2" fallbackPath="/home">
+            <LandingPage2 />
+          </PageVisibilityWrapper>
+        } />
 
         {/* Home Page */}
         <Route
           path="/home"
           element={
-            <Layout>
-              <Home />
-            </Layout>
+            <PageVisibilityWrapper pageName="home" fallbackPath="/">
+              <Layout>
+                <Home />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
         <Route
           path="/work"
           element={
-            <Layout>
-              <Work />
-            </Layout>
+            <PageVisibilityWrapper pageName="work" fallbackPath="/home">
+              <Layout>
+                <Work />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
         <Route
           path="/case-studies"
           element={
-            <Layout>
-              <CaseStudies />
-            </Layout>
+            <PageVisibilityWrapper pageName="case-study" fallbackPath="/home">
+              <Layout>
+                <CaseStudies />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
         <Route
           path="/case-studies/:slug"
           element={
-            <Layout blueNav={true}>
-              <CaseStudyDetail />
-            </Layout>
+            <PageVisibilityWrapper pageName="case-study" fallbackPath="/home">
+              <Layout blueNav={true}>
+                <CaseStudyDetail />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
         <Route
           path="/approach"
           element={
-            <Layout>
-              <Approach />
-            </Layout>
+            <PageVisibilityWrapper pageName="approach" fallbackPath="/home">
+              <Layout>
+                <Approach />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
         <Route
           path="/about"
           element={
-            <Layout darkNav={true}>
-              <About />
-            </Layout>
+            <PageVisibilityWrapper pageName="about" fallbackPath="/home">
+              <Layout darkNav={true}>
+                <About />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
         <Route
           path="/contact"
           element={
-            <Layout>
-              <Contact />
-            </Layout>
+            <PageVisibilityWrapper pageName="contact" fallbackPath="/home">
+              <Layout>
+                <Contact />
+              </Layout>
+            </PageVisibilityWrapper>
           }
         />
 

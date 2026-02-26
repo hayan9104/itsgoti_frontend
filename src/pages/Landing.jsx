@@ -204,6 +204,23 @@ const Landing = () => {
     siteUseLink: 'Site Use',
   });
 
+  // Helper to check if section is visible
+  const isSectionVisible = (sectionId) => {
+    const visibilityKey = `${sectionId}Visible`;
+    return pageContent[visibilityKey] !== false;
+  };
+
+  // Helper to check if section should be rendered (always render in editor mode)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true;
+    return isSectionVisible(sectionId);
+  };
+
+  // Helper to check if section is hidden (for blur effect)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
+
   useEffect(() => {
     fetchPageContent();
   }, []);
@@ -298,8 +315,8 @@ const Landing = () => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fff', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
       {/* Top Banner */}
-      {pageContent.showBanner === 'yes' && (
-        <EditableSection sectionId="topBanner" label="Top Banner" isEditorMode={isEditorMode} isSelected={selectedSection === 'topBanner'}>
+      {shouldRenderSection('topBanner') && pageContent.showBanner === 'yes' && (
+        <EditableSection sectionId="topBanner" label="Top Banner" isEditorMode={isEditorMode} isSelected={selectedSection === 'topBanner'} isHidden={isSectionHidden('topBanner')}>
           <div style={{
             backgroundColor: '#2558BF',
             padding: isMobile ? '8px 20px' : '10px 24px',
@@ -340,7 +357,8 @@ const Landing = () => {
         boxSizing: 'border-box',
       }}>
         {/* Hero Section */}
-        <EditableSection sectionId="hero" label="Hero Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'hero'}>
+        {shouldRenderSection('hero') && (
+        <EditableSection sectionId="hero" label="Hero Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'hero'} isHidden={isSectionHidden('hero')}>
           <section style={{
             padding: isMobile ? '24px 20px 32px' : '0',
             position: 'relative',
@@ -589,9 +607,11 @@ const Landing = () => {
             </div>
           </section>
         </EditableSection>
+        )}
 
         {/* Trusted By Section */}
-        <EditableSection sectionId="trustedBy" label="Trusted By Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'trustedBy'}>
+        {shouldRenderSection('trustedBy') && (
+        <EditableSection sectionId="trustedBy" label="Trusted By Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'trustedBy'} isHidden={isSectionHidden('trustedBy')}>
           <section style={{ padding: isMobile ? '0 20px 48px' : '40px 63px 60px', marginTop: isMobile ? '0' : '50px', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ maxWidth: isMobile ? '381px' : '1314px', margin: '0 auto', textAlign: 'center' }}>
               {/* Title - Figma: 18px, 700, #1F1F1F, line-height 26px, letter-spacing -0.15px, width 263px */}
@@ -774,10 +794,12 @@ const Landing = () => {
             </div>
           </section>
         </EditableSection>
+        )}
       </div>
 
       {/* Portfolio Section */}
-      <EditableSection sectionId="portfolio" label="Portfolio Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'portfolio'}>
+      {shouldRenderSection('portfolio') && (
+      <EditableSection sectionId="portfolio" label="Portfolio Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'portfolio'} isHidden={isSectionHidden('portfolio')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '60px 63px',
           backgroundColor: '#FFFDF9',
@@ -825,9 +847,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Real Numbers Section */}
-      <EditableSection sectionId="stats" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'stats'}>
+      {shouldRenderSection('stats') && (
+      <EditableSection sectionId="stats" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'stats'} isHidden={isSectionHidden('stats')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '60px 63px',
           backgroundColor: '#FFFDF9',
@@ -961,9 +985,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Hidden Cost Section */}
-      <EditableSection sectionId="hiddenCost" label="Hidden Cost Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'hiddenCost'}>
+      {shouldRenderSection('hiddenCost') && (
+      <EditableSection sectionId="hiddenCost" label="Hidden Cost Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'hiddenCost'} isHidden={isSectionHidden('hiddenCost')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '80px 63px',
           backgroundColor: '#FFFDF9',
@@ -1080,9 +1106,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Sounds Familiar Section */}
-      <EditableSection sectionId="familiar" label="Sounds Familiar Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'familiar'}>
+      {shouldRenderSection('familiar') && (
+      <EditableSection sectionId="familiar" label="Sounds Familiar Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'familiar'} isHidden={isSectionHidden('familiar')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '80px 63px',
           backgroundColor: '#FFFDF9',
@@ -1194,9 +1222,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Comparison Section */}
-      <EditableSection sectionId="comparison" label="Comparison Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'comparison'}>
+      {shouldRenderSection('comparison') && (
+      <EditableSection sectionId="comparison" label="Comparison Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'comparison'} isHidden={isSectionHidden('comparison')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '60px 63px',
           backgroundColor: '#FFFDF9',
@@ -1411,9 +1441,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Process Section */}
-      <EditableSection sectionId="process" label="Our Process Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'process'}>
+      {shouldRenderSection('process') && (
+      <EditableSection sectionId="process" label="Our Process Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'process'} isHidden={isSectionHidden('process')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '70px 63px 80px',
           backgroundColor: '#F9F3E6',
@@ -1591,9 +1623,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Value Section */}
-      <EditableSection sectionId="value" label="Value Proposition Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'value'}>
+      {shouldRenderSection('value') && (
+      <EditableSection sectionId="value" label="Value Proposition Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'value'} isHidden={isSectionHidden('value')}>
         <section style={{
           padding: isMobile ? '32px 20px 42px' : '80px 63px',
           backgroundColor: '#F9F3E6',
@@ -1889,9 +1923,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Testimonials Section */}
-      <EditableSection sectionId="testimonials" label="Testimonials Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'testimonials'}>
+      {shouldRenderSection('testimonials') && (
+      <EditableSection sectionId="testimonials" label="Testimonials Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'testimonials'} isHidden={isSectionHidden('testimonials')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '60px 63px',
           backgroundColor: '#FFFDF9',
@@ -2290,9 +2326,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Social Proof */}
-      <EditableSection sectionId="socialProof" label="Social Proof Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'socialProof'}>
+      {shouldRenderSection('socialProof') && (
+      <EditableSection sectionId="socialProof" label="Social Proof Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'socialProof'} isHidden={isSectionHidden('socialProof')}>
         <section style={{
           padding: isMobile ? '20px 20px' : '40px 63px',
           backgroundColor: '#FFFDF9',
@@ -2512,9 +2550,11 @@ const Landing = () => {
           )}
         </section>
       </EditableSection>
+      )}
 
       {/* FAQ Section */}
-      <EditableSection sectionId="faq" label="FAQ Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'faq'}>
+      {shouldRenderSection('faq') && (
+      <EditableSection sectionId="faq" label="FAQ Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'faq'} isHidden={isSectionHidden('faq')}>
         <section style={{
           padding: isMobile ? '32px 20px' : '80px 63px',
           backgroundColor: '#FFFDF9',
@@ -2602,9 +2642,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Contact Form Section - Have More Questions */}
-      <EditableSection sectionId="contactForm" label="Contact Form Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'contactForm'}>
+      {shouldRenderSection('contactForm') && (
+      <EditableSection sectionId="contactForm" label="Contact Form Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'contactForm'} isHidden={isSectionHidden('contactForm')}>
         <section style={{
           padding: isMobile ? '40px 20px' : '83px 84px 94px 83px',
           backgroundColor: '#FFFDF9',
@@ -2895,9 +2937,11 @@ const Landing = () => {
           </div>
         </section>
       </EditableSection>
+      )}
 
       {/* Landing Footer */}
-      <EditableSection sectionId="landingFooter" label="Landing Footer" isEditorMode={isEditorMode} isSelected={selectedSection === 'landingFooter'}>
+      {shouldRenderSection('landingFooter') && (
+      <EditableSection sectionId="landingFooter" label="Landing Footer" isEditorMode={isEditorMode} isSelected={selectedSection === 'landingFooter'} isHidden={isSectionHidden('landingFooter')}>
         <footer style={{
           backgroundColor: '#1A1A1A',
           color: '#fff',
@@ -2918,6 +2962,7 @@ const Landing = () => {
           </span>
         </footer>
       </EditableSection>
+      )}
     </div>
   );
 };
