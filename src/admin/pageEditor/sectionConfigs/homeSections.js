@@ -17,6 +17,8 @@ export const homeSections = [
     description: 'Logo showcase of partner brands',
     fields: [
       { key: 'partnerTitle', type: 'textarea', label: 'Partner Section Title' },
+      { key: 'partnerLogos', type: 'imageArray', label: 'Partner Logos (Desktop)', maxItems: 15, useObjectFormat: true, hint: 'Upload partner brand logos for desktop view' },
+      { key: 'partnerLogosMobile', type: 'imageArray', label: 'Partner Logos (Mobile)', maxItems: 15, useObjectFormat: true, hint: 'Upload partner brand logos for mobile view' },
     ]
   },
   {

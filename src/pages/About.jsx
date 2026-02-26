@@ -144,11 +144,15 @@ const About = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, [isEditorMode]);
 
+  // State for Home page partner logos
+  const [homePartnerLogos, setHomePartnerLogos] = useState({ desktop: [], mobile: [] });
+
   // Fetch content from API (skip if in editor mode - data comes via postMessage)
   useEffect(() => {
     if (!isEditorMode) {
       fetchPageContent();
       fetchTestimonialContent();
+      fetchHomePartnerLogos();
     }
   }, [isEditorMode]);
 
@@ -182,6 +186,22 @@ const About = () => {
     }
   };
 
+  // Fetch partner logos from Home page
+  const fetchHomePartnerLogos = async () => {
+    try {
+      const response = await pagesAPI.getOne('home');
+      if (response.data.data && response.data.data.content) {
+        const content = response.data.data.content;
+        setHomePartnerLogos({
+          desktop: content.partnerLogos || [],
+          mobile: content.partnerLogosMobile || [],
+        });
+      }
+    } catch (error) {
+      console.log('Using default partner logos');
+    }
+  };
+
   // Scroll effect for 10 Minds section
   useEffect(() => {
     const handleScroll = () => {
@@ -208,8 +228,34 @@ const About = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [pageContent.mindsImages]);
 
-  // Split logos into two rows - use mobile logos on mobile
-  const allLogos = isMobile ? (pageContent.logosMobile || pageContent.logos) : pageContent.logos;
+  // Helper to get logo image URL from different formats
+  const getLogoImageUrl = (logo) => {
+    if (!logo) return null;
+    // Handle string URL directly
+    if (typeof logo === 'string') return getImageUrl(logo);
+    // Handle object with different property names
+    return logo.image || logo.url || logo.path || null;
+  };
+
+  // Helper to get logo name
+  const getLogoName = (logo, index) => {
+    if (!logo) return `Logo ${index + 1}`;
+    if (typeof logo === 'string') return `Logo ${index + 1}`;
+    return logo.name || `Logo ${index + 1}`;
+  };
+
+  // Helper to get logo key
+  const getLogoKey = (logo, index) => {
+    if (!logo) return index;
+    if (typeof logo === 'string') return index;
+    return logo.id || index;
+  };
+
+  // Split logos into two rows - use Home page partner logos (priority) or fallback to About page logos
+  const homeLogos = isMobile ? homePartnerLogos.mobile : homePartnerLogos.desktop;
+  const aboutLogos = isMobile ? (pageContent.logosMobile || pageContent.logos) : pageContent.logos;
+  // Use Home page logos if available, otherwise fallback to About page logos
+  const allLogos = homeLogos.length > 0 ? homeLogos : aboutLogos;
   const logos = allLogos.slice(0, 6);
   const logos2 = isMobile ? [] : allLogos.slice(6, 10);
 
@@ -710,35 +756,38 @@ const About = () => {
               justifyContent: 'center',
             }}
           >
-            {allLogos.map((logo) => (
-              <div key={logo.id}>
-                {logo.image ? (
-                  <img
-                    src={getImageUrl(logo.image)}
-                    alt={logo.name}
-                    style={{
-                      width: 'auto',
-                      height: '28px',
-                      objectFit: 'contain',
-                      filter: 'grayscale(100%)',
-                      opacity: 0.6,
-                    }}
-                  />
-                ) : (
-                  <span
-                    style={{
-                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                      fontSize: '14px',
-                      color: '#999',
-                      fontWeight: 500,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {logo.name}
-                  </span>
-                )}
-              </div>
-            ))}
+            {allLogos.map((logo, index) => {
+              const logoUrl = getLogoImageUrl(logo);
+              return (
+                <div key={getLogoKey(logo, index)}>
+                  {logoUrl ? (
+                    <img
+                      src={getImageUrl(logoUrl)}
+                      alt={getLogoName(logo, index)}
+                      style={{
+                        width: 'auto',
+                        height: '28px',
+                        objectFit: 'contain',
+                        filter: 'grayscale(100%)',
+                        opacity: 0.6,
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                        fontSize: '14px',
+                        color: '#999',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {getLogoName(logo, index)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -754,12 +803,13 @@ const About = () => {
               flexWrap: 'nowrap',
             }}
           >
-            {logos.map((logo) => (
-              logo.image ? (
+            {logos.map((logo, index) => {
+              const logoUrl = getLogoImageUrl(logo);
+              return logoUrl ? (
                 <img
-                  key={logo.id}
-                  src={getImageUrl(logo.image)}
-                  alt={logo.name}
+                  key={getLogoKey(logo, index)}
+                  src={getImageUrl(logoUrl)}
+                  alt={getLogoName(logo, index)}
                   style={{
                     width: 'auto',
                     height: isTablet ? '40px' : '48px',
@@ -770,7 +820,7 @@ const About = () => {
                 />
               ) : (
                 <span
-                  key={logo.id}
+                  key={getLogoKey(logo, index)}
                   style={{
                     fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
                     fontSize: isTablet ? '16px' : '18px',
@@ -782,10 +832,10 @@ const About = () => {
                     justifyContent: 'center',
                   }}
                 >
-                  {logo.name}
+                  {getLogoName(logo, index)}
                 </span>
-              )
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -800,12 +850,13 @@ const About = () => {
               flexWrap: 'nowrap',
             }}
           >
-            {logos2.map((logo) => (
-              logo.image ? (
+            {logos2.map((logo, index) => {
+              const logoUrl = getLogoImageUrl(logo);
+              return logoUrl ? (
                 <img
-                  key={logo.id}
-                  src={getImageUrl(logo.image)}
-                  alt={logo.name}
+                  key={getLogoKey(logo, index + 6)}
+                  src={getImageUrl(logoUrl)}
+                  alt={getLogoName(logo, index + 6)}
                   style={{
                     width: 'auto',
                     height: isTablet ? '40px' : '48px',
@@ -816,7 +867,7 @@ const About = () => {
                 />
               ) : (
                 <span
-                  key={logo.id}
+                  key={getLogoKey(logo, index + 6)}
                   style={{
                     fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
                     fontSize: isTablet ? '16px' : '18px',
@@ -828,10 +879,10 @@ const About = () => {
                     justifyContent: 'center',
                   }}
                 >
-                  {logo.name}
+                  {getLogoName(logo, index + 6)}
                 </span>
-              )
-            ))}
+              );
+            })}
           </div>
         )}
         </div>

@@ -274,6 +274,7 @@ const Landing = () => {
         message: formData.message,
         subject: `New Inquiry from ${formData.fullName}`,
         source: 'Landing Page - Book A Call',
+        sourcePage: 'Landing Page',
       });
       setFormSuccess(true);
       setFormData({ fullName: '', email: '', companyName: '', phone: '', message: '' });

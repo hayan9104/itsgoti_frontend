@@ -22,14 +22,12 @@ export const aboutSections = [
   {
     id: 'youDontNeed',
     label: '"You Don\'t Need" Section',
-    description: 'Team description with avatars and logos',
+    description: 'Team description with avatars (logos are fetched from Home Page > Partner Brands)',
     fields: [
       { key: 'sectionTitle', type: 'text', label: 'Section Title' },
       { key: 'sectionSubtitle', type: 'text', label: 'Section Subtitle' },
       { key: 'sectionDescription', type: 'textarea', label: 'Description' },
       { key: 'sectionAvatars', type: 'imageArray', label: 'Team Avatars', maxItems: 4, hint: 'Circular profile images', useObjectFormat: true },
-      { key: 'logos', type: 'imageArray', label: 'Client Logos (Desktop)', maxItems: 10, useObjectFormat: true },
-      { key: 'logosMobile', type: 'imageArray', label: 'Client Logos (Mobile)', maxItems: 10, useObjectFormat: true },
     ]
   },
   {

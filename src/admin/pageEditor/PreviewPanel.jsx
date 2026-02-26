@@ -15,6 +15,7 @@ const PreviewPanel = ({ pageName }) => {
     'approach': '/approach',
     'footer': '/footer-preview',
     'landing': '/',
+    'landing-page-2': '/landing_page2',
   };
 
   const previewUrl = `${pageRoutes[pageName] || '/'}?editor=true`;

@@ -167,6 +167,56 @@ const pageDefaults = {
     copyrightText: 'Copyright© 2025 GOTI.DESIGN. All rights reserved.',
     siteUseLink: 'Site Use',
   },
+  'landing-page-2': {
+    // Header
+    logoText: 'goti',
+    // Hero Section
+    heroTitle: 'Your Shopify Website Design Agency',
+    heroDescription: "We specialize in Shopify design and development.\nLet's design, optimize, and launch your Shopify store with guaranteed results -\nor you don't pay.",
+    heroButtonText: 'See Price',
+    // Guarantees
+    guarantee1Title: '10-Day Satisfaction Guarantee',
+    guarantee1Text: "— Get a full refund if you're not happy, no questions asked.",
+    guarantee2Title: 'Launch your E-commerce business in weeks,',
+    guarantee2Highlight: 'not months.',
+    guarantee3Title: 'Unlimited revisions',
+    guarantee3Text: 'until your website looks exactly how you want it.',
+    // Clients
+    clientsTitle: 'Our Shopify Clients',
+    clientName1: '#basanti',
+    clientName2: 'baharasee',
+    clientName3: 'NOOR',
+    clientName4: 'knotty rope',
+    // Pricing
+    pricingTitle: 'Shopify Design Plans.',
+    pricingSubtitle: "Choose a plan that's right for you...",
+    plan1Label: 'Popular Plan',
+    plan1Price: '₹00,000/-',
+    plan1Subtitle: 'One request at a time. Pause or cancel anytime.',
+    plan1Features: 'Complete Shopify Theme Setup & Customization\nProduct Upload (Up to 300 Products)\nPayment Gateway & Shipping Setup\nFully Mobile-Optimized Design\nFast-Loading, SEO-Friendly Pages\nGoogle Analytics Integration\nGoogle & Meta (Facebook/Instagram) Ads Setup\n3 Shopify Training Sessions',
+    plan2Price: '₹00,000/-',
+    plan2Subtitle: 'Two requests at a time. Pause or cancel anytime.',
+    plan2Features: 'Custom Store Design in Figma Before Development\nUnlimited Product Listings\nCustom Upsell & Cross-Sell Flows\nTwo Extra Landing Pages for Your Hero Products\nEmail Marketing Integration & Flow Setup\nOn-Page SEO Optimization for Main Pages\nConversion Audit After Launch (30 Days Later)\nEverything Included in the MVP Plan',
+    // Call Now CTA
+    ctaTitle: "Not sure what's right for you? Let's figure it out together.",
+    ctaDescription: "Want to learn more about how we work or what's best for your store? We'll walk you through everything step by step.",
+    ctaButtonText: 'Call Now',
+    ctaPhoneNumber: '+919876543210',
+    // Contact Form
+    formTitle: "Let's Build Your Shopify Store — The Right Way.",
+    formDescription: "Get expert advice tailored to your brand. Whether you're starting fresh or redesigning, we'll guide you with a clear plan — no tech stress, no fluff.",
+    formButtonText: 'Book A Call',
+    formResponseText: '*Get Instant Response*',
+    showShopifyBadge: 'yes',
+    formNamePlaceholder: 'Your name',
+    formEmailPlaceholder: 'Your email',
+    formPhonePlaceholder: 'Your contact number',
+    successTitle: 'Thank you!',
+    successMessage: "We'll get back to you within 24 hours.",
+    // Footer
+    footerText: 'Thanks for visiting',
+    copyrightText: '© Goti 2025. All rights reserved.',
+  },
   about: {
     // Hero Section
     heroTitle1: 'What matters',

@@ -12,6 +12,7 @@ import {
 } from './pages';
 import FooterPreview from './pages/FooterPreview';
 import Landing from './pages/Landing';
+import LandingPage2 from './pages/LandingPage2';
 import AdminLogin from './admin/Login';
 import AdminDashboard from './admin/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -24,6 +25,9 @@ function App() {
         {/* Public Routes */}
         {/* Landing Page - First/Default Page */}
         <Route path="/" element={<Landing />} />
+
+        {/* Landing Page 2 - Shopify Design Focus */}
+        <Route path="/landing_page2" element={<LandingPage2 />} />
 
         {/* Home Page */}
         <Route

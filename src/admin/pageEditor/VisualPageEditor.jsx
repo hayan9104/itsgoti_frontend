@@ -14,6 +14,9 @@ const VisualPageEditor = () => {
     'case-study': 'Case Study',
     'home': 'Home Page',
     'approach': 'Our Approach',
+    'landing': 'Landing Page',
+    'landing-page-2': 'Landing Page 2 (Shopify)',
+    'footer': 'Footer',
   };
 
   const handleBack = () => {

@@ -14,10 +14,11 @@ const PagesManager = () => {
   const [selectedPage, setSelectedPage] = useState(null);
 
   // Pages that use the new visual editor
-  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home'];
+  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2'];
 
   const defaultPages = [
     { name: 'landing', label: 'Landing Page' },
+    { name: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
     { name: 'home', label: 'Home Page' },
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
@@ -107,7 +108,7 @@ const PagesManager = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
         {defaultPages.map((page) => {
           const pageData = getPageData(page.name);
-          const hasEditor = ['work', 'about', 'contact', 'case-study', 'home', 'approach', 'footer', 'landing'].includes(page.name);
+          const hasEditor = ['work', 'about', 'contact', 'case-study', 'home', 'approach', 'footer', 'landing', 'landing-page-2'].includes(page.name);
           return (
             <div
               key={page.name}

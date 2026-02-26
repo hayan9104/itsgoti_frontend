@@ -108,6 +108,7 @@ const Contact = () => {
         ...data,
         subject: `New Inquiry from ${data.name}`,
         source: selectedSource,
+        sourcePage: 'Contact Page',
       });
       setSubmitted(true);
       reset();

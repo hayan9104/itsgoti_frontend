@@ -18,10 +18,10 @@ const EditableSection = ({
     }, window.location.origin);
   };
 
-  // Base styles
+  // Base styles - keep position from style prop if provided, otherwise use relative
   const baseStyles = {
-    ...style,
     position: 'relative',
+    ...style,
   };
 
   // Editor mode styles

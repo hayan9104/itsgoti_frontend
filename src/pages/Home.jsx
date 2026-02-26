@@ -215,8 +215,13 @@ const Home = () => {
     }
   };
 
-  // Partner logos - can be customized via admin
-  const partnerLogos = [
+  // Partner logos - fetched from admin
+  const partnerLogosDesktop = pageContent.partnerLogos || [];
+  const partnerLogosMobile = pageContent.partnerLogosMobile || [];
+  const partnerLogos = isMobile ? partnerLogosMobile : partnerLogosDesktop;
+
+  // Fallback text logos if no images uploaded
+  const fallbackLogos = [
     'AUTOMATTIC', 'Wealthsimple', 'SPACEX', 'gusto', 'attentive', 'SONY',
     'Square', 'dribbble', 'drips', 'Dropbox'
   ];
@@ -624,38 +629,154 @@ const Home = () => {
           textAlign: 'center',
         }}>
           <p style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '14px' : '16px',
+            fontFamily: "'Gilroy-SemiBold', 'Plus Jakarta Sans', sans-serif",
+            fontSize: isMobile ? '20px' : '28px',
             fontWeight: 400,
+            fontStyle: 'normal',
             color: '#000',
-            maxWidth: '500px',
+            lineHeight: 'normal',
+            width: isMobile ? '100%' : '645px',
+            maxWidth: '100%',
             margin: `0 auto ${isMobile ? '24px' : '40px'}`,
+            textAlign: 'center',
           }}>
             {pageContent.partnerTitle}
           </p>
 
-          {/* Logo Grid */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: isMobile ? '16px 24px' : '24px 48px',
-            maxWidth: '1000px',
-            margin: '0 auto',
-          }}>
-            {partnerLogos.map((logo, index) => (
-              <span key={index} style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '14px' : '18px',
-                fontWeight: 500,
-                color: '#666',
-                opacity: 0.7,
-              }}>
-                {logo}
-              </span>
-            ))}
-          </div>
+          {/* Logo Grid - Two rows like About page */}
+          {(() => {
+            // Helper to get logo path
+            const getLogoPath = (logo) => {
+              if (typeof logo === 'string') return logo;
+              if (typeof logo === 'object' && logo !== null) {
+                return logo.image || logo.url || logo.path || logo.src || '';
+              }
+              return '';
+            };
+
+            // Split logos into two rows (6 in first row, rest in second)
+            const logosRow1 = partnerLogos.slice(0, 6);
+            const logosRow2 = isMobile ? [] : partnerLogos.slice(6, 10);
+
+            // Render logo item
+            const renderLogo = (logo, index) => {
+              const logoPath = getLogoPath(logo);
+              if (!logoPath) {
+                if (logo?.name) {
+                  return (
+                    <span key={index} style={{
+                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                      fontSize: isMobile ? '14px' : isTablet ? '16px' : '18px',
+                      color: '#999',
+                      fontWeight: 500,
+                      height: isMobile ? '28px' : isTablet ? '40px' : '48px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      {logo.name}
+                    </span>
+                  );
+                }
+                return null;
+              }
+              return (
+                <img
+                  key={index}
+                  src={getImageUrl(logoPath)}
+                  alt={logo?.name || `Partner logo ${index + 1}`}
+                  style={{
+                    width: 'auto',
+                    height: isMobile ? '28px' : isTablet ? '40px' : '48px',
+                    objectFit: 'contain',
+                    filter: 'grayscale(100%)',
+                    opacity: 0.6,
+                    transition: 'opacity 0.3s, filter 0.3s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.opacity = '1';
+                    e.target.style.filter = 'grayscale(0%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.opacity = '0.6';
+                    e.target.style.filter = 'grayscale(100%)';
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              );
+            };
+
+            if (partnerLogos.length === 0) {
+              // Fallback text logos
+              return (
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: isMobile ? '24px 32px' : isTablet ? '40px' : '81px',
+                  maxWidth: '1200px',
+                  margin: '0 auto',
+                }}>
+                  {fallbackLogos.map((logo, index) => (
+                    <span key={index} style={{
+                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                      fontSize: isMobile ? '14px' : isTablet ? '16px' : '18px',
+                      color: '#999',
+                      fontWeight: 500,
+                    }}>
+                      {logo}
+                    </span>
+                  ))}
+                </div>
+              );
+            }
+
+            return (
+              <>
+                {/* Mobile: All logos in flex wrap */}
+                {isMobile && (
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '24px 32px',
+                    justifyContent: 'center',
+                  }}>
+                    {partnerLogos.map((logo, index) => renderLogo(logo, index))}
+                  </div>
+                )}
+
+                {/* Desktop/Tablet: Row 1 */}
+                {!isMobile && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isTablet ? '40px' : '81px',
+                    marginBottom: '56px',
+                    flexWrap: 'nowrap',
+                  }}>
+                    {logosRow1.map((logo, index) => renderLogo(logo, index))}
+                  </div>
+                )}
+
+                {/* Desktop/Tablet: Row 2 */}
+                {!isMobile && logosRow2.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isTablet ? '40px' : '81px',
+                    flexWrap: 'nowrap',
+                  }}>
+                    {logosRow2.map((logo, index) => renderLogo(logo, index + 6))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </section>
       </EditableSection>
 
