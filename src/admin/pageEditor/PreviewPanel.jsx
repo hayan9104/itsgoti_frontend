@@ -16,6 +16,7 @@ const PreviewPanel = ({ pageName, themeId }) => {
     'footer': '/footer-preview',
     'landing': '/',
     'landing-page-2': '/landing_page2',
+    'landing-page-3': '/landing_page3',
   };
 
   // Build preview URL with themeId if present

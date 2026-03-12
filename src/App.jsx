@@ -30,6 +30,7 @@ function App() {
   const Contact = getThemeComponent(themeCode, 'Contact');
   const Landing = getThemeComponent(themeCode, 'Landing');
   const LandingPage2 = getThemeComponent(themeCode, 'LandingPage2');
+  const LandingPage3 = getThemeComponent(themeCode, 'LandingPage3');
   const FooterPreview = getThemeComponent(themeCode, 'FooterPreview');
 
   return (
@@ -46,6 +47,12 @@ function App() {
         <Route path="/landing_page2" element={
           <PageVisibilityWrapper pageName="landing-page-2" fallbackPath="/home">
             {LandingPage2 && <LandingPage2 />}
+          </PageVisibilityWrapper>
+        } />
+
+        <Route path="/landing_page3" element={
+          <PageVisibilityWrapper pageName="landing-page-3" fallbackPath="/home">
+            {LandingPage3 && <LandingPage3 />}
           </PageVisibilityWrapper>
         } />
 

@@ -370,6 +370,7 @@ const ThemePagesWrapper = () => {
   const defaultPages = [
     { name: 'landing', label: 'Landing Page' },
     { name: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
+    { name: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
     { name: 'home', label: 'Home Page' },
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
@@ -380,7 +381,7 @@ const ThemePagesWrapper = () => {
   ];
 
   // Pages that use the visual editor
-  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2'];
+  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
   // Pages that use modal editors
   const modalEditorPages = ['case-study'];
   // All editable pages
@@ -591,6 +592,7 @@ const ThemePagesWrapper = () => {
               {getAvailableRedirectPages().map((page) => {
                 const routePath = page.name === 'landing' ? '/'
                   : page.name === 'landing-page-2' ? '/landing_page2'
+                  : page.name === 'landing-page-3' ? '/landing_page3'
                   : page.name === 'case-study' ? '/case-studies'
                   : `/${page.name}`;
                 return (

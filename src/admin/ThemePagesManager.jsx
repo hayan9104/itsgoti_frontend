@@ -11,6 +11,7 @@ const ThemePagesManager = () => {
   const defaultPages = [
     { name: 'landing', label: 'Landing Page' },
     { name: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
+    { name: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
     { name: 'home', label: 'Home Page' },
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
@@ -20,7 +21,7 @@ const ThemePagesManager = () => {
     { name: 'footer', label: 'Footer' },
   ];
 
-  const editablePages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2'];
+  const editablePages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
 
   useEffect(() => {
     fetchTheme();

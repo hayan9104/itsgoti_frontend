@@ -7,6 +7,7 @@ import ImageArrayEditor from './fields/ImageArrayEditor';
 import StatsArrayEditor from './fields/StatsArrayEditor';
 import MediaFieldEditor from './fields/MediaFieldEditor';
 import TestimonialsArrayEditor from './fields/TestimonialsArrayEditor';
+import CaseStudiesArrayEditor from './fields/CaseStudiesArrayEditor';
 
 const fieldComponents = {
   text: TextFieldEditor,
@@ -16,6 +17,7 @@ const fieldComponents = {
   statsArray: StatsArrayEditor,
   media: MediaFieldEditor,
   testimonialsArray: TestimonialsArrayEditor,
+  caseStudiesArray: CaseStudiesArrayEditor,
 };
 
 const SectionFieldsRenderer = () => {
@@ -79,7 +81,7 @@ const SectionFieldsRenderer = () => {
             );
           }
 
-          const isArrayField = ['imageArray', 'statsArray', 'logoArray', 'testimonialsArray'].includes(field.type);
+          const isArrayField = ['imageArray', 'statsArray', 'logoArray', 'testimonialsArray', 'caseStudiesArray'].includes(field.type);
 
           return (
             <FieldComponent
