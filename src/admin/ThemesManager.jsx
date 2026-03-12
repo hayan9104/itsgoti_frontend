@@ -145,6 +145,12 @@ const ThemesManager = () => {
     navigate(`/admin/themes/${themeId}`);
   };
 
+  const handlePreview = (themeCode) => {
+    // Open preview in new tab with the specific theme code
+    const previewUrl = `/?themeCode=${themeCode || 'default'}`;
+    window.open(previewUrl, '_blank');
+  };
+
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -235,6 +241,7 @@ const ThemesManager = () => {
               openMenu={openMenu}
               setOpenMenu={setOpenMenu}
               onEdit={() => handleEditTheme(liveTheme._id)}
+              onPreview={() => handlePreview(liveTheme.themeCode)}
               onDuplicate={() => handleDuplicate(liveTheme._id, liveTheme.name)}
               onRename={() => { setShowRenameModal(liveTheme._id); setRenameName(liveTheme.name); }}
               onChangeCode={() => { setShowCodeModal(liveTheme._id); const codes = getAvailableThemeCodes(); const current = liveTheme.themeCode || 'default'; setNewThemeCode(codes.includes(current) ? current : codes[0] || 'default'); }}
@@ -274,6 +281,7 @@ const ThemesManager = () => {
                   openMenu={openMenu}
                   setOpenMenu={setOpenMenu}
                   onEdit={() => handleEditTheme(theme._id)}
+                  onPreview={() => handlePreview(theme.themeCode)}
                   onPublish={() => setShowPublishConfirm(theme._id)}
                   onDuplicate={() => handleDuplicate(theme._id, theme.name)}
                   onRename={() => { setShowRenameModal(theme._id); setRenameName(theme.name); }}
@@ -526,7 +534,7 @@ const LiveThemePreview = () => {
 // Theme Card Component
 const ThemeCard = ({
   theme, isLive, actionLoading, openMenu, setOpenMenu,
-  onEdit, onPublish, onDuplicate, onRename, onDelete, onChangeCode, formatDate,
+  onEdit, onPublish, onDuplicate, onRename, onDelete, onChangeCode, onPreview, formatDate,
 }) => {
   const isLoading = actionLoading === theme._id;
 
@@ -547,7 +555,7 @@ const ThemeCard = ({
           flexShrink: 0, position: 'relative',
         }}>
           <iframe
-            src="/"
+            src={`/?themeCode=${theme.themeCode || 'default'}`}
             title={`${theme.name} preview`}
             style={{
               position: 'absolute', top: 0, left: 0,
@@ -560,7 +568,7 @@ const ThemeCard = ({
 
         {/* Info */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>{theme.name}</span>
             {isLive && (
               <span style={{
@@ -571,17 +579,16 @@ const ThemeCard = ({
               </span>
             )}
           </div>
-          <span style={{ fontSize: 13, color: '#6b7280' }}>
+          <span style={{ fontSize: 13, color: '#6b7280', display: 'block', marginBottom: 4 }}>
             Last saved: {formatDate(theme.updatedAt)}
           </span>
-          <div style={{ marginTop: 2 }}>
-            <span style={{
-              fontSize: 11, fontFamily: 'monospace', color: '#6b7280',
-              backgroundColor: '#f3f4f6', padding: '1px 6px', borderRadius: 4,
-            }}>
-              code: {theme.themeCode || 'default'}
-            </span>
-          </div>
+          <span style={{
+            fontSize: 11, fontFamily: 'monospace', color: '#6b7280',
+            backgroundColor: '#f3f4f6', padding: '2px 8px', borderRadius: 4,
+            display: 'inline-block',
+          }}>
+            code: {theme.themeCode || 'default'}
+          </span>
         </div>
       </div>
 
@@ -606,16 +613,31 @@ const ThemeCard = ({
 
           {openMenu === theme._id && (
             <div style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: 4,
-              backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
-              boxShadow: '0 10px 25px rgba(0,0,0,0.1)', minWidth: 160, zIndex: 50,
-              overflow: 'hidden',
+              position: 'absolute', bottom: '100%', right: 0, marginBottom: 4,
+              backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 12,
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.15)', minWidth: 180, zIndex: 50,
+              overflow: 'hidden', padding: '4px 0',
             }}>
-              <MenuButton onClick={() => { onDuplicate(); }}>Duplicate</MenuButton>
-              <MenuButton onClick={() => { setOpenMenu(null); onRename(); }}>Rename</MenuButton>
-              <MenuButton onClick={() => { setOpenMenu(null); onChangeCode(); }}>Change code folder</MenuButton>
+              {/* Menu Header */}
+              <div style={{
+                padding: '8px 14px 6px',
+                fontSize: 11,
+                fontWeight: 600,
+                color: '#9ca3af',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}>
+                Actions
+              </div>
+              <MenuButton icon="preview" onClick={() => { setOpenMenu(null); onPreview(); }}>Preview</MenuButton>
+              <MenuButton icon="duplicate" onClick={() => { onDuplicate(); }}>Duplicate</MenuButton>
+              <MenuButton icon="rename" onClick={() => { setOpenMenu(null); onRename(); }}>Rename</MenuButton>
+              <MenuButton icon="code" onClick={() => { setOpenMenu(null); onChangeCode(); }}>Change code folder</MenuButton>
               {!isLive && (
-                <MenuButton onClick={() => { setOpenMenu(null); onDelete(); }} danger>Delete</MenuButton>
+                <>
+                  <div style={{ height: 1, backgroundColor: '#f3f4f6', margin: '4px 0' }} />
+                  <MenuButton icon="delete" onClick={() => { setOpenMenu(null); onDelete(); }} danger>Delete</MenuButton>
+                </>
               )}
             </div>
           )}
@@ -653,18 +675,61 @@ const ThemeCard = ({
   );
 };
 
+// Menu icons
+const MenuIcons = {
+  preview: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  duplicate: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  ),
+  rename: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  ),
+  code: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </svg>
+  ),
+  delete: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  ),
+};
+
 // Reusable menu button
-const MenuButton = ({ children, onClick, danger }) => (
+const MenuButton = ({ children, onClick, danger, icon }) => (
   <button
     onClick={onClick}
     style={{
-      display: 'block', width: '100%', padding: '10px 16px',
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 14px', margin: '0 4px', borderRadius: 6,
       textAlign: 'left', border: 'none', backgroundColor: 'transparent',
-      cursor: 'pointer', fontSize: 14, color: danger ? '#dc2626' : '#374151',
+      cursor: 'pointer', fontSize: 14, fontWeight: 500,
+      color: danger ? '#dc2626' : '#374151',
+      boxSizing: 'border-box',
+      width: 'calc(100% - 8px)',
     }}
-    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = danger ? '#fef2f2' : '#f9fafb'; }}
+    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = danger ? '#fef2f2' : '#f3f4f6'; }}
     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
   >
+    {icon && MenuIcons[icon] && (
+      <span style={{ display: 'flex', color: danger ? '#dc2626' : '#6b7280' }}>
+        {MenuIcons[icon]}
+      </span>
+    )}
     {children}
   </button>
 );
