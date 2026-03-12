@@ -5,7 +5,8 @@ const EditableSection = ({
   isSelected,
   isHidden = false,
   label,
-  style = {}
+  style = {},
+  id,
 }) => {
   const handleClick = (e) => {
     if (!isEditorMode) return;
@@ -41,6 +42,7 @@ const EditableSection = ({
 
   return (
     <section
+      id={id}
       data-section-id={sectionId}
       onClick={handleClick}
       style={{ ...baseStyles, ...editorStyles, ...hiddenStyles }}

@@ -76,11 +76,19 @@ const LandingPage3 = () => {
   const isEditorMode = searchParams.get('editor') === 'true';
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  // Scroll to section helper
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors: _errors },
+    formState: { errors },
   } = useForm();
 
   useEffect(() => {
@@ -318,6 +326,10 @@ const LandingPage3 = () => {
   // Parse client brands - ensure it's an array
   const clientBrands = ensureArray(content.clientBrands, defaultContent.clientBrands);
 
+  // Parse client logos - check if images are uploaded
+  const clientLogos = ensureArray(content.clientLogos, []);
+  const hasClientLogos = clientLogos.length > 0 && clientLogos.some(logo => logo && typeof logo === 'string' && logo.trim() !== '');
+
   if (loading) {
     return (
       <div style={{
@@ -391,7 +403,7 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('header')}
           style={{
             backgroundColor: '#e1ffa0',
-            height: isMobile ? '70px' : '99px',
+            height: isMobile ? '73px' : '99px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -400,7 +412,7 @@ const LandingPage3 = () => {
         >
           <p style={{
             fontFamily: "'Archivo Black', sans-serif",
-            fontSize: isMobile ? '36px' : '52.5px',
+            fontSize: isMobile ? '34px' : '52.5px',
             fontWeight: 400,
             color: '#000',
             lineHeight: '42px',
@@ -421,7 +433,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'hero'}
           isHidden={isSectionHidden('hero')}
           style={{
-            padding: isMobile ? '40px 20px' : '71px 243px 40px',
+            padding: isMobile ? '66px 20px 40px' : '71px 243px 40px',
             textAlign: 'center',
           }}
         >
@@ -429,23 +441,24 @@ const LandingPage3 = () => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '40px',
-            maxWidth: '954px',
+            gap: isMobile ? '16px' : '40px',
+            maxWidth: isMobile ? '390px' : '954px',
             margin: '0 auto',
           }}>
             {/* Title with Blue Highlight */}
             <div style={{
               position: 'relative',
-              width: isMobile ? '100%' : '689px',
+              width: isMobile ? '354px' : '689px',
             }}>
               {/* Blue background for "Shopify Website" */}
               <div style={{
                 position: 'absolute',
                 backgroundColor: '#2558bf',
-                height: isMobile ? '32px' : '57px',
-                left: isMobile ? '14%' : '175px',
-                top: isMobile ? '4px' : '4px',
-                width: isMobile ? '72%' : '500px',
+                height: isMobile ? '31px' : '57px',
+                left: isMobile ? '60px' : '175px',
+                top: isMobile ? '2px' : '4px',
+                width: isMobile ? '280px' : '500px',
+                borderRadius: isMobile ? '7.732px' : '0',
                 zIndex: 0,
               }} />
               <h1 style={{
@@ -469,22 +482,22 @@ const LandingPage3 = () => {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '24px',
+              gap: isMobile ? '16px' : '24px',
               alignItems: 'center',
               width: '100%',
             }}>
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '5px',
+                gap: isMobile ? '0' : '5px',
                 alignItems: 'center',
-                maxWidth: isMobile ? '100%' : '942px',
+                maxWidth: isMobile ? '378px' : '942px',
               }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '18px' : '24px',
+                  fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 400,
-                  lineHeight: 1.5,
+                  lineHeight: isMobile ? 'normal' : 1.5,
                   color: '#000',
                   textAlign: 'center',
                   margin: 0,
@@ -493,7 +506,7 @@ const LandingPage3 = () => {
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '18px' : '24px',
+                  fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 400,
                   lineHeight: 1.5,
                   color: '#000',
@@ -507,11 +520,12 @@ const LandingPage3 = () => {
               {/* Checkmarks */}
               <div style={{
                 display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: isMobile ? '12px' : '40px',
+                flexDirection: 'column',
+                gap: '12px',
                 alignItems: 'center',
                 justifyContent: 'center',
-                flexWrap: 'wrap',
+                width: isMobile ? '320px' : 'auto',
+                ...(isMobile ? {} : { flexDirection: 'row', gap: '40px', flexWrap: 'wrap' }),
               }}>
                 {[content.checkmark1, content.checkmark2, content.checkmark3].map((item, index) => (
                   <div key={index} style={{
@@ -519,6 +533,7 @@ const LandingPage3 = () => {
                     gap: '10px',
                     alignItems: 'center',
                     padding: '4px',
+                    justifyContent: 'center',
                   }}>
                     <div style={{
                       backgroundColor: '#fff',
@@ -529,12 +544,14 @@ const LandingPage3 = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      width: isMobile ? '22px' : 'auto',
+                      height: isMobile ? '22px' : 'auto',
                     }}>
                       <CheckmarkIcon />
                     </div>
                     <span style={{
                       fontFamily: "'Barlow', sans-serif",
-                      fontSize: isMobile ? '16px' : '18px',
+                      fontSize: '18px',
                       fontWeight: 600,
                       color: '#000',
                       lineHeight: 1.5,
@@ -549,24 +566,27 @@ const LandingPage3 = () => {
             {/* CTA Button */}
             <div style={{
               position: 'relative',
-              width: isMobile ? '100%' : '383px',
-              maxWidth: '383px',
+              width: isMobile ? '280px' : '383px',
+              marginTop: isMobile ? '8px' : '0',
             }}>
-              <button style={{
+              <button
+                onClick={() => scrollToSection('pricing-section')}
+                style={{
                 backgroundColor: '#000',
-                borderRadius: '905.76px',
+                borderRadius: isMobile ? '630.925px' : '905.76px',
                 width: '100%',
-                height: '68px',
+                height: isMobile ? '47px' : '68px',
                 border: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 14px 0 28px',
+                justifyContent: isMobile ? 'center' : 'space-between',
+                gap: isMobile ? '12px' : '0',
+                padding: isMobile ? '0 15px' : '0 14px 0 28px',
                 cursor: 'pointer',
               }}>
                 <span style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: isMobile ? '20px' : '24px',
+                  fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 600,
                   color: '#fff',
                   textTransform: 'uppercase',
@@ -577,13 +597,13 @@ const LandingPage3 = () => {
                 <div style={{
                   backgroundColor: '#fff',
                   borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
+                  width: isMobile ? '28px' : '40px',
+                  height: isMobile ? '28px' : '40px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <ArrowIcon color="#000" size={14} />
+                  <ArrowIcon color="#000" size={isMobile ? 10 : 14} />
                 </div>
               </button>
             </div>
@@ -600,7 +620,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'phoneCarousel'}
           isHidden={isSectionHidden('phoneCarousel')}
           style={{
-            padding: isMobile ? '20px' : '0 120px 40px',
+            padding: isMobile ? '20px 0' : '0 120px 40px',
           }}
         >
           {/* Phone Mockups - Coverflow Carousel */}
@@ -608,82 +628,117 @@ const LandingPage3 = () => {
             style={{
               display: 'flex',
               justifyContent: 'center',
-              alignItems: 'center',
+              alignItems: isMobile ? 'flex-end' : 'center',
               overflow: 'hidden',
-              padding: '40px 0',
+              padding: isMobile ? '20px 0' : '40px 0',
               position: 'relative',
               width: '100%',
-              minHeight: isMobile ? '400px' : '700px',
+              minHeight: isMobile ? '320px' : '700px',
             }}
           >
-            <div
-              style={{
-                position: 'relative',
-                width: isMobile ? '300px' : '700px',
-                height: isMobile ? '360px' : '650px',
+            {isMobile ? (
+              /* Mobile: 3 phones in a row with specific sizing */
+              <div style={{
                 display: 'flex',
-                alignItems: 'center',
+                gap: '12px',
+                alignItems: 'flex-end',
                 justifyContent: 'center',
-              }}
-            >
-              {portfolioImages.map((img, index) => {
-                // Calculate position relative to current slide (with wrapping)
-                const totalImages = portfolioImages.length;
-                let offset = index - currentSlide;
+              }}>
+                {portfolioImages.slice(0, 3).map((img, index) => {
+                  const isCenter = index === 1;
+                  const width = isCenter ? 141.561 : 119.844;
+                  const height = isCenter ? 297 : 251.436;
 
-                // Wrap around for infinite loop
-                if (offset > totalImages / 2) offset -= totalImages;
-                if (offset < -totalImages / 2) offset += totalImages;
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        width: `${width}px`,
+                        height: `${height}px`,
+                        backgroundColor: '#c4c4c4',
+                        borderRadius: '20px',
+                        border: '4px solid #000',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {typeof img === 'string' && !img.includes('placeholder') ? (
+                        <img
+                          src={img}
+                          alt={`Portfolio ${index + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Desktop: Coverflow carousel */
+              <div
+                style={{
+                  position: 'relative',
+                  width: '700px',
+                  height: '650px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {portfolioImages.map((img, index) => {
+                  const totalImages = portfolioImages.length;
+                  let offset = index - currentSlide;
 
-                // Determine card properties based on position
-                const isCenter = offset === 0;
-                const isLeft = offset === -1;
-                const isRight = offset === 1;
-                const isVisible = Math.abs(offset) <= 1;
+                  if (offset > totalImages / 2) offset -= totalImages;
+                  if (offset < -totalImages / 2) offset += totalImages;
 
-                // Sizes
-                const centerWidth = isMobile ? 160 : 300;
-                const sideWidth = isMobile ? 110 : 254;
-                const centerHeight = isMobile ? 340 : 629;
-                const sideHeight = isMobile ? 260 : 533;
-                const borderWidth = isMobile ? 4 : 7;
+                  const isCenter = offset === 0;
+                  const isLeft = offset === -1;
+                  const isRight = offset === 1;
+                  const isVisible = Math.abs(offset) <= 1;
 
-                // Calculate transforms
-                const translateX = isCenter ? 0 : (isLeft ? (isMobile ? -120 : -280) : (isRight ? (isMobile ? 120 : 280) : (offset < 0 ? -400 : 400)));
-                const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
-                const zIndex = isCenter ? 10 : (isVisible ? 5 : 1);
-                const opacity = isCenter ? 1 : (isVisible ? 0.85 : 0);
+                  const centerWidth = 300;
+                  const sideWidth = 254;
+                  const centerHeight = 629;
+                  const sideHeight = 533;
+                  const borderWidth = 7;
 
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      position: 'absolute',
-                      width: isCenter ? `${centerWidth}px` : `${sideWidth}px`,
-                      height: isCenter ? `${centerHeight}px` : `${sideHeight}px`,
-                      backgroundColor: '#c4c4c4',
-                      borderRadius: '37.328px',
-                      border: `${borderWidth}px solid #000`,
-                      boxShadow: `0 0 0 ${borderWidth}px #CCCCCC`,
-                      overflow: 'hidden',
-                      transform: `translateX(${translateX}px) scale(${scale})`,
-                      opacity,
-                      zIndex,
-                      transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                      pointerEvents: isVisible ? 'auto' : 'none',
-                    }}
-                  >
-                    {typeof img === 'string' && !img.includes('placeholder') ? (
-                      <img
-                        src={img}
-                        alt={`Portfolio ${index + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
+                  const translateX = isCenter ? 0 : (isLeft ? -280 : (isRight ? 280 : (offset < 0 ? -400 : 400)));
+                  const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
+                  const zIndex = isCenter ? 10 : (isVisible ? 5 : 1);
+                  const opacity = isCenter ? 1 : (isVisible ? 0.85 : 0);
+
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        position: 'absolute',
+                        width: isCenter ? `${centerWidth}px` : `${sideWidth}px`,
+                        height: isCenter ? `${centerHeight}px` : `${sideHeight}px`,
+                        backgroundColor: '#c4c4c4',
+                        borderRadius: '37.328px',
+                        border: `${borderWidth}px solid #000`,
+                        boxShadow: `0 0 0 ${borderWidth}px #CCCCCC`,
+                        overflow: 'hidden',
+                        transform: `translateX(${translateX}px) scale(${scale})`,
+                        opacity,
+                        zIndex,
+                        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                        pointerEvents: isVisible ? 'auto' : 'none',
+                      }}
+                    >
+                      {typeof img === 'string' && !img.includes('placeholder') ? (
+                        <img
+                          src={img}
+                          alt={`Portfolio ${index + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Carousel Navigation */}
@@ -691,10 +746,11 @@ const LandingPage3 = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '20px',
-            marginTop: '40px',
-            maxWidth: '689px',
-            margin: '40px auto 0',
+            gap: isMobile ? '12px' : '20px',
+            marginTop: isMobile ? '20px' : '40px',
+            maxWidth: isMobile ? '358px' : '689px',
+            margin: isMobile ? '20px auto 0' : '40px auto 0',
+            padding: isMobile ? '0 20px' : '0',
           }}>
             {/* Left Arrow */}
             <button
@@ -706,9 +762,9 @@ const LandingPage3 = () => {
               disabled={currentSlide === 0}
               style={{
                 backgroundColor: currentSlide === 0 ? '#94a3b8' : '#2558bf',
-                borderRadius: '12px',
-                width: '42px',
-                height: '42px',
+                borderRadius: isMobile ? '9.143px' : '12px',
+                width: isMobile ? '32px' : '42px',
+                height: isMobile ? '32px' : '42px',
                 border: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -716,6 +772,7 @@ const LandingPage3 = () => {
                 cursor: currentSlide === 0 ? 'not-allowed' : 'pointer',
                 transition: 'background-color 0.2s ease, transform 0.2s ease',
                 opacity: currentSlide === 0 ? 0.6 : 1,
+                flexShrink: 0,
               }}
             >
               <LeftArrowIcon />
@@ -724,11 +781,11 @@ const LandingPage3 = () => {
             {/* Progress Bar */}
             <div style={{
               flex: 1,
-              height: '8px',
+              height: isMobile ? '6px' : '8px',
               backgroundColor: '#ddd',
               borderRadius: '12px',
               overflow: 'hidden',
-              maxWidth: '477px',
+              maxWidth: isMobile ? '282px' : '477px',
             }}>
               <div style={{
                 width: `${((currentSlide + 1) / portfolioImages.length) * 100}%`,
@@ -749,9 +806,9 @@ const LandingPage3 = () => {
               disabled={currentSlide >= portfolioImages.length - 1}
               style={{
                 backgroundColor: currentSlide >= portfolioImages.length - 1 ? '#94a3b8' : '#2558bf',
-                borderRadius: '12px',
-                width: '42px',
-                height: '42px',
+                borderRadius: isMobile ? '9.143px' : '12px',
+                width: isMobile ? '32px' : '42px',
+                height: isMobile ? '32px' : '42px',
                 border: 'none',
                 display: 'flex',
                 alignItems: 'center',
@@ -759,6 +816,7 @@ const LandingPage3 = () => {
                 cursor: currentSlide >= portfolioImages.length - 1 ? 'not-allowed' : 'pointer',
                 transition: 'background-color 0.2s ease, transform 0.2s ease',
                 opacity: currentSlide >= portfolioImages.length - 1 ? 0.6 : 1,
+                flexShrink: 0,
               }}
             >
               <RightArrowIcon />
@@ -776,19 +834,19 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'problem'}
           isHidden={isSectionHidden('problem')}
           style={{
-            padding: isMobile ? '60px 20px' : '80px 120px',
+            padding: isMobile ? '40px 20px' : '80px 120px',
             textAlign: 'center',
           }}
         >
           {/* Problem Statement */}
           <p style={{
             fontFamily: "'Barlow', sans-serif",
-            fontSize: isMobile ? '20px' : '24px',
+            fontSize: isMobile ? '18px' : '24px',
             fontWeight: 500,
             lineHeight: 1.5,
             color: '#000',
             textAlign: 'center',
-            maxWidth: '702px',
+            maxWidth: isMobile ? '390px' : '702px',
             margin: '0 auto 40px',
           }}>
             {content.problemTitle}
@@ -800,14 +858,15 @@ const LandingPage3 = () => {
             border: '1px solid #000',
             borderRadius: '16px',
             boxShadow: '4px 4px 0px 0px #150634',
-            padding: '24px',
-            maxWidth: '468px',
+            padding: isMobile ? '24px 16px' : '24px',
+            maxWidth: isMobile ? '390px' : '468px',
+            minHeight: isMobile ? '317px' : 'auto',
             margin: '0 auto 40px',
             textAlign: 'center',
           }}>
             <h3 style={{
               fontFamily: "'Gabarito', sans-serif",
-              fontSize: '24px',
+              fontSize: isMobile ? '22px' : '24px',
               fontWeight: 600,
               lineHeight: 1.2,
               color: '#000',
@@ -817,7 +876,7 @@ const LandingPage3 = () => {
             </h3>
             <div style={{
               fontFamily: "'Barlow', sans-serif",
-              fontSize: '18px',
+              fontSize: isMobile ? '16px' : '18px',
               fontWeight: 500,
               lineHeight: 1.5,
               color: '#000',
@@ -839,13 +898,13 @@ const LandingPage3 = () => {
           {/* Better Way */}
           <p style={{
             fontFamily: "'Gabarito', sans-serif",
-            fontSize: '24px',
+            fontSize: isMobile ? '20px' : '24px',
             fontWeight: 500,
             lineHeight: 1.2,
             color: '#000',
             margin: 0,
-            marginTop: '70px',
-            marginBottom: '-50px',
+            marginTop: isMobile ? '40px' : '70px',
+            marginBottom: isMobile ? '-30px' : '-50px',
           }}>
             There's a <span style={{ position: 'relative', display: 'inline-block' }}>
               {/* Orange oval highlight image */}
@@ -857,8 +916,8 @@ const LandingPage3 = () => {
                   top: '50%',
                   left: '50%',
                   transform: 'translate(-50%, -50%)',
-                  width: '185px',
-                  height: '39px',
+                  width: isMobile ? '121px' : '185px',
+                  height: isMobile ? '39px' : '39px',
                   objectFit: 'fill',
                   pointerEvents: 'none',
                 }}
@@ -878,17 +937,19 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'solution'}
           isHidden={isSectionHidden('solution')}
           style={{
-            padding: isMobile ? '40px 20px' : '60px 120px',
+            padding: isMobile ? '60px 20px 40px' : '60px 120px',
             textAlign: 'center',
           }}
         >
           <h2 style={{
-            fontFamily: "'Poppins', sans-serif",
-            fontSize: isMobile ? '28px' : '32px',
+            fontFamily: isMobile ? "'Gabarito', sans-serif" : "'Poppins', sans-serif",
+            fontSize: isMobile ? '22px' : '32px',
             fontWeight: 600,
-            lineHeight: 1.2,
+            lineHeight: isMobile ? 'normal' : 1.2,
             color: '#000',
-            marginBottom: '24px',
+            marginBottom: isMobile ? '16px' : '24px',
+            maxWidth: isMobile ? '358px' : 'none',
+            margin: isMobile ? '0 auto 16px' : '0 0 24px 0',
           }}>
             {content.solutionTitle}
           </h2>
@@ -898,7 +959,7 @@ const LandingPage3 = () => {
             fontWeight: 500,
             lineHeight: 1.5,
             color: '#000',
-            maxWidth: '702px',
+            maxWidth: isMobile ? '377px' : '702px',
             margin: '0 auto',
             whiteSpace: 'pre-line',
           }}>
@@ -916,14 +977,15 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'caseStudies'}
           isHidden={isSectionHidden('caseStudies')}
           style={{
-            padding: isMobile ? '40px 20px' : '60px 120px',
+            padding: isMobile ? '40px 20px' : '0px 120px 60px',
+            marginTop: isMobile ? '40px' : '60px',
           }}
         >
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '64px',
-            maxWidth: '953px',
+            gap: isMobile ? '40px' : '64px',
+            maxWidth: isMobile ? '388px' : '953px',
             margin: '0 auto',
           }}>
             {caseStudies.map((study, studyIndex) => {
@@ -933,85 +995,56 @@ const LandingPage3 = () => {
                   style={{
                     position: 'relative',
                     width: '100%',
-                    maxWidth: '959px',
-                    marginTop: '50px',
+                    maxWidth: isMobile ? '388px' : '959px',
+                    marginTop: studyIndex === 0 ? '0px' : (isMobile ? '20px' : '50px'),
                   }}
                 >
-                  {/* SVG Container with integrated tab */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 959 463"
-                    fill="none"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      overflow: 'visible',
-                    }}
-                    preserveAspectRatio="xMidYMid meet"
-                  >
-                    <defs>
-                      <filter id={`shadow_${studyIndex}`} x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox">
-                        <feDropShadow dx="4" dy="4" stdDeviation="0" floodColor="#150634" floodOpacity="1"/>
-                      </filter>
-                    </defs>
-                    <path
-                      d="M1 431.327V66.7221C1 58.0821 1 53.7622 2.6105 50.4496C4.21833 47.1425 6.9162 44.4902 10.2502 42.9389C13.5897 41.3851 17.909 41.4586 26.5477 41.6058H26.5478L61.6564 42.2037C66.0009 42.2777 68.1732 42.3147 69.9676 41.9296C76.0277 40.6291 80.7916 35.9457 82.195 29.9087C82.6106 28.121 82.6106 25.9485 82.6106 21.6033C82.6106 17.3241 82.6106 15.1845 83.0173 13.4152C84.3903 7.44308 89.0537 2.7797 95.0258 1.40675C96.7951 1 98.9347 1 103.214 1H187.066C192.693 1 195.506 1 197.985 1.8324C200.469 2.66649 202.71 4.09778 204.511 6.00052C206.308 7.89941 207.491 10.4518 209.857 15.5567L215.864 28.5157C218.23 33.6206 219.413 36.173 221.21 38.0719C223.012 39.9746 225.253 41.4059 227.736 42.24C230.215 43.0724 233.028 43.0724 238.655 43.0724H928.491C936.999 43.0724 941.253 43.0724 944.537 44.6491C947.815 46.2235 950.46 48.8678 952.034 52.1464C953.611 55.4299 953.611 59.6841 953.611 68.1924V432.643C953.611 441.163 953.611 445.423 952.031 448.709C950.454 451.99 947.805 454.635 944.521 456.207C941.233 457.782 936.973 457.776 928.454 457.763L26.0833 456.447C17.5863 456.434 13.3377 456.428 10.059 454.85C6.78516 453.273 4.14534 450.63 2.57384 447.353C1 444.072 1 439.824 1 431.327Z"
-                      fill="white"
-                      filter={`url(#shadow_${studyIndex})`}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <path
-                      d="M187.066 0.5C192.657 0.5 195.57 0.493756 198.145 1.3584C200.706 2.21857 203.017 3.69513 204.874 5.65723C206.741 7.62963 207.961 10.2743 210.312 15.3467L216.317 28.3057C218.698 33.4426 219.845 35.9032 221.573 37.7285C223.318 39.5717 225.489 40.9576 227.896 41.7656C230.278 42.5658 232.993 42.5723 238.655 42.5723H928.49C932.737 42.5723 935.95 42.5716 938.512 42.7705C941.078 42.9699 943.032 43.372 944.753 44.1982C948.134 45.8217 950.861 48.5488 952.484 51.9297C953.311 53.6504 953.713 55.6044 953.912 58.1709C954.111 60.7323 954.11 63.9461 954.11 68.1924V432.644C954.11 436.895 954.111 440.113 953.912 442.678C953.712 445.247 953.309 447.203 952.481 448.925C950.855 452.308 948.123 455.037 944.737 456.658C943.014 457.483 941.057 457.883 938.487 458.079C935.923 458.275 932.705 458.27 928.453 458.264L26.083 456.946C21.8425 456.94 18.6331 456.937 16.0752 456.734C13.5118 456.532 11.5601 456.127 9.8418 455.3C6.4658 453.674 3.74361 450.948 2.12305 447.569C1.29835 445.85 0.897235 443.898 0.698242 441.335C0.499668 438.777 0.5 435.568 0.5 431.327V66.7217C0.5 62.4098 0.49994 59.1468 0.703125 56.5488C0.90673 53.9457 1.31714 51.9675 2.16113 50.2314C3.8192 46.821 6.60094 44.0851 10.0391 42.4854C11.7893 41.671 13.7746 41.295 16.3809 41.1357C18.982 40.9768 22.2452 41.032 26.5566 41.1055L61.665 41.7041C66.0373 41.7786 68.1382 41.8104 69.8623 41.4404C75.7329 40.1807 80.3483 35.6441 81.708 29.7959C82.1073 28.0783 82.1104 25.9767 82.1104 21.6035C82.1104 17.352 82.1076 15.1413 82.5303 13.3027C83.9463 7.14419 88.7554 2.33574 94.9141 0.919922C96.7526 0.497292 98.9625 0.5 103.214 0.5H187.066Z"
-                      stroke="black"
-                      strokeWidth="1"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                  </svg>
-
-                  {/* Tab Label - positioned in the tab area */}
-                  <span style={{
-                    position: 'absolute',
-                    top: '2.5%',
-                    left: '11%',
-                    fontFamily: "'Barlow', sans-serif",
-                    fontSize: isMobile ? '14px' : '18px',
-                    fontWeight: 600,
-                    color: '#000',
-                    whiteSpace: 'nowrap',
-                    zIndex: 2,
-                  }}>
-                    {study.label || `Case Study ${studyIndex + 1}`}
-                  </span>
-
-                  {/* Card Content */}
-                  <div style={{
-                    position: 'relative',
-                    padding: isMobile ? '60px 20px 30px' : '80px 50px 50px',
-                    paddingTop: isMobile ? '15%' : '12%',
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? '24px' : '60px',
-                    alignItems: 'center',
-                    aspectRatio: '959 / 463',
-                  }}>
-                      {/* Left Column */}
+                  {isMobile ? (
+                    /* Mobile Case Study Card Layout */
+                    <div style={{ position: 'relative' }}>
+                      {/* Tab Label */}
                       <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        minHeight: isMobile ? 'auto' : '300px',
+                        position: 'absolute',
+                        top: '-18px',
+                        left: '20px',
+                        backgroundColor: '#fff',
+                        border: '1px solid #000',
+                        borderBottom: 'none',
+                        borderRadius: '8px 8px 0 0',
+                        padding: '4px 12px',
+                        zIndex: 2,
                       }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <span style={{
+                          fontFamily: "'Barlow', sans-serif",
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: '#000',
+                        }}>
+                          {study.label || `Case Study ${studyIndex + 1}`}
+                        </span>
+                      </div>
+
+                      {/* Card Container */}
+                      <div style={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #000',
+                        borderRadius: '16px',
+                        boxShadow: '4px 4px 0px 0px #150634',
+                        padding: '24px 18px',
+                        minHeight: '542px',
+                      }}>
+                        {/* Content */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '16px',
+                        }}>
                           {/* Brand */}
                           <p style={{
                             fontFamily: "'Archivo Black', sans-serif",
-                            fontSize: '32px',
+                            fontSize: '26px',
                             fontWeight: 400,
-                            lineHeight: '41px',
+                            lineHeight: 'normal',
                             letterSpacing: '-0.68px',
                             color: '#000',
                             margin: 0,
@@ -1021,7 +1054,7 @@ const LandingPage3 = () => {
                           {/* Title */}
                           <h3 style={{
                             fontFamily: "'Gabarito', sans-serif",
-                            fontSize: isMobile ? '24px' : '32px',
+                            fontSize: '24px',
                             fontWeight: 600,
                             lineHeight: 1.2,
                             color: '#000',
@@ -1032,7 +1065,7 @@ const LandingPage3 = () => {
                           {/* Description */}
                           <p style={{
                             fontFamily: "'Barlow', sans-serif",
-                            fontSize: '16px',
+                            fontSize: '14px',
                             fontWeight: 400,
                             lineHeight: 1.5,
                             color: '#000',
@@ -1045,73 +1078,310 @@ const LandingPage3 = () => {
                         {/* Metrics */}
                         <div style={{
                           display: 'flex',
-                          gap: '16px',
-                          marginTop: isMobile ? '24px' : '20px',
-                          flexWrap: 'wrap',
+                          gap: '14px',
+                          marginTop: '16px',
+                          flexWrap: 'nowrap',
                         }}>
                           {ensureArray(study.metrics, defaultContent.caseStudies[0].metrics).map((metric, mIndex) => (
                             <div
                               key={mIndex}
                               style={{
-                                backgroundColor: '#FFF5EB',
-                                borderRadius: '12px',
-                                padding: '12px 20px',
+                                backgroundColor: 'rgba(255,138,53,0.1)',
+                                border: '0.771px dashed #ff8a35',
+                                borderRadius: '12.328px',
+                                padding: '9.246px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
-                                gap: '4px',
-                                minWidth: '100px',
+                                justifyContent: 'center',
+                                height: '68px',
+                                flex: 1,
                               }}
                             >
                               <span style={{
                                 fontFamily: "'Barlow', sans-serif",
-                                fontSize: '14px',
+                                fontSize: '12.793px',
                                 fontWeight: 400,
-                                color: '#666',
+                                color: '#000',
+                                lineHeight: 1,
                               }}>
                                 {metric.label}
                               </span>
                               <span style={{
                                 fontFamily: "'Gabarito', sans-serif",
-                                fontSize: '24px',
-                                fontWeight: 700,
+                                fontSize: '18px',
+                                fontWeight: 600,
                                 lineHeight: 1.2,
                                 color: '#000',
+                                marginTop: '4px',
                               }}>
                                 {metric.value}
                               </span>
                             </div>
                           ))}
                         </div>
-                      </div>
 
-                      {/* Right Column - Image */}
-                      <div style={{
-                        width: isMobile ? '100%' : '350px',
-                        height: isMobile ? '200px' : '280px',
-                        backgroundColor: '#D9D9D9',
-                        border: '1px solid #BFBFBF',
-                        borderRadius: '24px',
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                      }}>
-                        {study.image && (
-                          <img
-                            src={study.image}
-                            alt={study.brand}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                            }}
-                          />
-                        )}
+                        {/* Image */}
+                        <div style={{
+                          width: '100%',
+                          height: '223px',
+                          backgroundColor: '#c4c4c4',
+                          border: '0.57px solid #000',
+                          borderRadius: '10.745px',
+                          marginTop: '24px',
+                          overflow: 'hidden',
+                        }}>
+                          {study.image && (
+                            <img
+                              src={study.image}
+                              alt={study.brand}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
+                  ) : (
+                    /* Desktop Case Study Card Layout */
+                    <>
+                      {/* SVG Container with integrated tab */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 959 463"
+                        fill="none"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          overflow: 'visible',
+                        }}
+                        preserveAspectRatio="xMidYMid meet"
+                      >
+                        <defs>
+                          <filter id={`shadow_${studyIndex}`} x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox">
+                            <feDropShadow dx="4" dy="4" stdDeviation="0" floodColor="#150634" floodOpacity="1"/>
+                          </filter>
+                        </defs>
+                        <path
+                          d="M1 431.327V66.7221C1 58.0821 1 53.7622 2.6105 50.4496C4.21833 47.1425 6.9162 44.4902 10.2502 42.9389C13.5897 41.3851 17.909 41.4586 26.5477 41.6058H26.5478L61.6564 42.2037C66.0009 42.2777 68.1732 42.3147 69.9676 41.9296C76.0277 40.6291 80.7916 35.9457 82.195 29.9087C82.6106 28.121 82.6106 25.9485 82.6106 21.6033C82.6106 17.3241 82.6106 15.1845 83.0173 13.4152C84.3903 7.44308 89.0537 2.7797 95.0258 1.40675C96.7951 1 98.9347 1 103.214 1H187.066C192.693 1 195.506 1 197.985 1.8324C200.469 2.66649 202.71 4.09778 204.511 6.00052C206.308 7.89941 207.491 10.4518 209.857 15.5567L215.864 28.5157C218.23 33.6206 219.413 36.173 221.21 38.0719C223.012 39.9746 225.253 41.4059 227.736 42.24C230.215 43.0724 233.028 43.0724 238.655 43.0724H928.491C936.999 43.0724 941.253 43.0724 944.537 44.6491C947.815 46.2235 950.46 48.8678 952.034 52.1464C953.611 55.4299 953.611 59.6841 953.611 68.1924V432.643C953.611 441.163 953.611 445.423 952.031 448.709C950.454 451.99 947.805 454.635 944.521 456.207C941.233 457.782 936.973 457.776 928.454 457.763L26.0833 456.447C17.5863 456.434 13.3377 456.428 10.059 454.85C6.78516 453.273 4.14534 450.63 2.57384 447.353C1 444.072 1 439.824 1 431.327Z"
+                          fill="white"
+                          filter={`url(#shadow_${studyIndex})`}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        <path
+                          d="M187.066 0.5C192.657 0.5 195.57 0.493756 198.145 1.3584C200.706 2.21857 203.017 3.69513 204.874 5.65723C206.741 7.62963 207.961 10.2743 210.312 15.3467L216.317 28.3057C218.698 33.4426 219.845 35.9032 221.573 37.7285C223.318 39.5717 225.489 40.9576 227.896 41.7656C230.278 42.5658 232.993 42.5723 238.655 42.5723H928.49C932.737 42.5723 935.95 42.5716 938.512 42.7705C941.078 42.9699 943.032 43.372 944.753 44.1982C948.134 45.8217 950.861 48.5488 952.484 51.9297C953.311 53.6504 953.713 55.6044 953.912 58.1709C954.111 60.7323 954.11 63.9461 954.11 68.1924V432.644C954.11 436.895 954.111 440.113 953.912 442.678C953.712 445.247 953.309 447.203 952.481 448.925C950.855 452.308 948.123 455.037 944.737 456.658C943.014 457.483 941.057 457.883 938.487 458.079C935.923 458.275 932.705 458.27 928.453 458.264L26.083 456.946C21.8425 456.94 18.6331 456.937 16.0752 456.734C13.5118 456.532 11.5601 456.127 9.8418 455.3C6.4658 453.674 3.74361 450.948 2.12305 447.569C1.29835 445.85 0.897235 443.898 0.698242 441.335C0.499668 438.777 0.5 435.568 0.5 431.327V66.7217C0.5 62.4098 0.49994 59.1468 0.703125 56.5488C0.90673 53.9457 1.31714 51.9675 2.16113 50.2314C3.8192 46.821 6.60094 44.0851 10.0391 42.4854C11.7893 41.671 13.7746 41.295 16.3809 41.1357C18.982 40.9768 22.2452 41.032 26.5566 41.1055L61.665 41.7041C66.0373 41.7786 68.1382 41.8104 69.8623 41.4404C75.7329 40.1807 80.3483 35.6441 81.708 29.7959C82.1073 28.0783 82.1104 25.9767 82.1104 21.6035C82.1104 17.352 82.1076 15.1413 82.5303 13.3027C83.9463 7.14419 88.7554 2.33574 94.9141 0.919922C96.7526 0.497292 98.9625 0.5 103.214 0.5H187.066Z"
+                          stroke="black"
+                          strokeWidth="1"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+
+                      {/* Tab Label - positioned in the tab area */}
+                      <span style={{
+                        position: 'absolute',
+                        top: '2.5%',
+                        left: '11%',
+                        fontFamily: "'Barlow', sans-serif",
+                        fontSize: '18px',
+                        fontWeight: 600,
+                        color: '#000',
+                        whiteSpace: 'nowrap',
+                        zIndex: 2,
+                      }}>
+                        {study.label || `Case Study ${studyIndex + 1}`}
+                      </span>
+
+                      {/* Card Content */}
+                      <div style={{
+                        position: 'relative',
+                        padding: '80px 50px 50px',
+                        paddingTop: '12%',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: '60px',
+                        alignItems: 'center',
+                        aspectRatio: '959 / 463',
+                      }}>
+                        {/* Left Column */}
+                        <div style={{
+                          flex: 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          minHeight: '300px',
+                        }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {/* Brand */}
+                            <p style={{
+                              fontFamily: "'Archivo Black', sans-serif",
+                              fontSize: '32px',
+                              fontWeight: 400,
+                              lineHeight: '41px',
+                              letterSpacing: '-0.68px',
+                              color: '#000',
+                              margin: 0,
+                            }}>
+                              {study.brand || 'GOTI'}
+                            </p>
+                            {/* Title */}
+                            <h3 style={{
+                              fontFamily: "'Gabarito', sans-serif",
+                              fontSize: '32px',
+                              fontWeight: 600,
+                              lineHeight: 1.2,
+                              color: '#000',
+                              margin: 0,
+                            }}>
+                              {study.title}
+                            </h3>
+                            {/* Description */}
+                            <p style={{
+                              fontFamily: "'Barlow', sans-serif",
+                              fontSize: '16px',
+                              fontWeight: 400,
+                              lineHeight: 1.5,
+                              color: '#000',
+                              margin: 0,
+                            }}>
+                              {study.description}
+                            </p>
+                          </div>
+
+                          {/* Metrics */}
+                          <div style={{
+                            display: 'flex',
+                            gap: '16px',
+                            marginTop: '20px',
+                            flexWrap: 'wrap',
+                          }}>
+                            {ensureArray(study.metrics, defaultContent.caseStudies[0].metrics).map((metric, mIndex) => (
+                              <div
+                                key={mIndex}
+                                style={{
+                                  backgroundColor: '#FFF5EB',
+                                  borderRadius: '12px',
+                                  padding: '12px 20px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  minWidth: '100px',
+                                }}
+                              >
+                                <span style={{
+                                  fontFamily: "'Barlow', sans-serif",
+                                  fontSize: '14px',
+                                  fontWeight: 400,
+                                  color: '#666',
+                                }}>
+                                  {metric.label}
+                                </span>
+                                <span style={{
+                                  fontFamily: "'Gabarito', sans-serif",
+                                  fontSize: '24px',
+                                  fontWeight: 700,
+                                  lineHeight: 1.2,
+                                  color: '#000',
+                                }}>
+                                  {metric.value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Right Column - Image */}
+                        <div style={{
+                          width: '350px',
+                          height: '280px',
+                          backgroundColor: '#D9D9D9',
+                          border: '1px solid #BFBFBF',
+                          borderRadius: '24px',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                        }}>
+                          {study.image && (
+                            <img
+                              src={study.image}
+                              alt={study.brand}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
+
+          {/* Mobile Carousel Navigation for Case Studies */}
+          {isMobile && caseStudies.length > 1 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              marginTop: '24px',
+            }}>
+              <button
+                style={{
+                  backgroundColor: '#2558bf',
+                  borderRadius: '9.143px',
+                  width: '32px',
+                  height: '32px',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <LeftArrowIcon />
+              </button>
+              <div style={{
+                flex: 1,
+                maxWidth: '282px',
+                height: '6px',
+                backgroundColor: '#ddd',
+                borderRadius: '12px',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: '33%',
+                  height: '100%',
+                  backgroundColor: '#000',
+                  borderRadius: '12px',
+                }} />
+              </div>
+              <button
+                style={{
+                  backgroundColor: '#2558bf',
+                  borderRadius: '9.143px',
+                  width: '32px',
+                  height: '32px',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <RightArrowIcon />
+              </button>
+            </div>
+          )}
         </EditableSection>
       )}
 
@@ -1124,66 +1394,85 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'clients'}
           isHidden={isSectionHidden('clients')}
           style={{
-            padding: isMobile ? '60px 0' : '80px 0',
+            padding: isMobile ? '40px 0' : '80px 0',
           }}
         >
           <h2 style={{
             fontFamily: "'Barlow', sans-serif",
-            fontSize: isMobile ? '24px' : '32px',
+            fontSize: isMobile ? '20px' : '32px',
             fontWeight: 500,
             lineHeight: 1.5,
             color: '#000',
             textAlign: 'center',
-            marginBottom: '40px',
+            marginBottom: isMobile ? '24px' : '40px',
           }}>
             {content.clientsTitle}
           </h2>
 
           {/* Marquee Rows */}
-          {[0, 1].map((rowIndex) => (
-            <div
-              key={rowIndex}
-              style={{
-                overflow: 'hidden',
-                marginBottom: '20px',
-              }}
-            >
-              <div style={{
-                display: 'flex',
-                gap: '20px',
-                animation: `marquee ${20 + rowIndex * 5}s linear infinite`,
-                width: 'fit-content',
-                paddingLeft: rowIndex === 0 ? '98px' : '0',
-              }}>
-                {[...clientBrands, ...clientBrands, ...clientBrands, ...clientBrands].map((brand, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                      borderRadius: '16px',
-                      width: isMobile ? '140px' : '196px',
-                      height: isMobile ? '70px' : '96px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span style={{
-                      fontFamily: "'Archivo Black', sans-serif",
-                      fontSize: isMobile ? '24px' : '32px',
-                      fontWeight: 400,
-                      lineHeight: '41px',
-                      letterSpacing: '-0.68px',
-                      color: '#000',
-                    }}>
-                      {brand}
-                    </span>
-                  </div>
-                ))}
+          {[0, 1].map((rowIndex) => {
+            const items = hasClientLogos ? clientLogos : clientBrands;
+            const repeatedItems = [...items, ...items, ...items, ...items];
+
+            return (
+              <div
+                key={rowIndex}
+                style={{
+                  overflow: 'hidden',
+                  marginBottom: isMobile ? '12px' : '20px',
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  gap: isMobile ? '12px' : '20px',
+                  animation: `marquee ${20 + rowIndex * 5}s linear infinite`,
+                  width: 'fit-content',
+                  paddingLeft: rowIndex === 0 ? (isMobile ? '44px' : '98px') : '0',
+                }}>
+                  {repeatedItems.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                        borderRadius: isMobile ? '7.133px' : '16px',
+                        width: isMobile ? '87.383px' : '196px',
+                        height: isMobile ? '42.8px' : '96px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        overflow: 'hidden',
+                        padding: isMobile ? '4.458px' : '10px',
+                      }}
+                    >
+                      {hasClientLogos ? (
+                        <img
+                          src={item.startsWith('http') ? item : `${import.meta.env.VITE_API_URL || ''}${item}`}
+                          alt={`Client logo ${index + 1}`}
+                          style={{
+                            maxWidth: '80%',
+                            maxHeight: '80%',
+                            objectFit: 'contain',
+                          }}
+                        />
+                      ) : (
+                        <span style={{
+                          fontFamily: "'Archivo Black', sans-serif",
+                          fontSize: isMobile ? '14px' : '32px',
+                          fontWeight: 400,
+                          lineHeight: isMobile ? '18.332px' : '41px',
+                          letterSpacing: isMobile ? '-0.3034px' : '-0.68px',
+                          color: '#000',
+                        }}>
+                          {item}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </EditableSection>
       )}
 
@@ -1195,49 +1484,52 @@ const LandingPage3 = () => {
           isEditorMode={isEditorMode}
           isSelected={selectedSection === 'pricing'}
           isHidden={isSectionHidden('pricing')}
+          id="pricing-section"
           style={{
-            padding: isMobile ? '60px 20px' : '100px 120px',
+            padding: isMobile ? '40px 20px' : '100px 120px',
             position: 'relative',
           }}
         >
           {/* Purple gradient blob (decorative) */}
           <div style={{
             position: 'absolute',
-            right: isMobile ? '-100px' : '100px',
-            top: '200px',
+            right: isMobile ? '-50px' : '200px',
+            top: '150px',
             width: '393px',
             height: '870px',
-            background: 'radial-gradient(circle, rgba(138, 43, 226, 0.2) 0%, transparent 70%)',
-            filter: 'blur(100px)',
+            background: 'radial-gradient(ellipse at center, rgba(180, 130, 255, 0.45) 0%, rgba(200, 150, 255, 0.3) 40%, transparent 70%)',
+            filter: 'blur(80px)',
             pointerEvents: 'none',
+            zIndex: 0,
           }} />
 
           {/* Header */}
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            justifyContent: 'space-between',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            marginBottom: isMobile ? '40px' : '100px',
-            maxWidth: '1200px',
-            margin: '0 auto 60px',
-            gap: isMobile ? '20px' : '0',
+            flexDirection: 'column',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            marginBottom: isMobile ? '24px' : '100px',
+            maxWidth: isMobile ? '358px' : '1200px',
+            margin: isMobile ? '0 auto 24px' : '0 auto 60px',
+            gap: isMobile ? '13px' : '0',
           }}>
-            <div style={{ maxWidth: '488px' }}>
+            <div style={{ maxWidth: isMobile ? '358px' : '488px' }}>
               {/* Blue highlight behind title */}
               <div style={{ position: 'relative' }}>
                 <div style={{
                   position: 'absolute',
                   backgroundColor: '#2558bf',
-                  height: isMobile ? '28px' : '51px',
-                  top: 0,
+                  height: isMobile ? '29px' : '51px',
+                  top: isMobile ? '2.2px' : 0,
                   left: 0,
-                  right: 0,
+                  width: isMobile ? '100%' : '100%',
+                  borderRadius: isMobile ? '7.732px' : 0,
                   zIndex: 0,
                 }} />
                 <h2 style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: isMobile ? '32px' : '46px',
+                  fontSize: isMobile ? '28px' : '46px',
                   fontWeight: 600,
                   lineHeight: 1.2,
                   color: '#000',
@@ -1253,11 +1545,11 @@ const LandingPage3 = () => {
             </div>
             <p style={{
               fontFamily: "'Barlow', sans-serif",
-              fontSize: '18px',
+              fontSize: isMobile ? '14px' : '18px',
               fontWeight: 400,
               lineHeight: 1.5,
               color: '#000',
-              maxWidth: '541px',
+              maxWidth: isMobile ? '358px' : '541px',
               margin: 0,
             }}>
               {content.pricingDescription}
@@ -1267,21 +1559,22 @@ const LandingPage3 = () => {
           {/* Pricing Cards */}
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '40px' : '60px',
-            maxWidth: '1200px',
+            flexDirection: 'column',
+            gap: isMobile ? '32px' : '60px',
+            maxWidth: isMobile ? '372px' : '1200px',
             margin: '0 auto',
-            alignItems: 'flex-start',
+            alignItems: isMobile ? 'center' : 'flex-start',
+            ...(isMobile ? {} : { flexDirection: 'row' }),
           }}>
             {/* Plan 1 - Green Card */}
             <div style={{
               backgroundColor: 'rgba(225, 255, 160, 0.75)',
-              border: '2.67px solid #000',
-              borderRadius: '21px',
-              boxShadow: '5.34px 5.34px 0px 0px #150634',
+              border: isMobile ? '2.67px solid #000' : '2.67px solid #000',
+              borderRadius: isMobile ? '21.356px' : '21px',
+              boxShadow: isMobile ? '5.339px 5.339px 0px 0px #150634' : '5.34px 5.34px 0px 0px #150634',
               padding: isMobile ? '24px' : '32px',
-              width: isMobile ? '100%' : '622px',
-              minHeight: isMobile ? 'auto' : '838px',
+              width: isMobile ? '372px' : '622px',
+              minHeight: isMobile ? '543px' : '838px',
               display: 'flex',
               flexDirection: 'column',
             }}>
@@ -1337,12 +1630,15 @@ const LandingPage3 = () => {
                   paddingLeft: '12px',
                 }}>
                   {ensureArray(content.plan1Criteria, defaultContent.plan1Criteria).map((item, index) => (
-                    <p key={index} style={{ margin: '0 0 4px' }}>
-                      ✔️ {typeof item === 'string' && (item.includes('$50K+') || item.includes('marketing') || item.includes('improve'))
-                        ? <><span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[0]}</span>
-                           <strong>{item.match(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)?.[0]}</strong>
-                           <span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[2] || ''}</span></>
-                        : item}
+                    <p key={index} style={{ margin: '0 0 4px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: '20px' }}>✓</span>
+                      <span>
+                        {typeof item === 'string' && (item.includes('$50K+') || item.includes('marketing') || item.includes('improve'))
+                          ? <><span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[0]}</span>
+                             <strong>{item.match(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)?.[0]}</strong>
+                             <span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[2] || ''}</span></>
+                          : item}
+                      </span>
                     </p>
                   ))}
                 </div>
@@ -1387,19 +1683,22 @@ const LandingPage3 = () => {
               </p>
 
               {/* CTA Button */}
-              <button style={{
+              <button
+                onClick={() => scrollToSection('contact-section')}
+                style={{
                 backgroundColor: '#000',
-                borderRadius: '1458px',
-                padding: '23px 41px',
+                borderRadius: '1457.664px',
+                padding: '23.32px 40.81px',
                 border: 'none',
                 cursor: 'pointer',
                 alignSelf: 'center',
-                marginTop: 'auto',
+                marginTop: '20px',
               }}>
                 <span style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: '29px',
+                  fontSize: '29.153px',
                   fontWeight: 600,
+                  lineHeight: '100%',
                   color: '#fff',
                   textTransform: 'uppercase',
                 }}>
@@ -1411,14 +1710,17 @@ const LandingPage3 = () => {
             {/* Plan 2 - White Card */}
             <div style={{
               backgroundColor: '#fff',
-              border: '2px solid #000',
-              borderRadius: '16px',
-              boxShadow: '4px 4px 0px 0px #150634',
+              border: isMobile ? '2.306px solid #000' : '2px solid #000',
+              borderRadius: isMobile ? '18.446px' : '16px',
+              boxShadow: isMobile ? '4.611px 4.611px 0px 0px #150634' : '4px 4px 0px 0px #150634',
               padding: '24px',
-              width: isMobile ? '100%' : '466px',
-              minHeight: isMobile ? 'auto' : '628px',
+              width: isMobile ? '337px' : '466px',
+              minHeight: isMobile ? '469px' : '500px',
               display: 'flex',
               flexDirection: 'column',
+              position: 'relative',
+              zIndex: 1,
+              marginTop: isMobile ? '0' : '150px',
             }}>
               {/* Price Header */}
               <div style={{ marginBottom: '24px' }}>
@@ -1472,12 +1774,15 @@ const LandingPage3 = () => {
                   paddingLeft: '9px',
                 }}>
                   {ensureArray(content.plan2Criteria, defaultContent.plan2Criteria).map((item, index) => (
-                    <p key={index} style={{ margin: '0 0 4px' }}>
-                      ✔️ {typeof item === 'string' && (item.includes('$20K') || item.includes('own marketing') || item.includes('improve'))
-                        ? <><span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[0]}</span>
-                           <strong>{item.match(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)?.[0]}</strong>
-                           <span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[2] || ''}</span></>
-                        : item}
+                    <p key={index} style={{ margin: '0 0 4px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: '18px' }}>✓</span>
+                      <span>
+                        {typeof item === 'string' && (item.includes('$20K') || item.includes('own marketing') || item.includes('improve'))
+                          ? <><span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[0]}</span>
+                             <strong>{item.match(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)?.[0]}</strong>
+                             <span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[2] || ''}</span></>
+                          : item}
+                      </span>
                     </p>
                   ))}
                 </div>
@@ -1533,25 +1838,27 @@ const LandingPage3 = () => {
           isEditorMode={isEditorMode}
           isSelected={selectedSection === 'contact'}
           isHidden={isSectionHidden('contact')}
+          id="contact-section"
           style={{
-            padding: isMobile ? '60px 20px' : '100px 120px',
+            padding: isMobile ? '40px 20px' : '100px 120px',
           }}
         >
           <div style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? '40px' : '60px',
-            maxWidth: '1200px',
+            flexDirection: 'column',
+            gap: isMobile ? '24px' : '60px',
+            maxWidth: isMobile ? '390px' : '1200px',
             margin: '0 auto',
             alignItems: 'flex-start',
+            ...(isMobile ? {} : { flexDirection: 'row' }),
           }}>
             {/* Left - Title & Description */}
-            <div style={{ flex: 1, maxWidth: '610px' }}>
+            <div style={{ flex: 1, maxWidth: isMobile ? '354px' : '610px' }}>
               {/* Title with circle highlight */}
-              <div style={{ marginBottom: '17px' }}>
+              <div style={{ marginBottom: isMobile ? '8px' : '17px' }}>
                 <h2 style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: isMobile ? '32px' : '46px',
+                  fontSize: isMobile ? '28px' : '46px',
                   fontWeight: 600,
                   lineHeight: 1.2,
                   color: '#000',
@@ -1560,23 +1867,26 @@ const LandingPage3 = () => {
                   {content.contactTitle}
                 </h2>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                  {/* Orange highlight image around "Book A Call" */}
-                  <img
-                    src={HighlightImg}
-                    alt=""
+                  {/* Orange highlight SVG around "Book A Call" */}
+                  <svg
                     style={{
                       position: 'absolute',
                       top: '50%',
                       left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: 'calc(100% + 40px)',
-                      height: 'auto',
+                      transform: 'translate(-50%, -50%) rotate(-3.61deg) skewX(2.67deg)',
+                      width: isMobile ? '178.569px' : '256px',
+                      height: isMobile ? '43.715px' : '59px',
                       pointerEvents: 'none',
                     }}
-                  />
+                    viewBox="0 0 262 60"
+                    fill="none"
+                    preserveAspectRatio="none"
+                  >
+                    <ellipse cx="131" cy="30" rx="126" ry="26" stroke="#FF8A35" strokeWidth={isMobile ? '3' : '4.198'} fill="none" />
+                  </svg>
                   <span style={{
                     fontFamily: "'Gabarito', sans-serif",
-                    fontSize: isMobile ? '32px' : '46px',
+                    fontSize: isMobile ? '28px' : '46px',
                     fontWeight: 600,
                     lineHeight: 1.2,
                     color: '#000',
@@ -1588,11 +1898,11 @@ const LandingPage3 = () => {
               </div>
               <p style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: '18px',
+                fontSize: isMobile ? '14px' : '18px',
                 fontWeight: 400,
                 lineHeight: 1.5,
                 color: '#000',
-                maxWidth: '379px',
+                maxWidth: isMobile ? '308px' : '379px',
                 margin: 0,
               }}>
                 {content.contactDescription}
@@ -1600,7 +1910,7 @@ const LandingPage3 = () => {
             </div>
 
             {/* Right - Form */}
-            <div style={{ width: isMobile ? '100%' : '585px' }}>
+            <div style={{ width: isMobile ? '390px' : '585px' }}>
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1664,94 +1974,139 @@ const LandingPage3 = () => {
                 ) : (
                   <form onSubmit={handleSubmit(onSubmit)}>
                     {/* Company Name */}
-                    <div style={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #000',
-                      borderRadius: '16px',
-                      boxShadow: '4px 4px 0px 0px #150634',
-                      padding: '24px',
-                      marginBottom: '24px',
-                    }}>
-                      <input
-                        {...register('companyName', { required: 'Company name is required' })}
-                        placeholder={content.formPlaceholder1}
-                        className="form-input"
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          outline: 'none',
+                    <div style={{ marginBottom: '24px' }}>
+                      <div style={{
+                        backgroundColor: '#fff',
+                        border: errors.companyName ? '2px solid #ef4444' : '1px solid #000',
+                        borderRadius: '16px',
+                        boxShadow: '4px 4px 0px 0px #150634',
+                        padding: isMobile ? '12px 12px' : '24px',
+                        height: isMobile ? '60px' : 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}>
+                        <input
+                          {...register('companyName', { required: 'Company name is required' })}
+                          placeholder={content.formPlaceholder1}
+                          className="form-input"
+                          style={{
+                            width: '100%',
+                            border: 'none',
+                            outline: 'none',
+                            fontFamily: "'Barlow', sans-serif",
+                            fontSize: isMobile ? '15px' : '20px',
+                            fontWeight: 400,
+                            lineHeight: 1.5,
+                            color: '#000',
+                            backgroundColor: 'transparent',
+                          }}
+                        />
+                      </div>
+                      {errors.companyName && (
+                        <p style={{
+                          color: '#ef4444',
+                          fontSize: '14px',
                           fontFamily: "'Barlow', sans-serif",
-                          fontSize: '20px',
-                          fontWeight: 400,
-                          lineHeight: 1.5,
-                          color: '#000',
-                          backgroundColor: 'transparent',
-                        }}
-                      />
+                          marginTop: '8px',
+                          marginLeft: '12px',
+                        }}>
+                          {errors.companyName.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Contact Number */}
-                    <div style={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #000',
-                      borderRadius: '16px',
-                      boxShadow: '4px 4px 0px 0px #150634',
-                      padding: '24px',
-                      marginBottom: '24px',
-                    }}>
-                      <input
-                        {...register('phone', {
-                          required: 'Phone number is required',
-                          pattern: {
-                            value: /^[0-9]{10}$/,
-                            message: 'Phone must be 10 digits',
-                          },
-                        })}
-                        placeholder={content.formPlaceholder2}
-                        className="form-input"
-                        maxLength={10}
-                        onKeyPress={(e) => {
-                          if (!/[0-9]/.test(e.key)) e.preventDefault();
-                        }}
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          outline: 'none',
+                    <div style={{ marginBottom: '24px' }}>
+                      <div style={{
+                        backgroundColor: '#fff',
+                        border: errors.phone ? '2px solid #ef4444' : '1px solid #000',
+                        borderRadius: '16px',
+                        boxShadow: '4px 4px 0px 0px #150634',
+                        padding: isMobile ? '12px 12px' : '24px',
+                        height: isMobile ? '60px' : 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}>
+                        <input
+                          {...register('phone', {
+                            required: 'Contact number is required',
+                            pattern: {
+                              value: /^[0-9]{10}$/,
+                              message: 'Please enter a valid 10-digit mobile number',
+                            },
+                          })}
+                          placeholder={content.formPlaceholder2}
+                          className="form-input"
+                          maxLength={10}
+                          onKeyPress={(e) => {
+                            if (!/[0-9]/.test(e.key)) e.preventDefault();
+                          }}
+                          style={{
+                            width: '100%',
+                            border: 'none',
+                            outline: 'none',
+                            fontFamily: "'Barlow', sans-serif",
+                            fontSize: isMobile ? '15px' : '20px',
+                            fontWeight: 400,
+                            lineHeight: 1.5,
+                            color: '#000',
+                            backgroundColor: 'transparent',
+                          }}
+                        />
+                      </div>
+                      {errors.phone && (
+                        <p style={{
+                          color: '#ef4444',
+                          fontSize: '14px',
                           fontFamily: "'Barlow', sans-serif",
-                          fontSize: '20px',
-                          fontWeight: 400,
-                          lineHeight: 1.5,
-                          color: '#000',
-                          backgroundColor: 'transparent',
-                        }}
-                      />
+                          marginTop: '8px',
+                          marginLeft: '12px',
+                        }}>
+                          {errors.phone.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Service */}
-                    <div style={{
-                      backgroundColor: '#fff',
-                      border: '1px solid #000',
-                      borderRadius: '16px',
-                      boxShadow: '4px 4px 0px 0px #150634',
-                      padding: '24px',
-                      marginBottom: '37px',
-                    }}>
-                      <input
-                        {...register('service')}
-                        placeholder={content.formPlaceholder3}
-                        className="form-input"
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          outline: 'none',
+                    <div style={{ marginBottom: isMobile ? '37px' : '37px' }}>
+                      <div style={{
+                        backgroundColor: '#fff',
+                        border: errors.service ? '2px solid #ef4444' : '1px solid #000',
+                        borderRadius: '16px',
+                        boxShadow: '4px 4px 0px 0px #150634',
+                        padding: isMobile ? '12px 12px' : '24px',
+                        height: isMobile ? '60px' : 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}>
+                        <input
+                          {...register('service', { required: 'Please tell us what service you need' })}
+                          placeholder={content.formPlaceholder3}
+                          className="form-input"
+                          style={{
+                            width: '100%',
+                            border: 'none',
+                            outline: 'none',
+                            fontFamily: "'Barlow', sans-serif",
+                            fontSize: isMobile ? '15px' : '20px',
+                            fontWeight: 400,
+                            lineHeight: 1.5,
+                            color: '#000',
+                            backgroundColor: 'transparent',
+                          }}
+                        />
+                      </div>
+                      {errors.service && (
+                        <p style={{
+                          color: '#ef4444',
+                          fontSize: '14px',
                           fontFamily: "'Barlow', sans-serif",
-                          fontSize: '20px',
-                          fontWeight: 400,
-                          lineHeight: 1.5,
-                          color: '#000',
-                          backgroundColor: 'transparent',
-                        }}
-                      />
+                          marginTop: '8px',
+                          marginLeft: '12px',
+                        }}>
+                          {errors.service.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Submit Button */}
@@ -1760,9 +2115,16 @@ const LandingPage3 = () => {
                         type="submit"
                         disabled={formLoading}
                         style={{
+                          display: 'flex',
+                          width: isMobile ? '134px' : '200px',
+                          height: isMobile ? '42px' : '56px',
+                          padding: isMobile ? '16px 24px' : '22px 31px',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          gap: '10px',
+                          flexShrink: 0,
                           border: '1px solid #000',
-                          borderRadius: '906px',
-                          padding: '22px 31px',
+                          borderRadius: '905.76px',
                           backgroundColor: 'transparent',
                           cursor: formLoading ? 'not-allowed' : 'pointer',
                           opacity: formLoading ? 0.7 : 1,
@@ -1770,8 +2132,9 @@ const LandingPage3 = () => {
                       >
                         <span style={{
                           fontFamily: "'Gabarito', sans-serif",
-                          fontSize: '22px',
+                          fontSize: isMobile ? '16px' : '22px',
                           fontWeight: 600,
+                          lineHeight: '100%',
                           color: '#000',
                           textTransform: 'uppercase',
                         }}>
@@ -1787,13 +2150,15 @@ const LandingPage3 = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '12px',
+                  gap: isMobile ? '8px' : '12px',
                   marginTop: '12px',
                 }}>
-                  <ZapIcon />
+                  <div style={{ width: isMobile ? '20px' : '28px', height: isMobile ? '20px' : '28px' }}>
+                    <ZapIcon />
+                  </div>
                   <p style={{
                     fontFamily: "'Barlow', sans-serif",
-                    fontSize: '20px',
+                    fontSize: isMobile ? '16px' : '20px',
                     fontWeight: 500,
                     fontStyle: 'italic',
                     color: '#000',
@@ -1820,15 +2185,17 @@ const LandingPage3 = () => {
           style={{
             backgroundColor: '#fff',
             borderTop: '1px solid #000',
-            padding: '20px 80px',
+            padding: isMobile ? '20px' : '20px 80px',
           }}
         >
           <div style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '20px',
-            flexWrap: 'wrap',
+            gap: isMobile ? '20px' : '20px',
+            maxWidth: isMobile ? '386px' : 'none',
+            margin: '0 auto',
           }}>
             {/* Queue Counter */}
             <div style={{
@@ -1836,15 +2203,15 @@ const LandingPage3 = () => {
               alignItems: 'center',
               gap: '10px',
             }}>
-              <div style={{ display: 'flex', gap: '3.33px' }}>
+              <div style={{ display: 'flex', gap: isMobile ? '2.3px' : '3.33px' }}>
                 {content.queueCount.split('').map((digit, index) => (
                   <div
                     key={index}
                     style={{
                       backgroundColor: '#000',
-                      borderRadius: '3.33px',
-                      width: '22px',
-                      height: '30px',
+                      borderRadius: isMobile ? '2.3px' : '3.33px',
+                      width: isMobile ? '15.183px' : '22px',
+                      height: isMobile ? '20.704px' : '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1852,7 +2219,7 @@ const LandingPage3 = () => {
                   >
                     <span style={{
                       fontFamily: "'Gabarito', sans-serif",
-                      fontSize: '28px',
+                      fontSize: isMobile ? '16px' : '28px',
                       fontWeight: 600,
                       color: '#fff',
                       lineHeight: 1.2,
@@ -1864,7 +2231,7 @@ const LandingPage3 = () => {
               </div>
               <span style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: '18px',
+                fontSize: isMobile ? '16px' : '18px',
                 fontWeight: 600,
                 color: '#000',
                 lineHeight: 1.5,
@@ -1874,20 +2241,24 @@ const LandingPage3 = () => {
             </div>
 
             {/* WhatsApp CTA Button */}
-            <button style={{
+            <button
+              onClick={() => scrollToSection('pricing-section')}
+              style={{
               backgroundColor: '#000',
-              borderRadius: '906px',
-              height: '68px',
-              padding: '0 14px 0 31px',
+              borderRadius: isMobile ? '834.813px' : '906px',
+              height: isMobile ? '62.674px' : '68px',
+              width: isMobile ? '353px' : 'auto',
+              padding: isMobile ? '0 14px' : '0 14px 0 31px',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
-              gap: '20px',
+              justifyContent: 'center',
+              gap: isMobile ? '11px' : '20px',
               cursor: 'pointer',
             }}>
               <span style={{
                 fontFamily: "'Gabarito', sans-serif",
-                fontSize: '22px',
+                fontSize: isMobile ? '18.433px' : '22px',
                 fontWeight: 600,
                 color: '#fff',
                 textTransform: 'uppercase',
@@ -1897,8 +2268,8 @@ const LandingPage3 = () => {
               <div style={{
                 backgroundColor: '#63dd77',
                 borderRadius: '50%',
-                width: '46px',
-                height: '46px',
+                width: isMobile ? '30.415px' : '46px',
+                height: isMobile ? '30.415px' : '46px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1920,29 +2291,29 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('footer')}
           style={{
             backgroundColor: '#101827',
-            padding: isMobile ? '40px 20px' : '12px 551px',
+            padding: isMobile ? '12px 20px' : '12px 551px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '155px',
+            minHeight: isMobile ? '87px' : '155px',
           }}
         >
           {/* Social Icons */}
           <div style={{
             display: 'flex',
-            gap: '23px',
-            marginBottom: '20px',
+            gap: isMobile ? '16.428px' : '23px',
+            marginBottom: isMobile ? '16px' : '20px',
           }}>
-            <a href="#" aria-label="Instagram"><InstagramIcon /></a>
-            <a href="#" aria-label="Facebook"><FacebookIcon /></a>
-            <a href="#" aria-label="LinkedIn"><LinkedInIcon /></a>
+            <a href="#" aria-label="Instagram" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><InstagramIcon /></a>
+            <a href="#" aria-label="Facebook" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><FacebookIcon /></a>
+            <a href="#" aria-label="LinkedIn" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><LinkedInIcon /></a>
           </div>
 
           {/* Copyright */}
           <p style={{
-            fontFamily: "'Inter', sans-serif",
-            fontSize: '16px',
+            fontFamily: "'Barlow', sans-serif",
+            fontSize: isMobile ? '12px' : '16px',
             fontWeight: 400,
             color: '#fff',
             margin: 0,

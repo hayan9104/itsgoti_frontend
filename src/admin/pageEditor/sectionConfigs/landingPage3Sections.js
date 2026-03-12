@@ -61,10 +61,11 @@ export const landingPage3Sections = [
   {
     id: 'clients',
     label: 'Clients Marquee',
-    description: 'Scrolling client brand names',
+    description: 'Scrolling client brand names or logos',
     fields: [
       { key: 'clientsTitle', type: 'text', label: 'Section Title', hint: 'e.g. "Our Shopify Clients"' },
-      { key: 'clientBrandsText', type: 'textarea', label: 'Client Brand Names (one per line)', hint: 'e.g. "OSLET\nAQUA\nGOTI"' },
+      { key: 'clientLogos', type: 'imageArray', label: 'Client Logos (optional)', maxItems: 15, hint: 'Upload logo images. If logos are added, they will be shown instead of text names.' },
+      { key: 'clientBrandsText', type: 'textarea', label: 'Client Brand Names (one per line)', hint: 'Used only if no logos are uploaded. e.g. "OSLET\nAQUA\nGOTI"' },
     ]
   },
   {
