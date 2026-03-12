@@ -1,0 +1,10 @@
+export { default as Home } from './Home';
+export { default as Work } from './Work';
+export { default as CaseStudies } from './CaseStudies';
+export { default as CaseStudyDetail } from './CaseStudyDetail';
+export { default as Approach } from './Approach';
+export { default as About } from './About';
+export { default as Contact } from './Contact';
+export { default as Landing } from './Landing';
+export { default as LandingPage2 } from './LandingPage2';
+export { default as FooterPreview } from './FooterPreview';
