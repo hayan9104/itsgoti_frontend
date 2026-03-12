@@ -75,6 +75,27 @@ const LandingPage3 = () => {
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(null);
+
+  const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null) return;
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0 && currentSlide < portfolioImages.length - 1) setCurrentSlide(s => s + 1);
+      if (diff < 0 && currentSlide > 0) setCurrentSlide(s => s - 1);
+    }
+    setTouchStartX(null);
+  };
+
+  const handleWheel = (e) => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 30) {
+      e.preventDefault();
+      if (e.deltaX > 0 && currentSlide < portfolioImages.length - 1) setCurrentSlide(s => s + 1);
+      if (e.deltaX < 0 && currentSlide > 0) setCurrentSlide(s => s - 1);
+    }
+  };
 
   // Scroll to section helper
   const scrollToSection = (sectionId) => {
@@ -448,33 +469,35 @@ const LandingPage3 = () => {
             {/* Title with Blue Highlight */}
             <div style={{
               position: 'relative',
-              width: isMobile ? '354px' : '689px',
+              width: isMobile ? '354px' : '900px',
             }}>
-              {/* Blue background for "Shopify Website" */}
-              <div style={{
-                position: 'absolute',
-                backgroundColor: '#2558bf',
-                height: isMobile ? '31px' : '57px',
-                left: isMobile ? '60px' : '175px',
-                top: isMobile ? '2px' : '4px',
-                width: isMobile ? '280px' : '500px',
-                borderRadius: isMobile ? '7.732px' : '0',
-                zIndex: 0,
-              }} />
               <h1 style={{
                 fontFamily: "'Poppins', sans-serif",
-                fontSize: isMobile ? '32px' : isTablet ? '48px' : '60px',
+                fontSize: isMobile ? '28px' : isTablet ? '38px' : '48px',
                 fontWeight: 600,
-                lineHeight: 1.2,
+                lineHeight: 1.3,
                 color: '#000',
                 textAlign: 'center',
                 margin: 0,
                 position: 'relative',
                 zIndex: 1,
+                whiteSpace: isMobile ? 'normal' : 'nowrap',
               }}>
-                Your <span style={{ color: '#fff' }}>Shopify Website </span>
-                <br />
-                Design Agency
+                Your{' '}
+                <span style={{ 
+                  color: '#fff',
+                  backgroundColor: '#2558bf',
+                  padding: isMobile ? '0 10px' : '0 15px',
+                  borderRadius: isMobile ? '7.732px' : '0',
+                  display: 'inline-block',
+                  lineHeight: isMobile ? '36px' : '1.2',
+                  verticalAlign: 'middle',
+                  fontSize: isMobile ? '28px' : 'inherit',
+                }}>
+                  Shopify Website
+                </span>
+                {isMobile && <br />}
+                {' '}Design Agency
               </h1>
             </div>
 
@@ -621,6 +644,7 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('phoneCarousel')}
           style={{
             padding: isMobile ? '20px 0' : '0 120px 40px',
+            overflow: isMobile ? 'hidden' : 'visible',
           }}
         >
           {/* Phone Mockups - Coverflow Carousel */}
@@ -628,38 +652,72 @@ const LandingPage3 = () => {
             style={{
               display: 'flex',
               justifyContent: 'center',
-              alignItems: isMobile ? 'flex-end' : 'center',
-              overflow: 'hidden',
+              alignItems: isMobile ? 'center' : 'center',
               padding: isMobile ? '20px 0' : '40px 0',
+              margin: isMobile ? '0 13px' : '0',
               position: 'relative',
-              width: '100%',
-              minHeight: isMobile ? '320px' : '700px',
+              width: isMobile ? 'calc(100% - 26px)' : '100%',
+              minHeight: isMobile ? '310px' : '700px',
             }}
           >
             {isMobile ? (
-              /* Mobile: 3 phones in a row with specific sizing */
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                alignItems: 'flex-end',
-                justifyContent: 'center',
-              }}>
-                {portfolioImages.slice(0, 3).map((img, index) => {
-                  const isCenter = index === 1;
-                  const width = isCenter ? 141.561 : 119.844;
-                  const height = isCenter ? 297 : 251.436;
+              /* Mobile: Same coverflow carousel as desktop, touch/swipe enabled */
+              <div
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onWheel={handleWheel}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '300px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  touchAction: 'pan-y',
+                  userSelect: 'none',
+                }}
+              >
+                {portfolioImages.map((img, index) => {
+                  const totalImages = portfolioImages.length;
+                  let offset = index - currentSlide;
+                  if (offset > totalImages / 2) offset -= totalImages;
+                  if (offset < -totalImages / 2) offset += totalImages;
+
+                  const isCenter = offset === 0;
+                  const isLeft = offset === -1;
+                  const isRight = offset === 1;
+                  const isVisible = Math.abs(offset) <= 1;
+
+                  // Sized so side phones fit inside 364px container (390-26px margin)
+                  // Center at 182px: side outer edge = 182 ± (118 + 50) = 14px & 350px ✓
+                  const centerWidth = 138;
+                  const sideWidth = 100;
+                  const centerHeight = 290;
+                  const sideHeight = 210;
+                  const borderWidth = 4;
+
+                  const translateX = isCenter ? 0 : (isLeft ? -118 : (isRight ? 118 : (offset < 0 ? -200 : 200)));
+                  const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
+                  const zIndex = isCenter ? 10 : (isVisible ? 5 : 1);
+                  const opacity = isCenter ? 1 : (isVisible ? 0.85 : 0);
 
                   return (
                     <div
                       key={index}
                       style={{
-                        width: `${width}px`,
-                        height: `${height}px`,
+                        position: 'absolute',
+                        width: isCenter ? `${centerWidth}px` : `${sideWidth}px`,
+                        height: isCenter ? `${centerHeight}px` : `${sideHeight}px`,
                         backgroundColor: '#c4c4c4',
                         borderRadius: '20px',
-                        border: '4px solid #000',
+                        border: `${borderWidth}px solid #000`,
+                        boxShadow: `0 0 0 ${borderWidth}px #CCCCCC`,
                         overflow: 'hidden',
-                        flexShrink: 0,
+                        transform: `translateX(${translateX}px) scale(${scale})`,
+                        opacity,
+                        zIndex,
+                        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                        pointerEvents: isVisible ? 'auto' : 'none',
                       }}
                     >
                       {typeof img === 'string' && !img.includes('placeholder') ? (
