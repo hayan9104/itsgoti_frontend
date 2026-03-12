@@ -75,6 +75,7 @@ const LandingPage3 = () => {
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentCaseStudy, setCurrentCaseStudy] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
 
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
@@ -484,7 +485,7 @@ const LandingPage3 = () => {
                 whiteSpace: isMobile ? 'normal' : 'nowrap',
               }}>
                 Your{' '}
-                <span style={{ 
+                <span style={{
                   color: '#fff',
                   backgroundColor: '#2558bf',
                   padding: isMobile ? '0 10px' : '0 15px',
@@ -1047,6 +1048,9 @@ const LandingPage3 = () => {
             margin: '0 auto',
           }}>
             {caseStudies.map((study, studyIndex) => {
+              // On mobile, only show the current case study
+              if (isMobile && studyIndex !== currentCaseStudy) return null;
+
               return (
                 <div
                   key={study.id || studyIndex}
@@ -1054,48 +1058,74 @@ const LandingPage3 = () => {
                     position: 'relative',
                     width: '100%',
                     maxWidth: isMobile ? '388px' : '959px',
-                    marginTop: studyIndex === 0 ? '0px' : (isMobile ? '20px' : '50px'),
+                    marginTop: studyIndex === 0 || isMobile ? '0px' : '50px',
                   }}
                 >
                   {isMobile ? (
-                    /* Mobile Case Study Card Layout */
-                    <div style={{ position: 'relative' }}>
-                      {/* Tab Label */}
-                      <div style={{
+                    /* Mobile Case Study Card Layout - using exact desktop SVG structure */
+                    <div style={{
+                      position: 'relative',
+                      paddingBottom: '8px',
+                      paddingRight: '8px',
+                    }}>
+                      {/* SVG Container with integrated tab - scaled from desktop */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 390 565"
+                        fill="none"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: 'calc(100% - 4px)',
+                          height: 'calc(100% - 4px)',
+                          overflow: 'visible',
+                        }}
+                        preserveAspectRatio="none"
+                      >
+                        <defs>
+                          <filter id={`shadow_mobile_${studyIndex}`} x="-10%" y="-10%" width="130%" height="130%" filterUnits="objectBoundingBox">
+                            <feDropShadow dx="4" dy="4" stdDeviation="0" floodColor="#150634" floodOpacity="1"/>
+                          </filter>
+                        </defs>
+                        <path
+                          d="M1 536V40 C1 35 1 32 3 29 C5 26 8 24 12 23 C16 22 21 22 30 22 L32 22 C37 22 40 22 42 21 C48 19 52 14 53 8 C53.5 5 53.5 3 54 2 C54.5 1 55.5 1 57 1 L80 1 C86 1 89 1 91 3 C93 5 95 8 97 13 L101 22 C103 27 105 30 108 32 C111 34 115 35 122 35 L366 35 C374 35 378 35 382 37 C386 39 388 42 389 46 C390 50 390 55 390 63 L390 536 C390 544 390 548 388 551 C386 554 383 556 379 558 C375 560 370 560 362 560 L28 560 C20 560 15 560 11 558 C7 556 4 554 2 551 C1 548 1 544 1 536 Z"
+                          fill="white"
+                          filter={`url(#shadow_mobile_${studyIndex})`}
+                        />
+                        <path
+                          d="M1 536V40 C1 35 1 32 3 29 C5 26 8 24 12 23 C16 22 21 22 30 22 L32 22 C37 22 40 22 42 21 C48 19 52 14 53 8 C53.5 5 53.5 3 54 2 C54.5 1 55.5 1 57 1 L80 1 C86 1 89 1 91 3 C93 5 95 8 97 13 L101 22 C103 27 105 30 108 32 C111 34 115 35 122 35 L366 35 C374 35 378 35 382 37 C386 39 388 42 389 46 C390 50 390 55 390 63 L390 536 C390 544 390 548 388 551 C386 554 383 556 379 558 C375 560 370 560 362 560 L28 560 C20 560 15 560 11 558 C7 556 4 554 2 551 C1 548 1 544 1 536 Z"
+                          stroke="#000"
+                          strokeWidth="1"
+                        />
+                      </svg>
+
+                      {/* Tab Label - positioned in the curved tab area */}
+                      <span style={{
                         position: 'absolute',
-                        top: '-18px',
-                        left: '20px',
-                        backgroundColor: '#fff',
-                        border: '1px solid #000',
-                        borderBottom: 'none',
-                        borderRadius: '8px 8px 0 0',
-                        padding: '4px 12px',
+                        top: '5px',
+                        left: '58px',
+                        fontFamily: "'Barlow', sans-serif",
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#000',
+                        whiteSpace: 'nowrap',
                         zIndex: 2,
                       }}>
-                        <span style={{
-                          fontFamily: "'Barlow', sans-serif",
-                          fontSize: '15px',
-                          fontWeight: 600,
-                          color: '#000',
-                        }}>
-                          {study.label || `Case Study ${studyIndex + 1}`}
-                        </span>
-                      </div>
+                        {study.label || `Case Study ${studyIndex + 1}`}
+                      </span>
 
-                      {/* Card Container */}
+                      {/* Main Card Content */}
                       <div style={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #000',
-                        borderRadius: '16px',
-                        boxShadow: '4px 4px 0px 0px #150634',
-                        padding: '24px 18px',
-                        minHeight: '542px',
+                        position: 'relative',
+                        padding: '45px 18px 24px',
+                        minHeight: '530px',
                       }}>
                         {/* Content */}
                         <div style={{
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '16px',
+                          gap: '14px',
                         }}>
                           {/* Brand */}
                           <p style={{
@@ -1145,9 +1175,9 @@ const LandingPage3 = () => {
                               key={mIndex}
                               style={{
                                 backgroundColor: 'rgba(255,138,53,0.1)',
-                                border: '0.771px dashed #ff8a35',
-                                borderRadius: '12.328px',
-                                padding: '9.246px',
+                                border: '1px dashed #ff8a35',
+                                borderRadius: '12px',
+                                padding: '10px 8px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
@@ -1158,7 +1188,7 @@ const LandingPage3 = () => {
                             >
                               <span style={{
                                 fontFamily: "'Barlow', sans-serif",
-                                fontSize: '12.793px',
+                                fontSize: '13px',
                                 fontWeight: 400,
                                 color: '#000',
                                 lineHeight: 1,
@@ -1182,10 +1212,10 @@ const LandingPage3 = () => {
                         {/* Image */}
                         <div style={{
                           width: '100%',
-                          height: '223px',
+                          height: '220px',
                           backgroundColor: '#c4c4c4',
-                          border: '0.57px solid #000',
-                          borderRadius: '10.745px',
+                          border: '0.5px solid #000',
+                          borderRadius: '10px',
                           marginTop: '24px',
                           overflow: 'hidden',
                         }}>
@@ -1393,21 +1423,27 @@ const LandingPage3 = () => {
               gap: '12px',
               marginTop: '24px',
             }}>
+              {/* Left Arrow */}
               <button
+                onClick={() => currentCaseStudy > 0 && setCurrentCaseStudy(currentCaseStudy - 1)}
                 style={{
-                  backgroundColor: '#2558bf',
-                  borderRadius: '9.143px',
+                  backgroundColor: currentCaseStudy === 0 ? '#94a3b8' : '#2558bf',
+                  borderRadius: '9px',
                   width: '32px',
                   height: '32px',
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: currentCaseStudy === 0 ? 'not-allowed' : 'pointer',
+                  opacity: currentCaseStudy === 0 ? 0.6 : 1,
+                  transition: 'all 0.2s ease',
                 }}
               >
                 <LeftArrowIcon />
               </button>
+
+              {/* Progress Bar */}
               <div style={{
                 flex: 1,
                 maxWidth: '282px',
@@ -1417,23 +1453,29 @@ const LandingPage3 = () => {
                 overflow: 'hidden',
               }}>
                 <div style={{
-                  width: '33%',
+                  width: `${((currentCaseStudy + 1) / caseStudies.length) * 100}%`,
                   height: '100%',
                   backgroundColor: '#000',
                   borderRadius: '12px',
+                  transition: 'width 0.3s ease',
                 }} />
               </div>
+
+              {/* Right Arrow */}
               <button
+                onClick={() => currentCaseStudy < caseStudies.length - 1 && setCurrentCaseStudy(currentCaseStudy + 1)}
                 style={{
-                  backgroundColor: '#2558bf',
-                  borderRadius: '9.143px',
+                  backgroundColor: currentCaseStudy >= caseStudies.length - 1 ? '#94a3b8' : '#2558bf',
+                  borderRadius: '9px',
                   width: '32px',
                   height: '32px',
                   border: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: currentCaseStudy >= caseStudies.length - 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentCaseStudy >= caseStudies.length - 1 ? 0.6 : 1,
+                  transition: 'all 0.2s ease',
                 }}
               >
                 <RightArrowIcon />
@@ -1627,30 +1669,31 @@ const LandingPage3 = () => {
             {/* Plan 1 - Green Card */}
             <div style={{
               backgroundColor: 'rgba(225, 255, 160, 0.75)',
-              border: isMobile ? '2.67px solid #000' : '2.67px solid #000',
-              borderRadius: isMobile ? '21.356px' : '21px',
-              boxShadow: isMobile ? '5.339px 5.339px 0px 0px #150634' : '5.34px 5.34px 0px 0px #150634',
-              padding: isMobile ? '24px' : '32px',
-              width: isMobile ? '372px' : '622px',
-              minHeight: isMobile ? '543px' : '838px',
+              border: isMobile ? '2px solid #000' : '2.67px solid #000',
+              borderRadius: isMobile ? '16px' : '21px',
+              boxShadow: isMobile ? '4px 4px 0px 0px #150634' : '5.34px 5.34px 0px 0px #150634',
+              padding: isMobile ? '20px 18px' : '32px',
+              width: isMobile ? '100%' : '622px',
+              maxWidth: isMobile ? '358px' : 'none',
+              minHeight: isMobile ? 'auto' : '838px',
               display: 'flex',
               flexDirection: 'column',
             }}>
               {/* Price Header */}
-              <div style={{ marginBottom: '24px' }}>
+              <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
                 <p style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: '21px',
+                  fontSize: isMobile ? '16px' : '21px',
                   fontWeight: 700,
                   color: '#000',
                   textTransform: 'uppercase',
                   margin: 0,
                 }}>
-                  Starts from <span style={{ fontSize: '32px' }}>{content.plan1Price}</span>
+                  Starts from <span style={{ fontSize: isMobile ? '24px' : '32px' }}>{content.plan1Price}</span>
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '16px',
+                  fontSize: isMobile ? '13px' : '16px',
                   fontWeight: 400,
                   lineHeight: 1.4,
                   color: '#000',
@@ -1664,32 +1707,32 @@ const LandingPage3 = () => {
               <div style={{
                 height: '1px',
                 backgroundColor: '#000',
-                margin: '0 0 24px',
+                margin: isMobile ? '0 0 16px' : '0 0 24px',
               }} />
 
               {/* If your business */}
-              <div style={{ marginBottom: '40px' }}>
+              <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '27px',
+                  fontSize: isMobile ? '18px' : '27px',
                   fontWeight: 400,
                   lineHeight: 1.4,
                   color: '#000',
-                  margin: '0 0 16px',
+                  margin: isMobile ? '0 0 12px' : '0 0 16px',
                 }}>
                   {content.plan1BusinessTitle}
                 </p>
                 <div style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '23px',
+                  fontSize: isMobile ? '14px' : '23px',
                   fontWeight: 400,
                   lineHeight: 1.6,
                   color: '#000',
-                  paddingLeft: '12px',
+                  paddingLeft: isMobile ? '8px' : '12px',
                 }}>
                   {ensureArray(content.plan1Criteria, defaultContent.plan1Criteria).map((item, index) => (
                     <p key={index} style={{ margin: '0 0 4px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: '20px' }}>✓</span>
+                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: isMobile ? '14px' : '20px' }}>✓</span>
                       <span>
                         {typeof item === 'string' && (item.includes('$50K+') || item.includes('marketing') || item.includes('improve'))
                           ? <><span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[0]}</span>
@@ -1703,21 +1746,21 @@ const LandingPage3 = () => {
               </div>
 
               {/* What this means */}
-              <div style={{ marginBottom: '40px' }}>
+              <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '24px',
+                  fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 600,
                   fontStyle: 'italic',
                   lineHeight: 1.4,
                   color: '#000',
-                  margin: '0 0 20px',
+                  margin: isMobile ? '0 0 12px' : '0 0 20px',
                 }}>
                   {content.plan1MeansTitle}
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '23px',
+                  fontSize: isMobile ? '14px' : '23px',
                   fontWeight: 400,
                   lineHeight: 1.6,
                   color: '#000',
@@ -1730,12 +1773,12 @@ const LandingPage3 = () => {
               {/* Conclusion */}
               <p style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: '21px',
+                fontSize: isMobile ? '14px' : '21px',
                 fontWeight: 700,
                 lineHeight: 1.6,
                 color: '#000',
                 textAlign: 'center',
-                margin: '0 0 32px',
+                margin: isMobile ? '0 0 20px' : '0 0 32px',
               }}>
                 {content.plan1Conclusion}
               </p>
@@ -1746,15 +1789,15 @@ const LandingPage3 = () => {
                 style={{
                 backgroundColor: '#000',
                 borderRadius: '1457.664px',
-                padding: '23.32px 40.81px',
+                padding: isMobile ? '14px 28px' : '23.32px 40.81px',
                 border: 'none',
                 cursor: 'pointer',
                 alignSelf: 'center',
-                marginTop: '20px',
+                marginTop: isMobile ? '10px' : '20px',
               }}>
                 <span style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: '29.153px',
+                  fontSize: isMobile ? '18px' : '29.153px',
                   fontWeight: 600,
                   lineHeight: '100%',
                   color: '#fff',
@@ -1768,33 +1811,35 @@ const LandingPage3 = () => {
             {/* Plan 2 - White Card */}
             <div style={{
               backgroundColor: '#fff',
-              border: isMobile ? '2.306px solid #000' : '2px solid #000',
-              borderRadius: isMobile ? '18.446px' : '16px',
-              boxShadow: isMobile ? '4.611px 4.611px 0px 0px #150634' : '4px 4px 0px 0px #150634',
-              padding: '24px',
-              width: isMobile ? '337px' : '466px',
-              minHeight: isMobile ? '469px' : '500px',
+              border: isMobile ? '2px solid #000' : '2px solid #000',
+              borderRadius: isMobile ? '16px' : '16px',
+              boxShadow: isMobile ? '4px 4px 0px 0px #150634' : '4px 4px 0px 0px #150634',
+              padding: isMobile ? '18px 16px' : '24px',
+              width: isMobile ? '100%' : '466px',
+              maxWidth: isMobile ? '310px' : 'none',
+              minHeight: isMobile ? 'auto' : '500px',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
               zIndex: 1,
               marginTop: isMobile ? '0' : '150px',
+              margin: isMobile ? '0 auto' : undefined,
             }}>
               {/* Price Header */}
-              <div style={{ marginBottom: '24px' }}>
+              <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
                 <p style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: '16px',
+                  fontSize: isMobile ? '14px' : '16px',
                   fontWeight: 700,
                   color: '#000',
                   textTransform: 'uppercase',
                   margin: 0,
                 }}>
-                  Starts from <span style={{ fontSize: '24px' }}>{content.plan2Price}</span>
+                  Starts from <span style={{ fontSize: isMobile ? '20px' : '24px' }}>{content.plan2Price}</span>
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '12px',
+                  fontSize: isMobile ? '12px' : '12px',
                   fontWeight: 400,
                   lineHeight: 1.4,
                   color: '#000',
@@ -1808,32 +1853,32 @@ const LandingPage3 = () => {
               <div style={{
                 height: '1px',
                 backgroundColor: '#000',
-                margin: '0 0 24px',
+                margin: isMobile ? '0 0 16px' : '0 0 24px',
               }} />
 
               {/* If your business */}
-              <div style={{ marginBottom: '31px' }}>
+              <div style={{ marginBottom: isMobile ? '20px' : '31px' }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '20px',
+                  fontSize: isMobile ? '16px' : '20px',
                   fontWeight: 400,
                   lineHeight: 1.4,
                   color: '#000',
-                  margin: '0 0 12px',
+                  margin: isMobile ? '0 0 10px' : '0 0 12px',
                 }}>
                   {content.plan2BusinessTitle}
                 </p>
                 <div style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '17.5px',
+                  fontSize: isMobile ? '13px' : '17.5px',
                   fontWeight: 400,
                   lineHeight: 1.6,
                   color: '#000',
-                  paddingLeft: '9px',
+                  paddingLeft: isMobile ? '6px' : '9px',
                 }}>
                   {ensureArray(content.plan2Criteria, defaultContent.plan2Criteria).map((item, index) => (
                     <p key={index} style={{ margin: '0 0 4px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: '18px' }}>✓</span>
+                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: isMobile ? '13px' : '18px' }}>✓</span>
                       <span>
                         {typeof item === 'string' && (item.includes('$20K') || item.includes('own marketing') || item.includes('improve'))
                           ? <><span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[0]}</span>
@@ -1847,21 +1892,21 @@ const LandingPage3 = () => {
               </div>
 
               {/* What this means */}
-              <div style={{ marginBottom: '40px' }}>
+              <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '18px',
+                  fontSize: isMobile ? '14px' : '18px',
                   fontWeight: 600,
                   fontStyle: 'italic',
                   lineHeight: 1.4,
                   color: '#000',
-                  margin: '0 0 15px',
+                  margin: isMobile ? '0 0 10px' : '0 0 15px',
                 }}>
                   {content.plan2MeansTitle}
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: '17.5px',
+                  fontSize: isMobile ? '13px' : '17.5px',
                   fontWeight: 400,
                   lineHeight: 1.6,
                   color: '#000',
@@ -1874,7 +1919,7 @@ const LandingPage3 = () => {
               {/* Conclusion */}
               <p style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: '16px',
+                fontSize: isMobile ? '13px' : '16px',
                 fontWeight: 700,
                 lineHeight: 1.6,
                 color: '#000',
@@ -1968,7 +2013,7 @@ const LandingPage3 = () => {
             </div>
 
             {/* Right - Form */}
-            <div style={{ width: isMobile ? '390px' : '585px' }}>
+            <div style={{ width: isMobile ? '100%' : '585px', maxWidth: isMobile ? '354px' : 'none' }}>
               <div style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -2032,14 +2077,14 @@ const LandingPage3 = () => {
                 ) : (
                   <form onSubmit={handleSubmit(onSubmit)}>
                     {/* Company Name */}
-                    <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
                       <div style={{
                         backgroundColor: '#fff',
                         border: errors.companyName ? '2px solid #ef4444' : '1px solid #000',
-                        borderRadius: '16px',
-                        boxShadow: '4px 4px 0px 0px #150634',
-                        padding: isMobile ? '12px 12px' : '24px',
-                        height: isMobile ? '60px' : 'auto',
+                        borderRadius: isMobile ? '12px' : '16px',
+                        boxShadow: isMobile ? '3px 3px 0px 0px #150634' : '4px 4px 0px 0px #150634',
+                        padding: isMobile ? '10px 12px' : '24px',
+                        height: isMobile ? '50px' : 'auto',
                         display: 'flex',
                         alignItems: 'center',
                       }}>
@@ -2052,7 +2097,7 @@ const LandingPage3 = () => {
                             border: 'none',
                             outline: 'none',
                             fontFamily: "'Barlow', sans-serif",
-                            fontSize: isMobile ? '15px' : '20px',
+                            fontSize: isMobile ? '13px' : '20px',
                             fontWeight: 400,
                             lineHeight: 1.5,
                             color: '#000',
@@ -2074,14 +2119,14 @@ const LandingPage3 = () => {
                     </div>
 
                     {/* Contact Number */}
-                    <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
                       <div style={{
                         backgroundColor: '#fff',
                         border: errors.phone ? '2px solid #ef4444' : '1px solid #000',
-                        borderRadius: '16px',
-                        boxShadow: '4px 4px 0px 0px #150634',
-                        padding: isMobile ? '12px 12px' : '24px',
-                        height: isMobile ? '60px' : 'auto',
+                        borderRadius: isMobile ? '12px' : '16px',
+                        boxShadow: isMobile ? '3px 3px 0px 0px #150634' : '4px 4px 0px 0px #150634',
+                        padding: isMobile ? '10px 12px' : '24px',
+                        height: isMobile ? '50px' : 'auto',
                         display: 'flex',
                         alignItems: 'center',
                       }}>
@@ -2104,7 +2149,7 @@ const LandingPage3 = () => {
                             border: 'none',
                             outline: 'none',
                             fontFamily: "'Barlow', sans-serif",
-                            fontSize: isMobile ? '15px' : '20px',
+                            fontSize: isMobile ? '13px' : '20px',
                             fontWeight: 400,
                             lineHeight: 1.5,
                             color: '#000',
@@ -2126,14 +2171,14 @@ const LandingPage3 = () => {
                     </div>
 
                     {/* Service */}
-                    <div style={{ marginBottom: isMobile ? '37px' : '37px' }}>
+                    <div style={{ marginBottom: isMobile ? '24px' : '37px' }}>
                       <div style={{
                         backgroundColor: '#fff',
                         border: errors.service ? '2px solid #ef4444' : '1px solid #000',
-                        borderRadius: '16px',
-                        boxShadow: '4px 4px 0px 0px #150634',
-                        padding: isMobile ? '12px 12px' : '24px',
-                        height: isMobile ? '60px' : 'auto',
+                        borderRadius: isMobile ? '12px' : '16px',
+                        boxShadow: isMobile ? '3px 3px 0px 0px #150634' : '4px 4px 0px 0px #150634',
+                        padding: isMobile ? '10px 12px' : '24px',
+                        height: isMobile ? '50px' : 'auto',
                         display: 'flex',
                         alignItems: 'center',
                       }}>
@@ -2146,7 +2191,7 @@ const LandingPage3 = () => {
                             border: 'none',
                             outline: 'none',
                             fontFamily: "'Barlow', sans-serif",
-                            fontSize: isMobile ? '15px' : '20px',
+                            fontSize: isMobile ? '13px' : '20px',
                             fontWeight: 400,
                             lineHeight: 1.5,
                             color: '#000',
@@ -2208,15 +2253,15 @@ const LandingPage3 = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: isMobile ? '8px' : '12px',
+                  gap: isMobile ? '6px' : '12px',
                   marginTop: '12px',
                 }}>
-                  <div style={{ width: isMobile ? '20px' : '28px', height: isMobile ? '20px' : '28px' }}>
+                  <div style={{ width: isMobile ? '16px' : '28px', height: isMobile ? '16px' : '28px', flexShrink: 0 }}>
                     <ZapIcon />
                   </div>
                   <p style={{
                     fontFamily: "'Barlow', sans-serif",
-                    fontSize: isMobile ? '16px' : '20px',
+                    fontSize: isMobile ? '13px' : '20px',
                     fontWeight: 500,
                     fontStyle: 'italic',
                     color: '#000',
