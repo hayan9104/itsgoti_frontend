@@ -482,7 +482,6 @@ const LandingPage3 = () => {
                 margin: 0,
                 position: 'relative',
                 zIndex: 1,
-                whiteSpace: isMobile ? 'normal' : 'nowrap',
               }}>
                 Your{' '}
                 <span style={{
@@ -497,8 +496,8 @@ const LandingPage3 = () => {
                 }}>
                   Shopify Website
                 </span>
-                {isMobile && <br />}
-                {' '}Design Agency
+                <br />
+                Design Agency
               </h1>
             </div>
 
@@ -690,14 +689,14 @@ const LandingPage3 = () => {
                   const isVisible = Math.abs(offset) <= 1;
 
                   // Sized so side phones fit inside 364px container (390-26px margin)
-                  // Center at 182px: side outer edge = 182 ± (118 + 50) = 14px & 350px ✓
+                  // Added gap between cards
                   const centerWidth = 138;
                   const sideWidth = 100;
                   const centerHeight = 290;
                   const sideHeight = 210;
                   const borderWidth = 4;
 
-                  const translateX = isCenter ? 0 : (isLeft ? -118 : (isRight ? 118 : (offset < 0 ? -200 : 200)));
+                  const translateX = isCenter ? 0 : (isLeft ? -135 : (isRight ? 135 : (offset < 0 ? -200 : 200)));
                   const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
                   const zIndex = isCenter ? 10 : (isVisible ? 5 : 1);
                   const opacity = isCenter ? 1 : (isVisible ? 0.85 : 0);
@@ -762,7 +761,7 @@ const LandingPage3 = () => {
                   const sideHeight = 533;
                   const borderWidth = 7;
 
-                  const translateX = isCenter ? 0 : (isLeft ? -280 : (isRight ? 280 : (offset < 0 ? -400 : 400)));
+                  const translateX = isCenter ? 0 : (isLeft ? -320 : (isRight ? 320 : (offset < 0 ? -450 : 450)));
                   const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
                   const zIndex = isCenter ? 10 : (isVisible ? 5 : 1);
                   const opacity = isCenter ? 1 : (isVisible ? 0.85 : 0);
@@ -1043,7 +1042,7 @@ const LandingPage3 = () => {
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: isMobile ? '40px' : '64px',
+            gap: isMobile ? '40px' : '32px',
             maxWidth: isMobile ? '388px' : '953px',
             margin: '0 auto',
           }}>
