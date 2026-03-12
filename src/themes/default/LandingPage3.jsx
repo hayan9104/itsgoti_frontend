@@ -277,8 +277,12 @@ const LandingPage3 = () => {
     queueText: 'Projects sessions in the queue',
 
     // Footer
+    instagramLink: '#',
+    facebookLink: '#',
+    linkedinLink: '#',
     copyrightText: 'Copyright© 2025 GOTI.DESIGN. All rights reserved.',
     siteUseText: 'Site Use',
+    siteUseLink: '#',
   };
 
   const content = { ...defaultContent, ...pageContent };
@@ -412,6 +416,18 @@ const LandingPage3 = () => {
 
         .phone-slide-exit-left {
           animation: slideFromLeft 0.5s ease forwards;
+        }
+
+        .btn-hover {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-hover:hover {
+          transform: scale(1.03);
+        }
+
+        .btn-hover:active {
+          transform: scale(0.98);
         }
       `}</style>
 
@@ -593,6 +609,7 @@ const LandingPage3 = () => {
               marginTop: isMobile ? '8px' : '0',
             }}>
               <button
+                className="btn-hover"
                 onClick={() => scrollToSection('pricing-section')}
                 style={{
                 backgroundColor: '#000',
@@ -812,6 +829,7 @@ const LandingPage3 = () => {
           }}>
             {/* Left Arrow */}
             <button
+              className="btn-hover"
               onClick={() => {
                 if (currentSlide > 0) {
                   setCurrentSlide(currentSlide - 1);
@@ -856,6 +874,7 @@ const LandingPage3 = () => {
 
             {/* Right Arrow */}
             <button
+              className="btn-hover"
               onClick={() => {
                 if (currentSlide < portfolioImages.length - 1) {
                   setCurrentSlide(currentSlide + 1);
@@ -1061,64 +1080,42 @@ const LandingPage3 = () => {
                   }}
                 >
                   {isMobile ? (
-                    /* Mobile Case Study Card Layout - using exact desktop SVG structure */
+                    /* Mobile Case Study Card Layout - CSS-based with tab */
                     <div style={{
                       position: 'relative',
-                      paddingBottom: '8px',
-                      paddingRight: '8px',
+                      marginTop: '20px',
                     }}>
-                      {/* SVG Container with integrated tab - scaled from desktop */}
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 390 565"
-                        fill="none"
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: 'calc(100% - 4px)',
-                          height: 'calc(100% - 4px)',
-                          overflow: 'visible',
-                        }}
-                        preserveAspectRatio="none"
-                      >
-                        <defs>
-                          <filter id={`shadow_mobile_${studyIndex}`} x="-10%" y="-10%" width="130%" height="130%" filterUnits="objectBoundingBox">
-                            <feDropShadow dx="4" dy="4" stdDeviation="0" floodColor="#150634" floodOpacity="1"/>
-                          </filter>
-                        </defs>
-                        <path
-                          d="M1 536V40 C1 35 1 32 3 29 C5 26 8 24 12 23 C16 22 21 22 30 22 L32 22 C37 22 40 22 42 21 C48 19 52 14 53 8 C53.5 5 53.5 3 54 2 C54.5 1 55.5 1 57 1 L80 1 C86 1 89 1 91 3 C93 5 95 8 97 13 L101 22 C103 27 105 30 108 32 C111 34 115 35 122 35 L366 35 C374 35 378 35 382 37 C386 39 388 42 389 46 C390 50 390 55 390 63 L390 536 C390 544 390 548 388 551 C386 554 383 556 379 558 C375 560 370 560 362 560 L28 560 C20 560 15 560 11 558 C7 556 4 554 2 551 C1 548 1 544 1 536 Z"
-                          fill="white"
-                          filter={`url(#shadow_mobile_${studyIndex})`}
-                        />
-                        <path
-                          d="M1 536V40 C1 35 1 32 3 29 C5 26 8 24 12 23 C16 22 21 22 30 22 L32 22 C37 22 40 22 42 21 C48 19 52 14 53 8 C53.5 5 53.5 3 54 2 C54.5 1 55.5 1 57 1 L80 1 C86 1 89 1 91 3 C93 5 95 8 97 13 L101 22 C103 27 105 30 108 32 C111 34 115 35 122 35 L366 35 C374 35 378 35 382 37 C386 39 388 42 389 46 C390 50 390 55 390 63 L390 536 C390 544 390 548 388 551 C386 554 383 556 379 558 C375 560 370 560 362 560 L28 560 C20 560 15 560 11 558 C7 556 4 554 2 551 C1 548 1 544 1 536 Z"
-                          stroke="#000"
-                          strokeWidth="1"
-                        />
-                      </svg>
-
-                      {/* Tab Label - positioned in the curved tab area */}
-                      <span style={{
+                      {/* Tab Label - positioned above the card */}
+                      <div style={{
                         position: 'absolute',
-                        top: '5px',
-                        left: '58px',
-                        fontFamily: "'Barlow', sans-serif",
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        color: '#000',
-                        whiteSpace: 'nowrap',
+                        top: '-20px',
+                        left: '20px',
+                        backgroundColor: '#fff',
+                        padding: '4px 16px',
+                        borderRadius: '8px 8px 0 0',
+                        border: '1px solid #000',
+                        borderBottom: 'none',
                         zIndex: 2,
                       }}>
-                        {study.label || `Case Study ${studyIndex + 1}`}
-                      </span>
+                        <span style={{
+                          fontFamily: "'Barlow', sans-serif",
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#000',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {study.label || `Case Study ${studyIndex + 1}`}
+                        </span>
+                      </div>
 
-                      {/* Main Card Content */}
+                      {/* Main Card with border and shadow */}
                       <div style={{
-                        position: 'relative',
-                        padding: '45px 18px 24px',
-                        minHeight: '530px',
+                        backgroundColor: '#fff',
+                        border: '1px solid #000',
+                        borderRadius: '12px',
+                        boxShadow: '4px 4px 0px 0px #150634',
+                        padding: '24px 18px',
+                        minHeight: '400px',
                       }}>
                         {/* Content */}
                         <div style={{
@@ -1424,6 +1421,7 @@ const LandingPage3 = () => {
             }}>
               {/* Left Arrow */}
               <button
+                className="btn-hover"
                 onClick={() => currentCaseStudy > 0 && setCurrentCaseStudy(currentCaseStudy - 1)}
                 style={{
                   backgroundColor: currentCaseStudy === 0 ? '#94a3b8' : '#2558bf',
@@ -1462,6 +1460,7 @@ const LandingPage3 = () => {
 
               {/* Right Arrow */}
               <button
+                className="btn-hover"
                 onClick={() => currentCaseStudy < caseStudies.length - 1 && setCurrentCaseStudy(currentCaseStudy + 1)}
                 style={{
                   backgroundColor: currentCaseStudy >= caseStudies.length - 1 ? '#94a3b8' : '#2558bf',
@@ -1784,6 +1783,7 @@ const LandingPage3 = () => {
 
               {/* CTA Button */}
               <button
+                className="btn-hover"
                 onClick={() => scrollToSection('contact-section')}
                 style={{
                 backgroundColor: '#000',
@@ -1821,8 +1821,9 @@ const LandingPage3 = () => {
               flexDirection: 'column',
               position: 'relative',
               zIndex: 1,
-              marginTop: isMobile ? '0' : '150px',
-              margin: isMobile ? '0 auto' : undefined,
+              marginTop: isMobile ? '0' : '180px',
+              marginLeft: isMobile ? 'auto' : '-40px',
+              marginRight: isMobile ? 'auto' : '0',
             }}>
               {/* Price Header */}
               <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
@@ -2058,6 +2059,7 @@ const LandingPage3 = () => {
                       We'll get back to you within 24 hours.
                     </p>
                     <button
+                      className="btn-hover"
                       onClick={() => setFormSubmitted(false)}
                       style={{
                         marginTop: '16px',
@@ -2214,6 +2216,7 @@ const LandingPage3 = () => {
                     {/* Submit Button */}
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <button
+                        className="btn-hover"
                         type="submit"
                         disabled={formLoading}
                         style={{
@@ -2344,6 +2347,7 @@ const LandingPage3 = () => {
 
             {/* WhatsApp CTA Button */}
             <button
+              className="btn-hover"
               onClick={() => scrollToSection('pricing-section')}
               style={{
               backgroundColor: '#000',
@@ -2407,9 +2411,9 @@ const LandingPage3 = () => {
             gap: isMobile ? '16.428px' : '23px',
             marginBottom: isMobile ? '16px' : '20px',
           }}>
-            <a href="#" aria-label="Instagram" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><InstagramIcon /></a>
-            <a href="#" aria-label="Facebook" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><FacebookIcon /></a>
-            <a href="#" aria-label="LinkedIn" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><LinkedInIcon /></a>
+            <a href={content.instagramLink || '#'} target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><InstagramIcon /></a>
+            <a href={content.facebookLink || '#'} target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><FacebookIcon /></a>
+            <a href={content.linkedinLink || '#'} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><LinkedInIcon /></a>
           </div>
 
           {/* Copyright */}
@@ -2422,7 +2426,7 @@ const LandingPage3 = () => {
             textAlign: 'center',
           }}>
             {content.copyrightText}{' '}
-            <a href="#" style={{ color: '#fff', textDecoration: 'underline' }}>
+            <a href={content.siteUseLink || '#'} target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'underline' }}>
               {content.siteUseText}
             </a>
           </p>

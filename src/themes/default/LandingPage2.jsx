@@ -328,6 +328,19 @@ const LandingPage2 = () => {
       overflowX: 'hidden',
       scrollBehavior: 'smooth',
     }}>
+      {/* Button hover styles */}
+      <style>{`
+        .btn-hover {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-hover:hover {
+          transform: scale(1.03);
+        }
+        .btn-hover:active {
+          transform: scale(0.98);
+        }
+      `}</style>
+
       {/* Header */}
       {shouldRenderSection('header') && (
         <EditableSection
@@ -446,6 +459,7 @@ const LandingPage2 = () => {
 
           {/* See Price Button */}
           <button
+            className="btn-hover"
             onClick={() => document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' })}
             style={{
               backgroundColor: '#0071E3',
@@ -1017,6 +1031,7 @@ const LandingPage2 = () => {
             </ul>
             {/* Button */}
             <button
+              className="btn-hover"
               onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
               style={{
                 width: '100%',
@@ -1130,6 +1145,7 @@ const LandingPage2 = () => {
             </ul>
             {/* Button */}
             <button
+              className="btn-hover"
               onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
               style={{
                 width: '100%',
@@ -1197,6 +1213,7 @@ const LandingPage2 = () => {
             </p>
           </div>
           <button
+            className="btn-hover"
             onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
             style={{
               backgroundColor: '#fff',
@@ -1331,6 +1348,7 @@ const LandingPage2 = () => {
                   We'll get back to you within 24 hours.
                 </p>
                 <button
+                  className="btn-hover"
                   onClick={() => setFormSubmitted(false)}
                   style={{
                     marginTop: '16px',
@@ -1445,6 +1463,7 @@ const LandingPage2 = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button
+                    className="btn-hover"
                     type="submit"
                     disabled={formLoading}
                     style={{

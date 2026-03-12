@@ -314,6 +314,19 @@ const Landing = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fff', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+      {/* Button hover styles */}
+      <style>{`
+        .btn-hover {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-hover:hover {
+          transform: scale(1.03);
+        }
+        .btn-hover:active {
+          transform: scale(0.98);
+        }
+      `}</style>
+
       {/* Top Banner */}
       {shouldRenderSection('topBanner') && pageContent.showBanner === 'yes' && (
         <EditableSection sectionId="topBanner" label="Top Banner" isEditorMode={isEditorMode} isSelected={selectedSection === 'topBanner'} isHidden={isSectionHidden('topBanner')}>
@@ -448,7 +461,7 @@ const Landing = () => {
                   width: isMobile ? '100%' : '516px'
                 }}>
                   {/* Button */}
-                  <Link to={pageContent.heroButtonLink || '/contact'} style={{
+                  <Link to={pageContent.heroButtonLink || '/contact'} className="btn-hover" style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -1591,7 +1604,10 @@ const Landing = () => {
 
             {/* CTA Button */}
             <div style={{ textAlign: 'center', marginTop: isMobile ? '32px' : '50px' }}>
-              <Link to="/contact" style={{
+              <div
+                className="btn-hover"
+                onClick={() => document.getElementById('contact-form-section')?.scrollIntoView({ behavior: 'smooth' })}
+                style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -1600,7 +1616,7 @@ const Landing = () => {
                 padding: isMobile ? '10px 14px' : '12px 18px',
                 borderRadius: '300px',
                 border: '1px solid #000',
-                textDecoration: 'none',
+                cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
                 fontSize: isMobile ? '16px' : '22px',
                 fontWeight: 700,
@@ -1618,7 +1634,7 @@ const Landing = () => {
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </div>
-              </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -1809,7 +1825,10 @@ const Landing = () => {
                   }}>{pageContent.priceSubtext}</p>
 
                   {/* CTA Button */}
-                  <Link to="/contact" style={{
+                  <div
+                    className="btn-hover"
+                    onClick={() => document.getElementById('contact-form-section')?.scrollIntoView({ behavior: 'smooth' })}
+                    style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1819,7 +1838,7 @@ const Landing = () => {
                     padding: isMobile ? '12px 20px' : '17px 28px',
                     borderRadius: '300px',
                     border: '2px solid #000',
-                    textDecoration: 'none',
+                    cursor: 'pointer',
                     fontFamily: "'Inter', sans-serif",
                     fontSize: isMobile ? '14px' : '17px',
                     fontWeight: 700,
@@ -1829,7 +1848,7 @@ const Landing = () => {
                     <svg width={isMobile ? '16' : '21'} height={isMobile ? '16' : '21'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
-                  </Link>
+                  </div>
                 </div>
 
                 {/* Guarantees */}
@@ -1999,6 +2018,7 @@ const Landing = () => {
                     {!isMobile && hasMultiple && (
                       <>
                         <button
+                          className="btn-hover"
                           onClick={goToPrev}
                           disabled={currentTestimonialIndex === 0}
                           style={{
@@ -2023,6 +2043,7 @@ const Landing = () => {
                           </svg>
                         </button>
                         <button
+                          className="btn-hover"
                           onClick={goToNext}
                           disabled={currentTestimonialIndex === testimonials.length - 1}
                           style={{
@@ -2281,6 +2302,7 @@ const Landing = () => {
                   {isMobile && hasMultiple && (
                     <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px' }}>
                       <button
+                        className="btn-hover"
                         onClick={goToPrev}
                         disabled={currentTestimonialIndex === 0}
                         style={{
@@ -2300,6 +2322,7 @@ const Landing = () => {
                         </svg>
                       </button>
                       <button
+                        className="btn-hover"
                         onClick={goToNext}
                         disabled={currentTestimonialIndex === testimonials.length - 1}
                         style={{
@@ -2594,6 +2617,7 @@ const Landing = () => {
                   backgroundColor: '#F9F3E6',
                 }}>
                   <button
+                    className="btn-hover"
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
                     style={{
                       width: '100%',
@@ -2647,7 +2671,7 @@ const Landing = () => {
       {/* Contact Form Section - Have More Questions */}
       {shouldRenderSection('contactForm') && (
       <EditableSection sectionId="contactForm" label="Contact Form Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'contactForm'} isHidden={isSectionHidden('contactForm')}>
-        <section style={{
+        <section id="contact-form-section" style={{
           padding: isMobile ? '40px 20px' : '83px 84px 94px 83px',
           backgroundColor: '#FFFDF9',
           width: '100%',
@@ -2737,6 +2761,7 @@ const Landing = () => {
                     marginBottom: '24px',
                   }}>We've received your message and will get back to you soon.</p>
                   <button
+                    className="btn-hover"
                     onClick={() => setFormSuccess(false)}
                     style={{
                       backgroundColor: '#E1FFA0',
@@ -2891,6 +2916,7 @@ const Landing = () => {
                   gap: '12px',
                 }}>
                   <button
+                    className="btn-hover"
                     type="submit"
                     disabled={formSubmitting}
                     style={{
