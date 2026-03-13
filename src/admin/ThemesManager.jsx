@@ -119,7 +119,7 @@ const ThemesManager = () => {
       showToastMsg('Theme renamed!');
       await fetchThemes();
     } catch (error) {
-      showToastMsg('Failed to rename theme', 'error');
+      showToastMsg(error.response?.data?.message || 'Failed to rename theme', 'error');
     } finally {
       setActionLoading(null);
     }
