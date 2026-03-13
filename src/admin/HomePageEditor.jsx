@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { pagesAPI, uploadAPI } from '../services/api';
+import { pagesAPI, uploadAPI, worksAPI } from '../services/api';
 
 const HomePageEditor = ({ onClose, onSave }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
+  const [allWorks, setAllWorks] = useState([]);
   const [formData, setFormData] = useState({
+    // Projects Section
+    selectedProjectIds: [],
     // Hero Section
     heroImage: '',
     heroImageMobile: '',
@@ -92,6 +95,7 @@ const HomePageEditor = ({ onClose, onSave }) => {
 
   useEffect(() => {
     fetchPageData();
+    fetchWorks();
   }, []);
 
   const fetchPageData = async () => {
@@ -108,6 +112,28 @@ const HomePageEditor = ({ onClose, onSave }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchWorks = async () => {
+    try {
+      const response = await worksAPI.getAll();
+      setAllWorks(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching works:', error);
+    }
+  };
+
+  const handleProjectToggle = (projectId) => {
+    setFormData((prev) => {
+      const currentIds = prev.selectedProjectIds || [];
+      const isSelected = currentIds.includes(projectId);
+      return {
+        ...prev,
+        selectedProjectIds: isSelected
+          ? currentIds.filter((id) => id !== projectId)
+          : [...currentIds, projectId],
+      };
+    });
   };
 
   const handleChange = (e) => {
@@ -161,6 +187,7 @@ const HomePageEditor = ({ onClose, onSave }) => {
     { id: 'hero', label: 'Hero' },
     { id: 'partners', label: 'Partners' },
     { id: 'experience', label: 'Experience' },
+    { id: 'projects', label: 'Projects' },
     { id: 'wantMore', label: 'Want More' },
     { id: 'realNumbers', label: 'Real Numbers' },
     { id: 'services', label: 'Services' },
@@ -334,6 +361,68 @@ const HomePageEditor = ({ onClose, onSave }) => {
 
             <label style={labelStyle}>Description</label>
             <textarea name="experienceDescription" value={formData.experienceDescription} onChange={handleChange} style={{ ...inputStyle, minHeight: '80px' }} />
+          </div>
+        )}
+
+        {/* Projects Section */}
+        {activeSection === 'projects' && (
+          <div style={sectionStyle}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px' }}>
+              Projects Section
+              <span style={{ fontSize: '14px', fontWeight: 400, color: '#666', marginLeft: '12px' }}>
+                ({(formData.selectedProjectIds || []).length} selected)
+              </span>
+            </h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+              Select which projects to display on the home page. Selected projects will appear in the carousel.
+            </p>
+
+            {allWorks.length === 0 ? (
+              <p style={{ color: '#999', textAlign: 'center', padding: '40px' }}>
+                No projects found. Add projects in the Works section first.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {allWorks.map((work) => (
+                  <label
+                    key={work._id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      padding: '16px',
+                      backgroundColor: (formData.selectedProjectIds || []).includes(work._id) ? '#E8F4FD' : '#F9F9F9',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      border: (formData.selectedProjectIds || []).includes(work._id) ? '2px solid #2558BF' : '2px solid transparent',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={(formData.selectedProjectIds || []).includes(work._id)}
+                      onChange={() => handleProjectToggle(work._id)}
+                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                    />
+                    {work.image && (
+                      <img
+                        src={work.image.startsWith('http') ? work.image : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${work.image}`}
+                        alt={work.title}
+                        style={{ width: '80px', height: '60px', objectFit: 'cover', borderRadius: '8px' }}
+                      />
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#333', marginBottom: '4px' }}>
+                        {work.title}
+                      </h4>
+                      <p style={{ fontSize: '13px', color: '#666', lineHeight: 1.4 }}>
+                        {work.description?.substring(0, 100)}{work.description?.length > 100 ? '...' : ''}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

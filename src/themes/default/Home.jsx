@@ -6,6 +6,23 @@ import vectorIcon from '@/assets/Vector.png';
 import EditableSection from '@/components/EditableSection';
 import heroDecor1 from '@/assets/Group 37369.png';
 import heroDecor2 from '@/assets/Group 37368.png';
+import rightArrowIcon from '@/assets/arrow-right white.png';
+import quoteIcon from '@/assets/Screenshot 2026-02-17 185830.png';
+import arrowLeft from '@/assets/arrow-left.png';
+import arrowRight from '@/assets/arrow-right.png';
+import servicePatternGreen from '@/assets/service-pattern-green.svg';
+
+// Blue pattern as data URL (arrows positioned in bottom-right corner)
+const servicePatternBlue = `data:image/svg+xml,${encodeURIComponent(`<svg width="543" height="416" viewBox="0 0 543 416" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="543" height="416" rx="24" fill="black"/>
+<path d="M296.439 442.563L307.092 428.128L420.35 511.713L567.714 312.035L454.456 228.45L465.109 214.014L705.687 391.563L695.034 405.998L582.149 322.688L434.785 522.366L547.67 605.676L537.016 620.111L296.439 442.563Z" fill="#336BB7"/>
+<path d="M410.295 491.979L312.975 420.156L323.629 405.721L406.514 466.891L517.865 316.011L434.98 254.841L445.633 240.405L542.953 312.228L410.295 491.979Z" fill="#F5BD33"/>
+<path d="M335.627 389.463L403.053 439.224L493.347 316.875L425.921 267.115L415.268 281.55L468.259 320.658L399.271 414.136L346.28 375.028L335.627 389.463Z" fill="#336BB7"/>
+<path d="M392.513 390.434L355.221 362.913L365.875 348.477L388.732 365.346L418.531 324.968L395.674 308.1L406.327 293.664L443.619 321.186L392.513 390.434Z" fill="#F5BD33"/>
+<path d="M589.264 346.406L686.211 417.953L675.557 432.389L593.045 371.494L481.695 522.374L564.206 583.269L553.553 597.704L456.607 526.157L589.264 346.406Z" fill="#F5BD33"/>
+<path d="M666.499 444.663L599.447 395.178L509.153 517.527L576.205 567.011L586.858 552.576L534.241 513.744L603.228 420.266L655.846 459.098L666.499 444.663Z" fill="#336BB7"/>
+</svg>`)}`;
+
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -28,6 +45,8 @@ const Home = () => {
   const [expandedAccordion, setExpandedAccordion] = useState(0);
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [currentServiceIndex, setCurrentServiceIndex] = useState(0);
+  const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
+  const [projectSliding, setProjectSliding] = useState(false);
   const [works, setWorks] = useState([]);
 
   // Refs for GSAP animation
@@ -154,26 +173,34 @@ const Home = () => {
     return !isSectionVisible(sectionId);
   };
 
-  // Testimonial data from About page
-  const [testimonialData, setTestimonialData] = useState({
+  // Testimonial heading from About page, content from Landing page
+  const [testimonialHeading, setTestimonialHeading] = useState({
     clientLabelItalic: 'Look',
     clientLabelNormal: 'what our client said..',
-    testimonialQuote1: 'Lorem ipsum dolor sit amet consectetur. Ullamcorper amet arcu quis elementum. Convallis purus mauris at in.',
-    testimonialQuote2: 'Pretium pharetra aliquam consequat duis ac risus vitae sollicitudin pharetra.',
-    testimonialAuthor: 'Reema Roy',
-    testimonialRole: 'Head of Marketing, Company-name',
-    testimonialImage: '',
-    testimonialStats: [
-      { value: '+45%', label: 'AOV (Average Order Value)' },
-      { value: '+24%', label: 'CTR (Click-through rate)' },
-      { value: '+16%', label: 'Return-rate per customer' },
-    ],
   });
+
+  const [testimonials, setTestimonials] = useState([
+    {
+      id: 1,
+      quote1: 'Lorem ipsum dolor sit amet consectetur. Ullamcorper amet arcu quis elementum. Convallis purus mauris at in.',
+      quote2: 'Pretium pharetra aliquam consequat duis ac risus vitae sollicitudin pharetra.',
+      authorName: 'Reema Roy',
+      authorRole: 'Head of Marketing, Company-name',
+      authorImage: '',
+      stat1Value: '+45%',
+      stat1Label: 'AOV (Average Order Value)',
+      stat2Value: '+24%',
+      stat2Label: 'CTR (Click-through rate)',
+      stat3Value: '+16%',
+      stat3Label: 'Return-rate per customer',
+    },
+  ]);
+
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
 
   useEffect(() => {
     fetchPageContent();
     fetchTestimonialData();
-    fetchWorks();
   }, []);
 
   // Editor mode: Listen for updates from parent
@@ -206,38 +233,76 @@ const Home = () => {
     try {
       const response = await pagesAPI.getOne('home');
       if (response.data.data?.content) {
-        setPageContent(prev => ({ ...prev, ...response.data.data.content }));
+        const content = response.data.data.content;
+        setPageContent(prev => ({ ...prev, ...content }));
+        // Fetch works with selected project IDs
+        fetchWorks(content.selectedProjectIds || []);
+      } else {
+        fetchWorks([]);
       }
     } catch (error) {
       console.log('Using default content for home page');
+      fetchWorks([]);
     }
   };
 
   const fetchTestimonialData = async () => {
     try {
-      const response = await pagesAPI.getOne('about');
-      if (response.data.data?.content) {
-        const aboutContent = response.data.data.content;
-        setTestimonialData(prev => ({
+      // Fetch heading from About page
+      const aboutResponse = await pagesAPI.getOne('about');
+      if (aboutResponse.data.data?.content) {
+        const aboutContent = aboutResponse.data.data.content;
+        setTestimonialHeading(prev => ({
           ...prev,
           clientLabelItalic: aboutContent.clientLabelItalic || prev.clientLabelItalic,
           clientLabelNormal: aboutContent.clientLabelNormal || prev.clientLabelNormal,
-          testimonialQuote1: aboutContent.testimonialQuote1 || prev.testimonialQuote1,
-          testimonialQuote2: aboutContent.testimonialQuote2 || prev.testimonialQuote2,
-          testimonialAuthor: aboutContent.testimonialAuthor || prev.testimonialAuthor,
-          testimonialRole: aboutContent.testimonialRole || prev.testimonialRole,
-          testimonialImage: aboutContent.testimonialImage || prev.testimonialImage,
         }));
+      }
+
+      // Fetch testimonials from Landing page
+      const landingResponse = await pagesAPI.getOne('landing');
+      if (landingResponse.data.data?.content) {
+        const landingContent = landingResponse.data.data.content;
+        if (landingContent.testimonials && Array.isArray(landingContent.testimonials) && landingContent.testimonials.length > 0) {
+          setTestimonials(landingContent.testimonials);
+        }
       }
     } catch (error) {
       console.log('Using default testimonial content');
     }
   };
 
-  const fetchWorks = async () => {
+  const fetchWorks = async (selectedProjects = []) => {
     try {
       const response = await worksAPI.getAll({ published: true });
-      setWorks(response.data.data.slice(0, 3)); // Get first 3 projects
+      const allWorks = response.data.data || [];
+
+      // If selectedProjects exist, filter to only show selected ones
+      if (selectedProjects && selectedProjects.length > 0) {
+        // Support both old format (array of IDs) and new format (array of objects)
+        const projectIds = selectedProjects.map(p => typeof p === 'string' ? p : p.id);
+        const filteredWorks = allWorks.filter(work => projectIds.includes(work._id));
+
+        // Sort by the order they appear in selectedProjects
+        filteredWorks.sort((a, b) => projectIds.indexOf(a._id) - projectIds.indexOf(b._id));
+
+        // Add custom description if available
+        const worksWithCustomDesc = filteredWorks.map(work => {
+          const projectData = selectedProjects.find(p =>
+            typeof p === 'string' ? p === work._id : p.id === work._id
+          );
+          const customDescription = typeof projectData === 'object' ? projectData.customDescription : '';
+          return {
+            ...work,
+            homeDescription: customDescription || work.description || ''
+          };
+        });
+
+        setWorks(worksWithCustomDesc);
+      } else {
+        // Fallback: show first 3 if no selection
+        setWorks(allWorks.slice(0, 3).map(w => ({ ...w, homeDescription: w.description || '' })));
+      }
     } catch (error) {
       console.error('Error fetching works:', error);
     }
@@ -438,7 +503,7 @@ const Home = () => {
             backgroundColor: '#2558BF',
             position: 'relative',
             overflow: 'hidden',
-            padding: isMobile ? '77px 0 80px' : isTablet ? '80px 40px 100px' : '100px 100px 120px',
+            padding: isMobile ? '0 0 80px' : isTablet ? '80px 40px 100px' : '100px 100px 120px',
           }}>
           {/* Decorative Green Circles - Desktop only */}
           {!isMobile && (
@@ -472,22 +537,22 @@ const Home = () => {
             position: 'relative',
             zIndex: 1,
             maxWidth: isMobile ? '100%' : '900px',
-            paddingTop: isMobile ? '68px' : '80px',
+            paddingTop: isMobile ? '60px' : '80px',
             marginLeft: isMobile ? '0' : '98px',
             textAlign: isMobile ? 'center' : 'left',
           }}>
             {/* Main Title */}
             <h1 style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '40px' : isTablet ? '56px' : '80px',
+              fontSize: isMobile ? '36px' : isTablet ? '56px' : '80px',
               fontWeight: 500,
               color: '#fff',
-              lineHeight: isMobile ? 1.2 : 1.1,
+              lineHeight: isMobile ? '56px' : 1.1,
               letterSpacing: isMobile ? '-1px' : '-3px',
               marginBottom: isMobile ? '35px' : '24px',
               padding: isMobile ? '0 20px' : 0,
             }}>
-              Beyond the <span style={{ fontStyle: 'italic' }}>original</span>
+              <span style={{ whiteSpace: isMobile ? 'nowrap' : 'normal' }}>Beyond the <span style={{ fontStyle: 'italic' }}>original</span></span>
               <br />
               branding and{' '}
               <span
@@ -503,6 +568,7 @@ const Home = () => {
                   marginRight: isMobile ? '0' : '16px',
                   overflow: 'hidden',
                   transition: 'opacity 0.2s ease',
+                  transform: isMobile ? 'rotate(-90deg)' : 'none',
                 }}>
                 {(isMobile ? (pageContent.heroImageMobile || pageContent.heroImage) : pageContent.heroImage) && (
                   <img
@@ -534,7 +600,7 @@ const Home = () => {
             {/* Buttons */}
             <div style={{
               display: 'flex',
-              flexDirection: 'column',
+              flexDirection: isMobile ? 'column' : 'row',
               alignItems: isMobile ? 'center' : 'flex-start',
               gap: '16px',
               marginBottom: '20px',
@@ -674,7 +740,7 @@ const Home = () => {
             lineHeight: isMobile ? '30px' : 'normal',
             width: isMobile ? '390px' : '645px',
             maxWidth: '100%',
-            margin: `0 auto ${isMobile ? '36px' : '40px'}`,
+            margin: `0 auto ${isMobile ? '36px' : '60px'}`,
             textAlign: 'center',
           }}>
             {pageContent.partnerTitle}
@@ -824,7 +890,7 @@ const Home = () => {
         <section style={{
           backgroundColor: isMobile ? '#E1FFA0' : 'transparent',
           borderRadius: isMobile ? '0 0 300px 300px' : '0',
-          padding: isMobile ? '48px 20px 80px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '48px 20px 80px' : isTablet ? '40px 40px 60px' : '40px 100px 80px',
           textAlign: 'center',
           minHeight: isMobile ? '733px' : 'auto',
           marginTop: isMobile ? '-100px' : '0',
@@ -836,7 +902,7 @@ const Home = () => {
             flexDirection: 'column',
             alignItems: 'center',
             gap: isMobile ? '11px' : '0',
-            marginBottom: isMobile ? '40px' : '16px',
+            marginBottom: isMobile ? '40px' : isTablet ? '32px' : '40px',
           }}>
             <h2 style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -884,11 +950,14 @@ const Home = () => {
           {!isMobile && (
             <p style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '16px',
+              fontSize: '20px',
               fontWeight: 400,
-              color: '#666',
-              maxWidth: '600px',
+              color: '#000',
+              lineHeight: '24px',
+              width: '645px',
+              maxWidth: '100%',
               margin: '0 auto',
+              textAlign: 'center',
             }}>
               {pageContent.experienceDescription}
             </p>
@@ -897,177 +966,196 @@ const Home = () => {
       </EditableSection>
       )}
 
-      {/* Projects Showcase Section */}
+      {/* Projects Showcase Section - Carousel */}
       {shouldRenderSection('projects') && (
       <EditableSection sectionId="projects" label="Projects Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'projects'} isHidden={isSectionHidden('projects')}>
         <section style={{
-          padding: isMobile ? '0 0 40px 0' : '0 0 60px 0',
+          padding: isMobile ? '0 0 40px 0' : '0',
+          overflow: 'hidden',
         }}>
-          {/* Project Cards */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: isMobile ? '0' : '0',
-          }}>
-            {works.length > 0 ? works.map((work, index) => (
-              <div key={work._id || index} style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : index % 2 === 0 ? 'row' : 'row-reverse',
-                minHeight: isMobile ? 'auto' : '500px',
-                backgroundColor: projectColors[index % projectColors.length],
-                borderRadius: isMobile ? '0 0 300px 300px' : '0',
+          {(() => {
+            const projectList = works.length > 0 ? works : [
+              { _id: '1', title: 'Project Name', featuredImage: null },
+              { _id: '2', title: 'Project Name', featuredImage: null },
+              { _id: '3', title: 'Project Name', featuredImage: null },
+            ];
+            const totalProjects = projectList.length;
+            const currentWork = projectList[currentProjectIndex] || projectList[0];
+            const bgColor = '#D2F34C'; // Same green for all
+            const nextBgColor = '#2558BF'; // Blue for right section
+
+            const handleNextProject = () => {
+              if (projectSliding) return;
+              setProjectSliding(true);
+              setTimeout(() => {
+                setCurrentProjectIndex((prev) => (prev + 1) % totalProjects);
+                setProjectSliding(false);
+              }, 400);
+            };
+
+            return isMobile ? (
+              // Mobile Layout - Single card with swipe
+              <div style={{
+                backgroundColor: bgColor,
+                borderRadius: '0 0 300px 300px',
                 overflow: 'hidden',
-                marginTop: isMobile && index > 0 ? '-200px' : '0',
+                paddingBottom: '100px',
                 position: 'relative',
-                zIndex: isMobile ? 3 - index : 'auto',
               }}>
-                {/* Image Section - First on mobile */}
                 <div style={{
-                  flex: 1,
-                  backgroundColor: projectColors[index % projectColors.length],
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: isMobile ? '60px 25px 40px' : '40px',
-                  position: 'relative',
-                  order: isMobile ? 1 : 2,
+                  transform: projectSliding ? 'translateX(-100%)' : 'translateX(0)',
+                  opacity: projectSliding ? 0 : 1,
+                  transition: 'transform 0.4s ease, opacity 0.4s ease',
                 }}>
-                  {work.featuredImage ? (
-                    <img
-                      src={getImageUrl(work.featuredImage)}
-                      alt={work.title}
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: isMobile ? '365px' : '400px',
-                        width: isMobile ? '379px' : 'auto',
-                        objectFit: 'cover',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: isMobile ? '379px' : '100%',
-                      height: isMobile ? '365px' : '300px',
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: projectColors[index % projectColors.length] === '#2558BF' ? '#fff' : '#000',
+                  {/* Text */}
+                  <div style={{ padding: '60px 25px 20px', textAlign: 'center' }}>
+                    <h3 style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: '26px',
+                      fontWeight: 500,
+                      color: '#000',
+                      width: '315px',
+                      maxWidth: '100%',
+                      margin: '0 auto',
                     }}>
-                      Project Image
-                    </div>
-                  )}
-                  {/* Arrow Button */}
-                  {!isMobile && index % 2 !== 0 && (
-                    <Link to={`/work/${work.slug || work._id}`} style={{
-                      position: 'absolute',
-                      left: '-28px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '50%',
-                      backgroundColor: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      textDecoration: 'none',
-                    }}>
-                      <span style={{ fontSize: '24px', color: '#000' }}>→</span>
-                    </Link>
-                  )}
+                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{currentWork.title || 'Project Name'}</span>
+                      <span style={{ fontWeight: 500 }}> , {currentWork.homeDescription?.substring(0, 50) || currentWork.description?.substring(0, 50) || 'and the description goes here'}</span>
+                    </h3>
+                  </div>
+                  {/* Image */}
+                  <div style={{ padding: '20px 25px', display: 'flex', justifyContent: 'center' }}>
+                    {(currentWork.featuredImage || currentWork.image) ? (
+                      <img src={getImageUrl(currentWork.featuredImage || currentWork.image)} alt={currentWork.title} style={{ width: '379px', maxWidth: '100%', height: '365px', objectFit: 'cover', borderRadius: '8px' }} />
+                    ) : (
+                      <div style={{ width: '379px', height: '365px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>Project Image</div>
+                    )}
+                  </div>
                 </div>
-                {/* Text Section - Below image on mobile */}
+                {/* Navigation dots */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
+                  {projectList.map((_, idx) => (
+                    <button key={idx} onClick={() => setCurrentProjectIndex(idx)} style={{
+                      width: '10px', height: '10px', borderRadius: '50%',
+                      backgroundColor: idx === currentProjectIndex ? '#000' : 'rgba(0,0,0,0.3)',
+                      border: 'none', cursor: 'pointer',
+                    }} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              // Desktop Layout - Carousel with slide animation
+              <div style={{ position: 'relative', minHeight: '646px', width: '100%', backgroundColor: bgColor }}>
+                {/* Full Width Yellow Background with Content */}
                 <div style={{
-                  flex: isMobile ? 'none' : 1,
-                  backgroundColor: projectColors[index % projectColors.length],
-                  padding: isMobile ? '20px 25px 100px' : '60px',
+                  width: '100%',
+                  backgroundColor: bgColor,
+                  padding: '60px 80px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'flex-start',
-                  alignItems: isMobile ? 'center' : 'flex-start',
-                  order: isMobile ? 2 : 1,
-                }}>
-                  <h3 style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: isMobile ? '26px' : '32px',
-                    fontWeight: 500,
-                    color: projectColors[index % projectColors.length] === '#2558BF' ? '#fff' : '#000',
-                    marginBottom: '8px',
-                    textAlign: isMobile ? 'center' : 'left',
-                    width: isMobile ? '315px' : 'auto',
-                  }}>
-                    <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{work.title || 'Project Name'}</span>
-                    <span style={{ fontWeight: 500 }}> , and the description goes here</span>
-                  </h3>
-                </div>
-              </div>
-            )) : (
-              // Placeholder projects if no works
-              [0, 1, 2].map((index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : index % 2 === 0 ? 'row' : 'row-reverse',
-                  minHeight: isMobile ? 'auto' : '500px',
-                  backgroundColor: projectColors[index],
-                  borderRadius: isMobile ? '0 0 300px 300px' : '0',
-                  overflow: 'hidden',
-                  marginTop: isMobile && index > 0 ? '-200px' : '0',
                   position: 'relative',
-                  zIndex: isMobile ? 3 - index : 'auto',
+                  overflow: 'hidden',
+                  minHeight: '646px',
                 }}>
-                  {/* Image Section - First on mobile */}
                   <div style={{
-                    flex: 1,
-                    backgroundColor: projectColors[index],
+                    transform: projectSliding ? 'translateX(-100%)' : 'translateX(0)',
+                    opacity: projectSliding ? 0 : 1,
+                    transition: 'transform 0.4s ease, opacity 0.4s ease',
+                  }}>
+                    {/* Title */}
+                    <h3 style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: '32px',
+                      fontWeight: 500,
+                      color: '#000',
+                      marginBottom: '40px',
+                      maxWidth: '700px',
+                      lineHeight: 1.3,
+                    }}>
+                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{currentWork.title || 'Project Name'}</span>
+                      <span style={{ fontWeight: 500 }}> , {currentWork.homeDescription || currentWork.description?.substring(0, 80) || 'and the description goes here'}</span>
+                    </h3>
+                    {/* Image */}
+                    {(currentWork.featuredImage || currentWork.image) ? (
+                      <img src={getImageUrl(currentWork.featuredImage || currentWork.image)} alt={currentWork.title} style={{ maxWidth: '500px', width: '100%', height: 'auto', objectFit: 'cover', borderRadius: '8px' }} />
+                    ) : (
+                      <div style={{ width: '500px', maxWidth: '100%', height: '350px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>Project Image</div>
+                    )}
+                  </div>
+                  {/* Slide indicators */}
+                  <div style={{ position: 'absolute', bottom: '40px', left: '80px', display: 'flex', gap: '8px' }}>
+                    {projectList.map((_, idx) => (
+                      <button key={idx} onClick={() => setCurrentProjectIndex(idx)} style={{
+                        width: '12px', height: '12px', borderRadius: '50%',
+                        backgroundColor: idx === currentProjectIndex ? '#000' : 'rgba(0,0,0,0.2)',
+                        border: 'none', cursor: 'pointer', transition: 'background-color 0.3s',
+                      }} />
+                    ))}
+                  </div>
+                </div>
+                {/* Right Section - Blue curved overlay on top of yellow */}
+                <div style={{
+                  backgroundColor: nextBgColor,
+                  borderRadius: '300px 0 0 300px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '40%',
+                  zIndex: 10,
+                }}>
+                  {/* Arrow Button and Next Project Title */}
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: isMobile ? '60px 25px 40px' : '40px',
-                    order: isMobile ? 1 : 2,
+                    gap: '24px',
+                    position: 'absolute',
+                    left: '45px',
+                    right: '40px',
+                    transform: projectSliding ? 'translateX(50px)' : 'translateX(0)',
+                    opacity: projectSliding ? 0 : 1,
+                    transition: 'transform 0.4s ease, opacity 0.4s ease',
                   }}>
-                    <div style={{
-                      width: isMobile ? '379px' : '100%',
-                      height: isMobile ? '365px' : '300px',
-                      backgroundColor: 'rgba(255,255,255,0.2)',
-                      borderRadius: '8px',
+                    <button onClick={handleNextProject} style={{
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '300px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.44)',
+                      border: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: projectColors[index] === '#2558BF' ? '#fff' : '#000',
-                    }}>
-                      Project Image
-                    </div>
-                  </div>
-                  {/* Text Section - Below image on mobile */}
-                  <div style={{
-                    flex: isMobile ? 'none' : 1,
-                    backgroundColor: projectColors[index],
-                    padding: isMobile ? '20px 25px 100px' : '60px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-start',
-                    alignItems: isMobile ? 'center' : 'flex-start',
-                    order: isMobile ? 2 : 1,
-                  }}>
-                    <h3 style={{
+                      cursor: 'pointer',
+                      transition: 'background-color 0.3s, transform 0.2s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.6)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.44)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                    >
+                      <img src={rightArrowIcon} alt="Next" style={{ width: '32px', height: '32px' }} />
+                    </button>
+                    {/* Next Project Title */}
+                    <h4 style={{
                       fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: isMobile ? '26px' : '32px',
+                      fontSize: '24px',
                       fontWeight: 500,
-                      color: projectColors[index] === '#2558BF' ? '#fff' : '#000',
-                      textAlign: isMobile ? 'center' : 'left',
-                      width: isMobile ? '315px' : 'auto',
+                      color: '#fff',
+                      flex: 1,
+                      margin: 0,
+                      lineHeight: 1.4,
                     }}>
-                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>Project Name</span>
-                      <span style={{ fontWeight: 500 }}> , and the description goes here</span>
-                    </h3>
+                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{projectList[(currentProjectIndex + 1) % totalProjects]?.title || 'Project Name'}</span>
+                      <span style={{ fontWeight: 400 }}> , {projectList[(currentProjectIndex + 1) % totalProjects]?.homeDescription || projectList[(currentProjectIndex + 1) % totalProjects]?.description || 'and description goes here'}</span>
+                    </h4>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            );
+          })()}
         </section>
       </EditableSection>
       )}
@@ -1077,14 +1165,16 @@ const Home = () => {
       <EditableSection sectionId="wantMore" label="Want To See More" isEditorMode={isEditorMode} isSelected={selectedSection === 'wantMore'} isHidden={isSectionHidden('wantMore')}>
         <section style={{
           padding: isMobile ? '40px 20px' : '60px 100px',
+          paddingBottom: isMobile ? '40px' : '50px',
           textAlign: 'center',
         }}>
           <h3 style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '20px' : '24px',
-            fontWeight: 500,
+            fontSize: isMobile ? '24px' : '32px',
+            fontWeight: 400,
+            fontStyle: 'italic',
             color: '#000',
-            marginBottom: '16px',
+            marginBottom: '20px',
           }}>
             {pageContent.wantMoreTitle}
           </h3>
@@ -1092,14 +1182,17 @@ const Home = () => {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '12px 32px',
+            height: '64px',
+            padding: '12px 24px',
+            gap: '12px',
             backgroundColor: '#2558BF',
             color: '#fff',
-            borderRadius: '100px',
+            borderRadius: '200px',
             textDecoration: 'none',
             fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: '14px',
-            fontWeight: 500,
+            fontSize: '20px',
+            fontWeight: 400,
+            lineHeight: '24px',
           }}>
             {pageContent.wantMoreButtonText}
           </Link>
@@ -1111,7 +1204,7 @@ const Home = () => {
       {shouldRenderSection('realNumbers') && (
       <EditableSection sectionId="realNumbers" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'realNumbers'} isHidden={isSectionHidden('realNumbers')}>
         <section style={{
-          padding: isMobile ? '64px 22px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '64px 22px' : isTablet ? '60px 40px' : '50px 100px 80px',
           textAlign: 'center',
         }}>
           <h2 style={{
@@ -1128,114 +1221,150 @@ const Home = () => {
 
           {/* Stats Grid */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            display: 'flex',
+            justifyContent: 'center',
             gap: isMobile ? '12px' : '24px',
-            maxWidth: isMobile ? '386px' : '1000px',
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            maxWidth: isMobile ? '386px' : '1240px',
             margin: '0 auto',
             marginBottom: isMobile ? '12px' : '32px',
           }}>
             {/* Stat 1 */}
             <div style={{
-              padding: isMobile ? '24px 17px' : '32px',
+              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              height: isMobile ? 'auto' : '198px',
+              padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
               borderRadius: isMobile ? '16px' : '8px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '32px' : '36px',
-                fontWeight: 500,
+                fontSize: isMobile ? '32px' : '56px',
+                fontWeight: 400,
                 color: '#000',
                 marginBottom: '10px',
-                letterSpacing: isMobile ? '0.37px' : '0',
+                letterSpacing: '0.369px',
               }}>
                 {pageContent.stat1Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#1f1f1f',
-                letterSpacing: isMobile ? '-0.15px' : '0',
+                fontSize: isMobile ? '12px' : '18px',
+                fontWeight: 400,
+                color: '#1F1F1F',
+                lineHeight: '24px',
+                letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat1Label}
               </div>
             </div>
             {/* Stat 2 */}
             <div style={{
-              padding: isMobile ? '24px 17px' : '32px',
+              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              height: isMobile ? 'auto' : '198px',
+              padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
               borderRadius: isMobile ? '16px' : '8px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '32px' : '36px',
-                fontWeight: 500,
+                fontSize: isMobile ? '32px' : '56px',
+                fontWeight: 400,
                 color: '#000',
                 marginBottom: '10px',
-                letterSpacing: isMobile ? '0.37px' : '0',
+                letterSpacing: '0.369px',
               }}>
                 {pageContent.stat2Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#1f1f1f',
-                letterSpacing: isMobile ? '-0.15px' : '0',
+                fontSize: isMobile ? '12px' : '18px',
+                fontWeight: 400,
+                color: '#1F1F1F',
+                lineHeight: '24px',
+                letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat2Label}
               </div>
             </div>
             {/* Stat 3 */}
             <div style={{
-              padding: isMobile ? '24px 17px' : '32px',
+              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              height: isMobile ? 'auto' : '198px',
+              padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
               borderRadius: isMobile ? '16px' : '8px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '32px' : '36px',
-                fontWeight: 500,
+                fontSize: isMobile ? '32px' : '56px',
+                fontWeight: 400,
                 color: '#000',
                 marginBottom: '10px',
-                letterSpacing: isMobile ? '0.37px' : '0',
+                letterSpacing: '0.369px',
               }}>
                 {pageContent.stat3Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#1f1f1f',
-                letterSpacing: isMobile ? '-0.15px' : '0',
+                fontSize: isMobile ? '12px' : '18px',
+                fontWeight: 400,
+                color: '#1F1F1F',
+                lineHeight: '24px',
+                letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat3Label}
               </div>
             </div>
             {/* Stat 4 */}
             <div style={{
-              padding: isMobile ? '24px 17px' : '32px',
+              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              height: isMobile ? 'auto' : '198px',
+              padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
               borderRadius: isMobile ? '16px' : '8px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              textAlign: 'center',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '32px' : '36px',
-                fontWeight: 500,
+                fontSize: isMobile ? '32px' : '56px',
+                fontWeight: 400,
                 color: '#000',
                 marginBottom: '10px',
-                letterSpacing: isMobile ? '0.37px' : '0',
+                letterSpacing: '0.369px',
               }}>
                 {pageContent.stat4Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#1f1f1f',
-                letterSpacing: isMobile ? '-0.15px' : '0',
-                color: '#666',
+                fontSize: isMobile ? '12px' : '18px',
+                fontWeight: 400,
+                color: '#1F1F1F',
+                lineHeight: '24px',
+                letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat4Label}
               </div>
@@ -1250,24 +1379,27 @@ const Home = () => {
             gap: '16px',
           }}>
             {pageContent.stat5Image ? (
-              <img src={getImageUrl(pageContent.stat5Image)} alt="" style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
+              <img src={getImageUrl(pageContent.stat5Image)} alt="" style={{ width: '222px', height: '153px', borderRadius: '8px', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '80px', height: '80px', backgroundColor: '#E5E5E5', borderRadius: '8px' }} />
+              <div style={{ width: '222px', height: '153px', backgroundColor: '#E5E5E5', borderRadius: '8px' }} />
             )}
             <div style={{ textAlign: 'left' }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '24px' : '36px',
-                fontWeight: 600,
+                fontSize: isMobile ? '24px' : '56px',
+                fontWeight: 400,
                 color: '#000',
+                letterSpacing: '0.369px',
               }}>
                 {pageContent.stat5Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '12px' : '14px',
+                fontSize: isMobile ? '12px' : '18px',
                 fontWeight: 400,
-                color: '#666',
+                color: '#1F1F1F',
+                lineHeight: '24px',
+                letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat5Label}
               </div>
@@ -1281,42 +1413,52 @@ const Home = () => {
       {shouldRenderSection('services') && (
       <EditableSection sectionId="services" label="Services Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'services'} isHidden={isSectionHidden('services')}>
         <section style={{
-          padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '40px 0 40px 20px' : isTablet ? '60px 0 60px 40px' : '80px 0 80px 100px',
+          overflow: 'hidden',
         }}>
           {/* Title and CTA Row */}
           <div style={{
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
             justifyContent: 'space-between',
-            alignItems: isMobile ? 'flex-start' : 'flex-end',
+            alignItems: isMobile ? 'flex-start' : 'flex-start',
             marginBottom: isMobile ? '32px' : '48px',
             gap: isMobile ? '24px' : '40px',
+            paddingRight: isMobile ? '20px' : '100px',
           }}>
             <h2 style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '28px' : isTablet ? '36px' : '42px',
+              fontSize: isMobile ? '28px' : isTablet ? '36px' : '50px',
               fontWeight: 400,
               color: '#000',
-              maxWidth: '500px',
+              maxWidth: '600px',
               lineHeight: 1.2,
+              letterSpacing: '-1px',
+              margin: 0,
             }}>
-              <span style={{ fontStyle: 'italic' }}>{pageContent.servicesTitle}</span>{' '}
+              <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.servicesTitle}</span>{' '}
               {pageContent.servicesTitleNormal}
             </h2>
-            <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: isMobile ? 'flex-start' : 'flex-end',
+              gap: '8px',
+            }}>
               <Link to="/contact" style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '16px 32px',
+                height: '64px',
+                padding: '12px 24px',
                 backgroundColor: '#2558BF',
                 color: '#fff',
-                borderRadius: '100px',
+                borderRadius: '200px',
                 textDecoration: 'none',
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '16px',
-                fontWeight: 500,
-                marginBottom: '12px',
+                fontSize: '20px',
+                fontWeight: 600,
+                lineHeight: '24px',
               }}>
                 {pageContent.ctaMidButtonText}
               </Link>
@@ -1324,13 +1466,14 @@ const Home = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: isMobile ? 'flex-start' : 'flex-end',
-                gap: '8px',
+                gap: '4px',
               }}>
-                <img src={vectorIcon} alt="" style={{ width: '14px', height: '14px' }} />
+                <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0)' }} />
                 <span style={{
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontSize: '14px',
-                  color: '#666',
+                  fontSize: '16px',
+                  fontWeight: 500,
+                  color: '#000',
                 }}>
                   {pageContent.ctaMidInstantText}
                 </span>
@@ -1338,277 +1481,538 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Services Cards Carousel */}
+          {/* Services Cards Carousel - Shows 2 full + partial 3rd with nav arrow on 3rd card */}
           <div style={{
-            display: 'flex',
-            gap: '16px',
-            overflowX: isMobile ? 'auto' : 'visible',
-            paddingBottom: isMobile ? '16px' : '0',
+            position: 'relative',
           }}>
-            {services.map((service, index) => (
-              <div key={index} style={{
-                flex: isMobile ? '0 0 280px' : 1,
-                backgroundColor: '#1A1A1A',
-                borderRadius: '16px',
-                padding: '24px',
-                minHeight: '300px',
-                display: 'flex',
-                flexDirection: 'column',
-              }}>
-                <h4 style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  color: '#fff',
-                  marginBottom: '16px',
-                }}>
-                  {service.title}
-                </h4>
-                <p style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: '#999',
-                  lineHeight: 1.6,
-                  marginBottom: '24px',
-                }}>
-                  {service.description}
-                </p>
-                <div style={{
-                  marginTop: 'auto',
-                  height: '120px',
-                  backgroundColor: '#2A2A2A',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                }}>
-                  {service.image ? (
-                    <img src={getImageUrl(service.image)} alt={service.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      backgroundColor: '#3A3A3A',
-                      borderRadius: '8px',
-                    }} />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Carousel Navigation */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px',
-            marginTop: '24px',
-          }}>
-            <button
-              onClick={() => setCurrentServiceIndex(prev => Math.max(0, prev - 1))}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: '1px solid #E5E5E5',
-                backgroundColor: '#fff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              ←
-            </button>
-            <span style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '14px',
-              color: '#666',
+            <div style={{
+              display: 'flex',
+              gap: '24px',
+              transform: `translateX(-${currentServiceIndex * (isMobile ? 324 : 567)}px)`,
+              transition: 'transform 0.4s ease-out',
             }}>
-              {currentServiceIndex + 1} / {services.length > 0 ? Math.ceil(services.length) : 12}
-            </span>
-            <button
-              onClick={() => setCurrentServiceIndex(prev => prev + 1)}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                border: '1px solid #E5E5E5',
-                backgroundColor: '#fff',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              →
-            </button>
+              {services.map((service, index) => {
+                // Use green pattern for odd cards (1st, 3rd, 5th) and blue for even cards (2nd, 4th)
+                const patternImage = index % 2 === 0 ? servicePatternGreen : servicePatternBlue;
+
+                return (
+                  <div key={index} style={{
+                    flex: '0 0 auto',
+                    width: isMobile ? '300px' : '543px',
+                    height: isMobile ? '380px' : '416px',
+                    borderRadius: '24px',
+                    padding: '32px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    backgroundImage: service.image ? 'none' : `url(${patternImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundColor: '#000',
+                  }}>
+                    {/* If service has custom image, show it as background */}
+                    {service.image && (
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '24px',
+                        overflow: 'hidden',
+                      }}>
+                        <img
+                          src={getImageUrl(service.image)}
+                          alt=""
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    <h4 style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: isMobile ? '20px' : '24px',
+                      fontWeight: 600,
+                      color: '#fff',
+                      margin: '0 0 20px 0',
+                      position: 'relative',
+                      zIndex: 2,
+                    }}>
+                      {service.title}
+                    </h4>
+                    <p style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: isMobile ? '14px' : '16px',
+                      fontWeight: 400,
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      lineHeight: '26px',
+                      margin: '0',
+                      maxWidth: '400px',
+                      position: 'relative',
+                      zIndex: 2,
+                    }}>
+                      {service.description}
+                    </p>
+
+                    {/* Left Navigation Arrow - show on first visible card when scrolled */}
+                    {index === currentServiceIndex && currentServiceIndex > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentServiceIndex(prev => Math.max(0, prev - 1));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '32px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '68px',
+                          height: '68px',
+                          borderRadius: '204px',
+                          border: 'none',
+                          backgroundColor: 'rgba(255, 255, 255, 0.44)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 10,
+                        }}
+                      >
+                        <img src={rightArrowIcon} alt="Previous" style={{ width: '24px', height: '24px', transform: 'rotate(180deg)' }} />
+                      </button>
+                    )}
+
+                    {/* Right Navigation Arrow - show on partially visible card */}
+                    {index === currentServiceIndex + 2 && currentServiceIndex < services.length - 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentServiceIndex(prev => Math.min(services.length - 1, prev + 1));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          left: '32px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '68px',
+                          height: '68px',
+                          borderRadius: '204px',
+                          border: 'none',
+                          backgroundColor: 'rgba(255, 255, 255, 0.44)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 10,
+                        }}
+                      >
+                        <img src={rightArrowIcon} alt="Next" style={{ width: '24px', height: '24px' }} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
       </EditableSection>
       )}
 
-      {/* Testimonial Section - Connected to About Page */}
-      <section style={{
-        padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
-        textAlign: 'center',
-      }}>
-        <h3 style={{
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-          fontSize: isMobile ? '24px' : isTablet ? '32px' : '36px',
-          fontWeight: 400,
-          color: '#000',
-          marginBottom: isMobile ? '32px' : '48px',
+      {/* Testimonial Section - Content from Landing Page, Styling from CaseStudyDetail */}
+      {testimonials[currentTestimonialIndex]?.quote1 && (
+        <section style={{
+          paddingTop: isMobile ? '60px' : isTablet ? '90px' : '90px',
+          paddingBottom: '0px',
+          paddingLeft: isMobile ? '20px' : isTablet ? '40px' : '100px',
+          paddingRight: isMobile ? '20px' : isTablet ? '40px' : '100px',
+          textAlign: 'center',
         }}>
-          <span style={{ fontStyle: 'italic' }}>{testimonialData.clientLabelItalic}</span>{' '}
-          {testimonialData.clientLabelNormal}
-        </h3>
-
-        {/* Testimonial Content */}
-        <div style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'flex-start' : 'center',
-          justifyContent: 'center',
-          gap: isMobile ? '24px' : '60px',
-          maxWidth: '900px',
-          margin: '0 auto',
-        }}>
-          {/* Quote */}
-          <div style={{ flex: 1, textAlign: 'left' }}>
-            <div style={{ fontSize: '48px', color: '#000', lineHeight: 1, marginBottom: '16px' }}>"</div>
-            <p style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '16px' : '18px',
+          <div style={{ maxWidth: '1320px', margin: '0 auto' }}>
+            {/* Look what our client said - First word Italic */}
+            <h3 style={{
+              fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+              fontSize: isMobile ? '28px' : isTablet ? '40px' : '50px',
               fontWeight: 400,
+              lineHeight: 'normal',
+              letterSpacing: isMobile ? '-0.5px' : '-1px',
               color: '#000',
-              lineHeight: 1.6,
-              marginBottom: '8px',
+              marginBottom: isMobile ? '80px' : '60px',
             }}>
-              {testimonialData.testimonialQuote1}
-            </p>
-            <p style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '16px' : '18px',
-              fontWeight: 400,
-              color: '#000',
-              lineHeight: 1.6,
-              marginBottom: '24px',
-            }}>
-              {testimonialData.testimonialQuote2}
-            </p>
+              <em style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{testimonialHeading.clientLabelItalic}</em>{testimonialHeading.clientLabelNormal}
+            </h3>
 
-            {/* Stats */}
-            <div style={{
-              display: 'flex',
-              gap: '24px',
-              borderTop: '1px solid #E5E5E5',
-              paddingTop: '16px',
-            }}>
-              {testimonialData.testimonialStats.map((stat, index) => (
-                <div key={index} style={{
-                  borderRight: index < testimonialData.testimonialStats.length - 1 ? '1px solid #E5E5E5' : 'none',
-                  paddingRight: index < testimonialData.testimonialStats.length - 1 ? '24px' : '0',
-                }}>
-                  <div style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: isMobile ? '20px' : '24px',
-                    fontWeight: 600,
-                    color: '#000',
-                  }}>
-                    {stat.value}
-                  </div>
-                  <div style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: '12px',
+            {isMobile ? (
+              /* Mobile Layout */
+              <div style={{ textAlign: 'left', padding: '0 20px' }}>
+                {/* Quote Mark */}
+                <div style={{ marginBottom: '16px' }}>
+                  <img
+                    src={quoteIcon}
+                    alt="quote"
+                    style={{
+                      width: '36px',
+                      height: 'auto',
+                    }}
+                  />
+                </div>
+                {/* Quote Text - Two paragraphs */}
+                <div style={{ marginBottom: '32px' }}>
+                  <p style={{
+                    fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                    fontSize: '16px',
                     fontWeight: 400,
-                    color: '#666',
+                    lineHeight: '20px',
+                    color: '#000',
+                    width: '378px',
+                    maxWidth: '100%',
+                    marginBottom: '16px',
                   }}>
-                    {stat.label}
+                    {testimonials[currentTestimonialIndex]?.quote1}
+                  </p>
+                  <p style={{
+                    fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                    fontSize: '16px',
+                    fontWeight: 400,
+                    lineHeight: '20px',
+                    color: '#000',
+                    width: '378px',
+                    maxWidth: '100%',
+                  }}>
+                    {testimonials[currentTestimonialIndex]?.quote2}
+                  </p>
+                </div>
+
+                {/* Stats in a row */}
+                {testimonials[currentTestimonialIndex]?.stat1Value && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: '32px',
+                  }}>
+                    {[
+                      { value: testimonials[currentTestimonialIndex]?.stat1Value, label: testimonials[currentTestimonialIndex]?.stat1Label },
+                      { value: testimonials[currentTestimonialIndex]?.stat2Value, label: testimonials[currentTestimonialIndex]?.stat2Label },
+                      { value: testimonials[currentTestimonialIndex]?.stat3Value, label: testimonials[currentTestimonialIndex]?.stat3Label },
+                    ].map((stat, index) => (
+                      <div key={index} style={{ textAlign: 'center' }}>
+                        <p style={{
+                          fontFamily: "'Plus Jakarta Sans-SemiBold', 'Plus Jakarta Sans', sans-serif",
+                          fontSize: '24px',
+                          fontWeight: 500,
+                          lineHeight: '32px',
+                          color: '#000',
+                          marginBottom: '4px',
+                        }}>
+                          {stat.value}
+                        </p>
+                        <p style={{
+                          fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                          fontSize: '11px',
+                          fontWeight: 400,
+                          lineHeight: '16px',
+                          color: '#000',
+                        }}>
+                          {stat.label}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Image and Author - with Navigation */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
+                  }}
+                >
+                  {/* Navigation Arrows - Left (only show if multiple testimonials) */}
+                  {testimonials.length > 1 && (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setCurrentTestimonialIndex((prev) => Math.max(0, prev - 1))}
+                        disabled={currentTestimonialIndex === 0}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          border: '1px solid #E2775A',
+                          backgroundColor: 'transparent',
+                          cursor: currentTestimonialIndex === 0 ? 'not-allowed' : 'pointer',
+                          opacity: currentTestimonialIndex === 0 ? 0.4 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <img src={arrowLeft} alt="Previous" style={{ width: '14px', height: '14px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                      </button>
+                      <button
+                        onClick={() => setCurrentTestimonialIndex((prev) => Math.min(testimonials.length - 1, prev + 1))}
+                        disabled={currentTestimonialIndex === testimonials.length - 1}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          border: '1px solid #E2775A',
+                          backgroundColor: 'transparent',
+                          cursor: currentTestimonialIndex === testimonials.length - 1 ? 'not-allowed' : 'pointer',
+                          opacity: currentTestimonialIndex === testimonials.length - 1 ? 0.4 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <img src={arrowRight} alt="Next" style={{ width: '14px', height: '14px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Author Image and Info - Right */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                  }}>
+                    {testimonials[currentTestimonialIndex]?.authorImage && (
+                      <img
+                        src={getImageUrl(testimonials[currentTestimonialIndex]?.authorImage)}
+                        alt={testimonials[currentTestimonialIndex]?.authorName}
+                        style={{
+                          width: '150px',
+                          height: '150px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          marginBottom: '12px',
+                        }}
+                      />
+                    )}
+                    <p style={{
+                      fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                      fontSize: '18px',
+                      fontWeight: 400,
+                      lineHeight: 'normal',
+                      color: '#000',
+                      marginBottom: '4px',
+                      textAlign: 'right',
+                    }}>
+                      {testimonials[currentTestimonialIndex]?.authorName}
+                    </p>
+                    <p style={{
+                      fontFamily: "'Plus Jakarta Sans-MediumItalic', 'Plus Jakarta Sans', sans-serif",
+                      fontSize: '14px',
+                      fontStyle: 'italic',
+                      fontWeight: 400,
+                      lineHeight: '17px',
+                      color: '#000',
+                      textAlign: 'right',
+                    }}>
+                      {testimonials[currentTestimonialIndex]?.authorRole}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Author */}
-          <div style={{ textAlign: 'center' }}>
-            {testimonialData.testimonialImage ? (
-              <img
-                src={getImageUrl(testimonialData.testimonialImage)}
-                alt={testimonialData.testimonialAuthor}
-                style={{
-                  width: isMobile ? '100px' : '150px',
-                  height: isMobile ? '100px' : '150px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  marginBottom: '16px',
-                }}
-              />
+              </div>
             ) : (
+              /* Desktop/Tablet Layout - Horizontal: Quote on left, Author on right */
               <div style={{
-                width: isMobile ? '100px' : '150px',
-                height: isMobile ? '100px' : '150px',
-                borderRadius: '50%',
-                backgroundColor: '#E5E5E5',
-                marginBottom: '16px',
-                margin: '0 auto 16px',
-              }} />
-            )}
-            <p style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '16px',
-              fontWeight: 600,
-              color: '#000',
-              marginBottom: '4px',
-            }}>
-              {testimonialData.testimonialAuthor}
-            </p>
-            <p style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '14px',
-              fontWeight: 400,
-              color: '#666',
-              fontStyle: 'italic',
-            }}>
-              {testimonialData.testimonialRole}
-            </p>
-          </div>
-        </div>
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                gap: '60px',
+                maxWidth: '900px',
+                margin: '0 auto',
+                textAlign: 'left',
+              }}>
+                {/* Left - Quote and Stats */}
+                <div style={{ flex: 1 }}>
+                  {/* Quote Mark */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <img
+                      src={quoteIcon}
+                      alt="quote"
+                      style={{
+                        width: '48px',
+                        height: 'auto',
+                      }}
+                    />
+                  </div>
 
-        {/* Navigation */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '16px',
-          marginTop: '32px',
-        }}>
-          <button style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: '1px solid #E5E5E5',
-            backgroundColor: '#fff',
-            cursor: 'pointer',
-          }}>
-            ←
-          </button>
-          <button style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: '1px solid #E5E5E5',
-            backgroundColor: '#fff',
-            cursor: 'pointer',
-          }}>
-            →
-          </button>
-        </div>
-      </section>
+                  {/* Quote Text - Two paragraphs */}
+                  <div style={{ marginBottom: '32px', maxWidth: '521px' }}>
+                    <p style={{
+                      fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                      fontSize: '20px',
+                      fontWeight: 400,
+                      lineHeight: 'normal',
+                      letterSpacing: '-0.184px',
+                      color: '#000',
+                      marginBottom: '16px',
+                    }}>
+                      {testimonials[currentTestimonialIndex]?.quote1}
+                    </p>
+                    <p style={{
+                      fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                      fontSize: '20px',
+                      fontWeight: 400,
+                      lineHeight: 'normal',
+                      letterSpacing: '-0.184px',
+                      color: '#000',
+                    }}>
+                      {testimonials[currentTestimonialIndex]?.quote2}
+                    </p>
+                  </div>
+
+                  {/* Stats with vertical separators */}
+                  {testimonials[currentTestimonialIndex]?.stat1Value && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      marginBottom: '24px',
+                    }}>
+                      {[
+                        { value: testimonials[currentTestimonialIndex]?.stat1Value, label: testimonials[currentTestimonialIndex]?.stat1Label },
+                        { value: testimonials[currentTestimonialIndex]?.stat2Value, label: testimonials[currentTestimonialIndex]?.stat2Label },
+                        { value: testimonials[currentTestimonialIndex]?.stat3Value, label: testimonials[currentTestimonialIndex]?.stat3Label },
+                      ].map((stat, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            paddingLeft: index > 0 ? '24px' : 0,
+                            paddingRight: '24px',
+                            borderLeft: index > 0 ? '1px solid #000' : 'none',
+                          }}
+                        >
+                          <p style={{
+                            fontFamily: "'Plus Jakarta Sans-SemiBold', 'Plus Jakarta Sans', sans-serif",
+                            fontSize: '24px',
+                            fontWeight: 400,
+                            lineHeight: '43.951px',
+                            color: '#000',
+                            marginBottom: '4px',
+                          }}>
+                            {stat.value}
+                          </p>
+                          <p style={{
+                            fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                            fontSize: '14px',
+                            fontWeight: 400,
+                            lineHeight: '24.417px',
+                            color: '#000',
+                          }}>
+                            {stat.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right - Author Image and Info */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  minWidth: '150px',
+                }}>
+                  {testimonials[currentTestimonialIndex]?.authorImage && (
+                    <img
+                      src={getImageUrl(testimonials[currentTestimonialIndex]?.authorImage)}
+                      alt={testimonials[currentTestimonialIndex]?.authorName}
+                      style={{
+                        width: '150px',
+                        height: '150px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        marginBottom: '16px',
+                      }}
+                    />
+                  )}
+                  <p style={{
+                    fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', sans-serif",
+                    fontSize: '20px',
+                    fontWeight: 400,
+                    lineHeight: 'normal',
+                    letterSpacing: '-0.184px',
+                    color: '#000',
+                    textAlign: 'center',
+                    marginBottom: '4px',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {testimonials[currentTestimonialIndex]?.authorName}
+                  </p>
+                  <p style={{
+                    fontFamily: "'Plus Jakarta Sans-MediumItalic', 'Plus Jakarta Sans', sans-serif",
+                    fontSize: '14px',
+                    fontStyle: 'italic',
+                    fontWeight: 400,
+                    lineHeight: '17px',
+                    color: '#000',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                  }}>
+                    {testimonials[currentTestimonialIndex]?.authorRole}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Arrows - Desktop only (show only if multiple testimonials) */}
+            {!isMobile && testimonials.length > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '16px',
+                  marginTop: '40px',
+                }}
+              >
+                <button
+                  onClick={() => setCurrentTestimonialIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={currentTestimonialIndex === 0}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    border: '1px solid #E2775A',
+                    backgroundColor: 'transparent',
+                    cursor: currentTestimonialIndex === 0 ? 'not-allowed' : 'pointer',
+                    opacity: currentTestimonialIndex === 0 ? 0.4 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <img src={arrowLeft} alt="Previous" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                </button>
+                <button
+                  onClick={() => setCurrentTestimonialIndex((prev) => Math.min(testimonials.length - 1, prev + 1))}
+                  disabled={currentTestimonialIndex === testimonials.length - 1}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    border: '1px solid #E2775A',
+                    backgroundColor: 'transparent',
+                    cursor: currentTestimonialIndex === testimonials.length - 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentTestimonialIndex === testimonials.length - 1 ? 0.4 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <img src={arrowRight} alt="Next" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Brands Section */}
       {shouldRenderSection('brands') && (
@@ -1667,38 +2071,42 @@ const Home = () => {
                   }}>
                     {item.title}
                   </span>
-                  <span style={{
-                    fontSize: '24px',
-                    color: '#E2775A',
-                    transform: expandedAccordion === index ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.3s ease',
-                  }}>
-                    {expandedAccordion === index ? '←' : '→'}
-                  </span>
+                  <img
+                    src={expandedAccordion === index ? arrowLeft : arrowRight}
+                    alt={expandedAccordion === index ? "collapse" : "expand"}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)',
+                    }}
+                  />
                 </button>
                 {expandedAccordion === index && item.items.length > 0 && (
                   <div style={{
                     padding: '0 0 20px 0',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px 24px',
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                    gap: '12px 40px',
+                    marginLeft: isMobile ? '0' : '200px',
                   }}>
                     {item.items.map((subItem, subIndex) => (
                       <div key={subIndex} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '10px',
                       }}>
                         <span style={{
-                          width: '6px',
-                          height: '6px',
+                          width: '8px',
+                          height: '8px',
                           borderRadius: '50%',
                           backgroundColor: '#E2775A',
+                          flexShrink: 0,
                         }} />
                         <span style={{
                           fontFamily: "'Plus Jakarta Sans', sans-serif",
-                          fontSize: '14px',
-                          color: '#666',
+                          fontSize: '16px',
+                          fontWeight: 400,
+                          color: '#000',
                         }}>
                           {subItem}
                         </span>
@@ -1710,8 +2118,8 @@ const Home = () => {
             ))}
           </div>
 
-          {/* CTA Button */}
-          <div style={{ marginTop: '40px', textAlign: isMobile ? 'center' : 'left' }}>
+          {/* CTA Button - Centered */}
+          <div style={{ marginTop: '40px', textAlign: 'center' }}>
             <Link to="/contact" style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -1724,14 +2132,13 @@ const Home = () => {
               fontFamily: "'Plus Jakarta Sans', sans-serif",
               fontSize: '16px',
               fontWeight: 500,
-              marginBottom: '12px',
             }}>
               {pageContent.ctaMidButtonText}
             </Link>
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: isMobile ? 'center' : 'flex-start',
+              justifyContent: 'center',
               gap: '8px',
               marginTop: '12px',
             }}>

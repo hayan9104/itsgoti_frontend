@@ -34,6 +34,14 @@ export const homeSections = [
     ]
   },
   {
+    id: 'projects',
+    label: 'Projects Section',
+    description: 'Select which projects to display in the carousel',
+    fields: [
+      { key: 'selectedProjectIds', type: 'projectsArray', label: 'Select Projects to Display', hint: 'Check the projects you want to show on the home page carousel' },
+    ]
+  },
+  {
     id: 'wantMore',
     label: 'Want To See More',
     description: 'CTA section to view all case studies',
