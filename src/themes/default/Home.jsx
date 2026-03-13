@@ -281,9 +281,9 @@ const Home = () => {
   // Project colors
   const projectColors = ['#D2F34C', '#2558BF', '#E2775A'];
 
-  // GSAP ScrollTrigger Animation for hero image
+  // GSAP ScrollTrigger Animation for hero image (works on both mobile and desktop)
   useLayoutEffect(() => {
-    if (isMobile || !animatedImageRef.current || !heroSectionRef.current || !targetSectionRef.current) return;
+    if (!animatedImageRef.current || !heroSectionRef.current || !targetSectionRef.current) return;
 
     const inlineImage = heroImageRef.current;
     if (!inlineImage) return;
@@ -293,24 +293,24 @@ const Home = () => {
       const animatedImage = animatedImageRef.current;
       const targetSection = targetSectionRef.current;
       const targetImg = targetSection.querySelector('img');
+      const viewportWidth = window.innerWidth;
+      const isMobileView = viewportWidth <= 768;
 
       // Get measurements
       const inlineRect = inlineImage.getBoundingClientRect();
-      const heroRect = heroSection.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
 
-      // Starting values (inline pill position)
+      // Starting values (inline pill position) - different for mobile/desktop
       const startLeft = inlineRect.left;
       const startTop = inlineRect.top;
-      const startWidth = 125;
-      const startHeight = 67;
+      const startWidth = isMobileView ? 57 : 125;
+      const startHeight = isMobileView ? 43 : 67;
       const startRadius = 300;
 
       // Ending values (full width, positioned at top of viewport when hero scrolls out)
       const endLeft = 0;
       const endTop = 0;
       const endWidth = viewportWidth;
-      const endHeight = 832;
+      const endHeight = isMobileView ? 792 : 832;
       const endRadius = 0;
 
       // Hide target image initially
@@ -399,14 +399,14 @@ const Home = () => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fff', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif", overflowX: 'hidden' }}>
 
-      {/* Animated Hero Image - GSAP controlled */}
-      {!isMobile && pageContent.heroImage && (
+      {/* Animated Hero Image - GSAP controlled (works on both mobile and desktop) */}
+      {(pageContent.heroImage || pageContent.heroImageMobile) && (
         <div
           ref={animatedImageRef}
           style={{
             position: 'fixed',
-            width: '125px',
-            height: '67px',
+            width: isMobile ? '57px' : '125px',
+            height: isMobile ? '43px' : '67px',
             borderRadius: '300px',
             overflow: 'hidden',
             zIndex: 999,
@@ -416,7 +416,7 @@ const Home = () => {
           }}
         >
           <img
-            src={getImageUrl(pageContent.heroImage)}
+            src={getImageUrl(isMobile ? (pageContent.heroImageMobile || pageContent.heroImage) : pageContent.heroImage)}
             alt=""
             style={{
               width: '100%',
@@ -434,35 +434,31 @@ const Home = () => {
           ref={heroSectionRef}
           style={{
             width: '100%',
-            minHeight: isMobile ? '500px' : isTablet ? '600px' : '700px',
+            minHeight: isMobile ? '609px' : isTablet ? '600px' : '700px',
             backgroundColor: '#2558BF',
             position: 'relative',
             overflow: 'hidden',
-            padding: isMobile ? '60px 20px 80px' : isTablet ? '80px 40px 100px' : '100px 100px 120px',
+            padding: isMobile ? '77px 0 80px' : isTablet ? '80px 40px 100px' : '100px 100px 120px',
           }}>
-          {/* Decorative Green Circles */}
-          {/* Left Column - Half visible (50% inside) */}
-          <div style={{ position: 'absolute', top: '50px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-          <div style={{ position: 'absolute', top: '260px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-          <div style={{ position: 'absolute', top: '470px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-          {/* Bottom-Left Corner - partial visible */}
-          <div style={{ position: 'absolute', bottom: '-92px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-          {/* Right Side - Full circles in middle + 1/4 visible on edge */}
+          {/* Decorative Green Circles - Desktop only */}
           {!isMobile && (
             <>
+              {/* Left Column - Half visible (50% inside) */}
+              <div style={{ position: 'absolute', top: '50px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
+              <div style={{ position: 'absolute', top: '260px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
+              <div style={{ position: 'absolute', top: '470px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
+              {/* Bottom-Left Corner - partial visible */}
+              <div style={{ position: 'absolute', bottom: '-92px', left: '-92px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
+              {/* Right Side - Full circles in middle + 1/4 visible on edge */}
               <div style={{ position: 'absolute', top: '0px', right: '-139px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               {/* Full circles on right side */}
               <div style={{ position: 'absolute', top: '530px', right: '430px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               <div style={{ position: 'absolute', top: '330px', right: '100px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               <div style={{ position: 'absolute', top: '210px', right: '-139px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               <div style={{ position: 'absolute', top: '420px', right: '-139px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-            </>
-          )}
-          {/* Bottom Row - 1/4 visible (25% inside) */}
-          <div style={{ position: 'absolute', bottom: '-139px', left: '150px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-          <div style={{ position: 'absolute', bottom: '-139px', left: '400px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
-          {!isMobile && (
-            <>
+              {/* Bottom Row - 1/4 visible (25% inside) */}
+              <div style={{ position: 'absolute', bottom: '-139px', left: '150px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
+              <div style={{ position: 'absolute', bottom: '-139px', left: '400px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               <div style={{ position: 'absolute', bottom: '-139px', left: '650px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               <div style={{ position: 'absolute', bottom: '-139px', right: '300px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
               <div style={{ position: 'absolute', bottom: '-139px', right: '50px', width: '185px', height: '185px', borderRadius: '50%', backgroundColor: '#AAD28E' }} />
@@ -475,56 +471,62 @@ const Home = () => {
           <div style={{
             position: 'relative',
             zIndex: 1,
-            maxWidth: '900px',
-            paddingTop: isMobile ? '40px' : '80px',
+            maxWidth: isMobile ? '100%' : '900px',
+            paddingTop: isMobile ? '68px' : '80px',
             marginLeft: isMobile ? '0' : '98px',
+            textAlign: isMobile ? 'center' : 'left',
           }}>
             {/* Main Title */}
             <h1 style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '36px' : isTablet ? '56px' : '80px',
+              fontSize: isMobile ? '40px' : isTablet ? '56px' : '80px',
               fontWeight: 500,
               color: '#fff',
-              lineHeight: 1.1,
-              letterSpacing: '-3px',
-              marginBottom: '24px',
+              lineHeight: isMobile ? 1.2 : 1.1,
+              letterSpacing: isMobile ? '-1px' : '-3px',
+              marginBottom: isMobile ? '35px' : '24px',
+              padding: isMobile ? '0 20px' : 0,
             }}>
               Beyond the <span style={{ fontStyle: 'italic' }}>original</span>
               <br />
               branding and{' '}
-              {!isMobile && (
-                <span
-                  ref={heroImageRef}
-                  style={{
-                    display: 'inline-block',
-                    width: '125px',
-                    height: '67px',
-                    backgroundColor: '#fff',
-                    borderRadius: '300px',
-                    verticalAlign: 'middle',
-                    marginRight: '16px',
-                    overflow: 'hidden',
-                    transition: 'opacity 0.2s ease',
-                  }}>
-                  {pageContent.heroImage && (
-                    <img src={getImageUrl(pageContent.heroImage)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  )}
-                </span>
-              )}
-              UI UX
+              <span
+                ref={heroImageRef}
+                style={{
+                  display: 'inline-block',
+                  width: isMobile ? '57px' : '125px',
+                  height: isMobile ? '43px' : '67px',
+                  backgroundColor: '#fff',
+                  borderRadius: '300px',
+                  verticalAlign: 'middle',
+                  marginLeft: isMobile ? '4px' : '0',
+                  marginRight: isMobile ? '0' : '16px',
+                  overflow: 'hidden',
+                  transition: 'opacity 0.2s ease',
+                }}>
+                {(isMobile ? (pageContent.heroImageMobile || pageContent.heroImage) : pageContent.heroImage) && (
+                  <img
+                    src={getImageUrl(isMobile ? (pageContent.heroImageMobile || pageContent.heroImage) : pageContent.heroImage)}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                )}
+              </span>
               <br />
-              design agency
+              UI UX design agency
             </h1>
 
             {/* Description */}
             <p style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '16px' : '20px',
-              fontWeight: 400,
+              fontSize: '16px',
+              fontWeight: 500,
               color: '#fff',
-              lineHeight: '31px',
-              maxWidth: '531px',
-              marginBottom: '40px',
+              lineHeight: '28px',
+              maxWidth: isMobile ? '350px' : '531px',
+              marginBottom: isMobile ? '58px' : '40px',
+              margin: isMobile ? '0 auto 58px' : '0 0 40px 0',
+              textAlign: isMobile ? 'center' : 'left',
             }}>
               {pageContent.heroDescription || 'We are UX/UI agency helping ambitious companies and visionary entrepreneurs bring the next design revolution.'}
             </p>
@@ -532,7 +534,8 @@ const Home = () => {
             {/* Buttons */}
             <div style={{
               display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
+              flexDirection: 'column',
+              alignItems: isMobile ? 'center' : 'flex-start',
               gap: '16px',
               marginBottom: '20px',
             }}>
@@ -541,8 +544,9 @@ const Home = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '12px 24px',
-                height: '64px',
-                minWidth: isMobile ? '100%' : '216px',
+                height: isMobile ? '54px' : '64px',
+                width: isMobile ? '347px' : 'auto',
+                minWidth: isMobile ? 'auto' : '216px',
                 backgroundColor: '#fff',
                 color: '#000',
                 borderRadius: '200px',
@@ -553,36 +557,40 @@ const Home = () => {
               }}>
                 {pageContent.heroButton1Text || 'Schedule Call'}
               </Link>
-              <Link to="/work" style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '12px 24px',
-                height: '64px',
-                minWidth: isMobile ? '100%' : '200px',
-                backgroundColor: 'transparent',
-                color: '#fff',
-                border: '1px solid #fff',
-                borderRadius: '200px',
-                textDecoration: 'none',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '20px',
-                fontWeight: 600,
-              }}>
-                {pageContent.heroButton2Text || 'Our Work'}
-              </Link>
+              {!isMobile && (
+                <Link to="/work" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 24px',
+                  height: '64px',
+                  minWidth: '200px',
+                  backgroundColor: 'transparent',
+                  color: '#fff',
+                  border: '1px solid #fff',
+                  borderRadius: '200px',
+                  textDecoration: 'none',
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '20px',
+                  fontWeight: 600,
+                }}>
+                  {pageContent.heroButton2Text || 'Our Work'}
+                </Link>
+              )}
             </div>
 
             {/* Get instant response */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              justifyContent: isMobile ? 'center' : 'flex-start',
+              gap: '12px',
             }}>
               <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0) invert(1)' }} />
               <span style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                 fontSize: '16px',
+                fontWeight: 500,
                 color: '#fff',
               }}>
                 {pageContent.heroInstantText || 'Get instant response'}
@@ -625,50 +633,48 @@ const Home = () => {
       </EditableSection>
       )}
 
-      {/* Target Section for Animated Image - Full width image display */}
-      {!isMobile && (
-        <section
-          ref={targetSectionRef}
-          style={{
-            width: '100%',
-            height: '832px',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Static image that appears when animation completes */}
-          {pageContent.heroImage && (
-            <img
-              src={getImageUrl(pageContent.heroImage)}
-              alt=""
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                opacity: 0,
-              }}
-            />
-          )}
-        </section>
-      )}
+      {/* Target Section for Animated Image - Full width image display (works on both mobile and desktop) */}
+      <section
+        ref={targetSectionRef}
+        style={{
+          width: '100%',
+          height: isMobile ? '792px' : '832px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Static image that appears when animation completes */}
+        {(pageContent.heroImage || pageContent.heroImageMobile) && (
+          <img
+            src={getImageUrl(isMobile ? (pageContent.heroImageMobile || pageContent.heroImage) : pageContent.heroImage)}
+            alt=""
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0,
+            }}
+          />
+        )}
+      </section>
 
       {/* Partner Brands Section */}
       {shouldRenderSection('partners') && (
       <EditableSection sectionId="partners" label="Partner Brands" isEditorMode={isEditorMode} isSelected={selectedSection === 'partners'} isHidden={isSectionHidden('partners')}>
         <section style={{
-          padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '64px 20px' : isTablet ? '60px 40px' : '80px 100px',
           textAlign: 'center',
         }}>
           <p style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: isMobile ? '20px' : '28px',
-            fontWeight: 400,
+            fontWeight: isMobile ? 600 : 400,
             fontStyle: 'normal',
             color: '#000',
-            lineHeight: 'normal',
-            width: isMobile ? '100%' : '645px',
+            lineHeight: isMobile ? '30px' : 'normal',
+            width: isMobile ? '390px' : '645px',
             maxWidth: '100%',
-            margin: `0 auto ${isMobile ? '24px' : '40px'}`,
+            margin: `0 auto ${isMobile ? '36px' : '40px'}`,
             textAlign: 'center',
           }}>
             {pageContent.partnerTitle}
@@ -816,33 +822,77 @@ const Home = () => {
       {shouldRenderSection('experience') && (
       <EditableSection sectionId="experience" label="Experience Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'experience'} isHidden={isSectionHidden('experience')}>
         <section style={{
-          padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          backgroundColor: isMobile ? '#E1FFA0' : 'transparent',
+          borderRadius: isMobile ? '0 0 300px 300px' : '0',
+          padding: isMobile ? '48px 20px 80px' : isTablet ? '60px 40px' : '80px 100px',
           textAlign: 'center',
+          minHeight: isMobile ? '733px' : 'auto',
+          marginTop: isMobile ? '-100px' : '0',
+          position: 'relative',
+          zIndex: 1,
         }}>
-          <h2 style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '28px' : isTablet ? '36px' : '48px',
-            fontWeight: 400,
-            color: '#000',
-            lineHeight: 1.2,
-            marginBottom: '16px',
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: isMobile ? '11px' : '0',
+            marginBottom: isMobile ? '40px' : '16px',
           }}>
-            <span style={{ fontStyle: 'italic', fontWeight: 500 }}>{pageContent.experienceTitle1}</span>{' '}
-            {pageContent.experienceTitle2}
-            <br />
-            <span style={{ fontStyle: 'italic', fontWeight: 500 }}>{pageContent.experienceTitle3}</span>{' '}
-            {pageContent.experienceTitle4}
-          </h2>
-          <p style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '14px' : '16px',
-            fontWeight: 400,
-            color: '#666',
-            maxWidth: '600px',
-            margin: '0 auto',
-          }}>
-            {pageContent.experienceDescription}
-          </p>
+            <h2 style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: isMobile ? '28px' : isTablet ? '36px' : '48px',
+              fontWeight: 500,
+              color: '#000',
+              lineHeight: isMobile ? 'normal' : 1.2,
+              letterSpacing: isMobile ? '-0.5px' : '0',
+              margin: 0,
+              width: isMobile ? '373px' : 'auto',
+              maxWidth: '100%',
+            }}>
+              <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle1}</span>{' '}
+              {pageContent.experienceTitle2}
+            </h2>
+            <h2 style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: isMobile ? '28px' : isTablet ? '36px' : '48px',
+              fontWeight: 500,
+              color: '#000',
+              lineHeight: isMobile ? 'normal' : 1.2,
+              letterSpacing: isMobile ? '-0.5px' : '0',
+              margin: 0,
+              width: isMobile ? '373px' : 'auto',
+              maxWidth: '100%',
+              display: isMobile ? 'block' : 'none',
+            }}>
+              <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle3}</span>{' '}
+              {pageContent.experienceTitle4}
+            </h2>
+            {!isMobile && (
+              <h2 style={{
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: isTablet ? '36px' : '48px',
+                fontWeight: 500,
+                color: '#000',
+                lineHeight: 1.2,
+                margin: 0,
+              }}>
+                <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle3}</span>{' '}
+                {pageContent.experienceTitle4}
+              </h2>
+            )}
+          </div>
+          {!isMobile && (
+            <p style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: '16px',
+              fontWeight: 400,
+              color: '#666',
+              maxWidth: '600px',
+              margin: '0 auto',
+            }}>
+              {pageContent.experienceDescription}
+            </p>
+          )}
         </section>
       </EditableSection>
       )}
@@ -864,36 +914,23 @@ const Home = () => {
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : index % 2 === 0 ? 'row' : 'row-reverse',
                 minHeight: isMobile ? 'auto' : '500px',
+                backgroundColor: projectColors[index % projectColors.length],
+                borderRadius: isMobile ? '0 0 300px 300px' : '0',
+                overflow: 'hidden',
+                marginTop: isMobile && index > 0 ? '-200px' : '0',
+                position: 'relative',
+                zIndex: isMobile ? 3 - index : 'auto',
               }}>
-                {/* Text Section */}
-                <div style={{
-                  flex: 1,
-                  backgroundColor: projectColors[index % projectColors.length],
-                  padding: isMobile ? '40px 24px' : '60px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                }}>
-                  <h3 style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: isMobile ? '24px' : '32px',
-                    fontWeight: 500,
-                    color: projectColors[index % projectColors.length] === '#2558BF' ? '#fff' : '#000',
-                    marginBottom: '8px',
-                  }}>
-                    <span style={{ fontStyle: 'italic' }}>{work.title || 'Project Name'}</span>
-                    <span style={{ fontWeight: 400 }}> , and the description goes here</span>
-                  </h3>
-                </div>
-                {/* Image Section */}
+                {/* Image Section - First on mobile */}
                 <div style={{
                   flex: 1,
                   backgroundColor: projectColors[index % projectColors.length],
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: isMobile ? '0 24px 40px' : '40px',
+                  padding: isMobile ? '60px 25px 40px' : '40px',
                   position: 'relative',
+                  order: isMobile ? 1 : 2,
                 }}>
                   {work.featuredImage ? (
                     <img
@@ -901,15 +938,16 @@ const Home = () => {
                       alt={work.title}
                       style={{
                         maxWidth: '100%',
-                        maxHeight: isMobile ? '300px' : '400px',
-                        objectFit: 'contain',
+                        maxHeight: isMobile ? '365px' : '400px',
+                        width: isMobile ? '379px' : 'auto',
+                        objectFit: 'cover',
                         borderRadius: '8px',
                       }}
                     />
                   ) : (
                     <div style={{
-                      width: '100%',
-                      height: isMobile ? '200px' : '300px',
+                      width: isMobile ? '379px' : '100%',
+                      height: isMobile ? '365px' : '300px',
                       backgroundColor: 'rgba(255,255,255,0.2)',
                       borderRadius: '8px',
                       display: 'flex',
@@ -941,6 +979,30 @@ const Home = () => {
                     </Link>
                   )}
                 </div>
+                {/* Text Section - Below image on mobile */}
+                <div style={{
+                  flex: isMobile ? 'none' : 1,
+                  backgroundColor: projectColors[index % projectColors.length],
+                  padding: isMobile ? '20px 25px 100px' : '60px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'flex-start',
+                  alignItems: isMobile ? 'center' : 'flex-start',
+                  order: isMobile ? 2 : 1,
+                }}>
+                  <h3 style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: isMobile ? '26px' : '32px',
+                    fontWeight: 500,
+                    color: projectColors[index % projectColors.length] === '#2558BF' ? '#fff' : '#000',
+                    marginBottom: '8px',
+                    textAlign: isMobile ? 'center' : 'left',
+                    width: isMobile ? '315px' : 'auto',
+                  }}>
+                    <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{work.title || 'Project Name'}</span>
+                    <span style={{ fontWeight: 500 }}> , and the description goes here</span>
+                  </h3>
+                </div>
               </div>
             )) : (
               // Placeholder projects if no works
@@ -949,33 +1011,26 @@ const Home = () => {
                   display: 'flex',
                   flexDirection: isMobile ? 'column' : index % 2 === 0 ? 'row' : 'row-reverse',
                   minHeight: isMobile ? 'auto' : '500px',
+                  backgroundColor: projectColors[index],
+                  borderRadius: isMobile ? '0 0 300px 300px' : '0',
+                  overflow: 'hidden',
+                  marginTop: isMobile && index > 0 ? '-200px' : '0',
+                  position: 'relative',
+                  zIndex: isMobile ? 3 - index : 'auto',
                 }}>
-                  <div style={{
-                    flex: 1,
-                    backgroundColor: projectColors[index],
-                    padding: isMobile ? '40px 24px' : '60px',
-                  }}>
-                    <h3 style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: isMobile ? '24px' : '32px',
-                      fontWeight: 500,
-                      color: projectColors[index] === '#2558BF' ? '#fff' : '#000',
-                    }}>
-                      <span style={{ fontStyle: 'italic' }}>Project Name</span>
-                      <span style={{ fontWeight: 400 }}> , and the description goes here</span>
-                    </h3>
-                  </div>
+                  {/* Image Section - First on mobile */}
                   <div style={{
                     flex: 1,
                     backgroundColor: projectColors[index],
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: isMobile ? '0 24px 40px' : '40px',
+                    padding: isMobile ? '60px 25px 40px' : '40px',
+                    order: isMobile ? 1 : 2,
                   }}>
                     <div style={{
-                      width: '100%',
-                      height: isMobile ? '200px' : '300px',
+                      width: isMobile ? '379px' : '100%',
+                      height: isMobile ? '365px' : '300px',
                       backgroundColor: 'rgba(255,255,255,0.2)',
                       borderRadius: '8px',
                       display: 'flex',
@@ -985,6 +1040,29 @@ const Home = () => {
                     }}>
                       Project Image
                     </div>
+                  </div>
+                  {/* Text Section - Below image on mobile */}
+                  <div style={{
+                    flex: isMobile ? 'none' : 1,
+                    backgroundColor: projectColors[index],
+                    padding: isMobile ? '20px 25px 100px' : '60px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                    alignItems: isMobile ? 'center' : 'flex-start',
+                    order: isMobile ? 2 : 1,
+                  }}>
+                    <h3 style={{
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontSize: isMobile ? '26px' : '32px',
+                      fontWeight: 500,
+                      color: projectColors[index] === '#2558BF' ? '#fff' : '#000',
+                      textAlign: isMobile ? 'center' : 'left',
+                      width: isMobile ? '315px' : 'auto',
+                    }}>
+                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>Project Name</span>
+                      <span style={{ fontWeight: 500 }}> , and the description goes here</span>
+                    </h3>
                   </div>
                 </div>
               ))
@@ -1033,17 +1111,18 @@ const Home = () => {
       {shouldRenderSection('realNumbers') && (
       <EditableSection sectionId="realNumbers" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'realNumbers'} isHidden={isSectionHidden('realNumbers')}>
         <section style={{
-          padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '64px 22px' : isTablet ? '60px 40px' : '80px 100px',
           textAlign: 'center',
         }}>
           <h2 style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: isMobile ? '28px' : isTablet ? '36px' : '42px',
-            fontWeight: 400,
+            fontWeight: 500,
             color: '#000',
-            marginBottom: isMobile ? '32px' : '48px',
+            marginBottom: isMobile ? '74px' : '48px',
+            letterSpacing: isMobile ? '-0.5px' : '0',
           }}>
-            <span style={{ fontStyle: 'italic' }}>{pageContent.realNumbersTitle}</span>{' '}
+            <span style={{ fontStyle: 'italic', fontWeight: 500 }}>{pageContent.realNumbersTitle}</span>{' '}
             {pageContent.realNumbersTitleNormal}
           </h2>
 
@@ -1051,102 +1130,111 @@ const Home = () => {
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-            gap: isMobile ? '16px' : '24px',
-            maxWidth: '1000px',
+            gap: isMobile ? '12px' : '24px',
+            maxWidth: isMobile ? '386px' : '1000px',
             margin: '0 auto',
-            marginBottom: '32px',
+            marginBottom: isMobile ? '12px' : '32px',
           }}>
             {/* Stat 1 */}
             <div style={{
-              padding: isMobile ? '20px' : '32px',
-              border: '1px solid #E5E5E5',
-              borderRadius: '8px',
+              padding: isMobile ? '24px 17px' : '32px',
+              border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
+              borderRadius: isMobile ? '16px' : '8px',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '24px' : '36px',
-                fontWeight: 600,
+                fontSize: isMobile ? '32px' : '36px',
+                fontWeight: 500,
                 color: '#000',
-                marginBottom: '8px',
+                marginBottom: '10px',
+                letterSpacing: isMobile ? '0.37px' : '0',
               }}>
                 {pageContent.stat1Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: 400,
-                color: '#666',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#1f1f1f',
+                letterSpacing: isMobile ? '-0.15px' : '0',
               }}>
                 {pageContent.stat1Label}
               </div>
             </div>
             {/* Stat 2 */}
             <div style={{
-              padding: isMobile ? '20px' : '32px',
-              border: '1px solid #E5E5E5',
-              borderRadius: '8px',
+              padding: isMobile ? '24px 17px' : '32px',
+              border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
+              borderRadius: isMobile ? '16px' : '8px',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '24px' : '36px',
-                fontWeight: 600,
+                fontSize: isMobile ? '32px' : '36px',
+                fontWeight: 500,
                 color: '#000',
-                marginBottom: '8px',
+                marginBottom: '10px',
+                letterSpacing: isMobile ? '0.37px' : '0',
               }}>
                 {pageContent.stat2Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: 400,
-                color: '#666',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#1f1f1f',
+                letterSpacing: isMobile ? '-0.15px' : '0',
               }}>
                 {pageContent.stat2Label}
               </div>
             </div>
             {/* Stat 3 */}
             <div style={{
-              padding: isMobile ? '20px' : '32px',
-              border: '1px solid #E5E5E5',
-              borderRadius: '8px',
+              padding: isMobile ? '24px 17px' : '32px',
+              border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
+              borderRadius: isMobile ? '16px' : '8px',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '24px' : '36px',
-                fontWeight: 600,
+                fontSize: isMobile ? '32px' : '36px',
+                fontWeight: 500,
                 color: '#000',
-                marginBottom: '8px',
+                marginBottom: '10px',
+                letterSpacing: isMobile ? '0.37px' : '0',
               }}>
                 {pageContent.stat3Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: 400,
-                color: '#666',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#1f1f1f',
+                letterSpacing: isMobile ? '-0.15px' : '0',
               }}>
                 {pageContent.stat3Label}
               </div>
             </div>
             {/* Stat 4 */}
             <div style={{
-              padding: isMobile ? '20px' : '32px',
-              border: '1px solid #E5E5E5',
-              borderRadius: '8px',
+              padding: isMobile ? '24px 17px' : '32px',
+              border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
+              borderRadius: isMobile ? '16px' : '8px',
             }}>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '24px' : '36px',
-                fontWeight: 600,
+                fontSize: isMobile ? '32px' : '36px',
+                fontWeight: 500,
                 color: '#000',
-                marginBottom: '8px',
+                marginBottom: '10px',
+                letterSpacing: isMobile ? '0.37px' : '0',
               }}>
                 {pageContent.stat4Value}
               </div>
               <div style={{
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: 400,
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#1f1f1f',
+                letterSpacing: isMobile ? '-0.15px' : '0',
                 color: '#666',
               }}>
                 {pageContent.stat4Label}
