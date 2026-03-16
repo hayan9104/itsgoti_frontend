@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
+import useThemeColors from '@/hooks/useThemeColors';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
@@ -124,6 +125,7 @@ const serviceIcons = {
 
 const LandingPage3 = () => {
   const { isMobile, isTablet } = useWindowSize();
+  const { getSectionColors, getColor, themeColors } = useThemeColors('landing-page-3');
   const [pageContent, setPageContent] = useState({});
   const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for clients
   const [loading, setLoading] = useState(true);
@@ -142,6 +144,7 @@ const LandingPage3 = () => {
   const [modalFormSubmitted, setModalFormSubmitted] = useState(false);
   const [modalFormLoading, setModalFormLoading] = useState(false);
   const [modalSource, setModalSource] = useState(''); // Track which button opened the modal
+  const [editorColors, setEditorColors] = useState({}); // Colors from editor for live preview
 
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
 
@@ -247,6 +250,10 @@ const LandingPage3 = () => {
             ...prev,
             ...event.data.payload.data
           }));
+        }
+        // Update colors for live preview
+        if (event.data.payload?.colors) {
+          setEditorColors(event.data.payload.colors);
         }
       }
 
@@ -610,10 +617,32 @@ const LandingPage3 = () => {
     );
   }
 
+  // Get dynamic colors - prioritize editor colors for live preview
+  const getColors = (sectionId) => {
+    const apiColors = getSectionColors(sectionId);
+    const editColors = editorColors[sectionId] || {};
+    // In editor mode, merge editor colors on top of API colors
+    if (isEditorMode && Object.keys(editColors).length > 0) {
+      return { ...apiColors, ...editColors };
+    }
+    return apiColors;
+  };
+
+  const heroColors = getColors('hero');
+  const headerColors = getColors('header');
+  const problemColors = getColors('problem');
+  const solutionColors = getColors('solution');
+  const caseStudiesColors = getColors('caseStudies');
+  const clientsColors = getColors('clients');
+  const pricingColors = getColors('pricing');
+  const contactColors = getColors('contact');
+  const stickyCtaColors = getColors('stickyCta');
+  const footerColors = getColors('footer');
+
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#fffdf8',
+      backgroundColor: heroColors.backgroundColor || '#fffdf8',
       fontFamily: "'Barlow', 'Inter', sans-serif",
       overflowX: 'hidden',
     }}>
@@ -1002,7 +1031,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'header'}
           isHidden={isSectionHidden('header')}
           style={{
-            backgroundColor: '#2558BF',
+            backgroundColor: headerColors.backgroundColor || '#2558BF',
             height: isMobile ? '73px' : '99px',
             display: 'flex',
             alignItems: 'center',
@@ -1025,7 +1054,7 @@ const LandingPage3 = () => {
               fontFamily: "'Archivo Black', sans-serif",
               fontSize: isMobile ? '34px' : '52.5px',
               fontWeight: 400,
-              color: '#fff',
+              color: headerColors.headingColor || '#fff',
               lineHeight: '42px',
               letterSpacing: '-0.7px',
               margin: 0,
@@ -1067,7 +1096,7 @@ const LandingPage3 = () => {
                 fontSize: isMobile ? '28px' : isTablet ? '38px' : '48px',
                 fontWeight: 600,
                 lineHeight: 1.3,
-                color: '#000',
+                color: heroColors.headingColor || '#000',
                 textAlign: 'center',
                 margin: 0,
                 position: 'relative',
@@ -1075,8 +1104,8 @@ const LandingPage3 = () => {
               }}>
                 Your{' '}
                 <span style={{
-                  color: '#000',
-                  backgroundColor: '#E1FFA0',
+                  color: heroColors.headingColor || '#000',
+                  backgroundColor: heroColors.accentColor || '#E1FFA0',
                   padding: isMobile ? '0 10px' : '0 15px',
                   borderRadius: '0',
                   display: 'inline-block',
@@ -1111,7 +1140,7 @@ const LandingPage3 = () => {
                   fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 400,
                   lineHeight: isMobile ? 'normal' : 1.5,
-                  color: '#000',
+                  color: heroColors.subheadingColor || heroColors.textColor || '#000',
                   textAlign: 'center',
                   margin: 0,
                 }}>
@@ -1122,7 +1151,7 @@ const LandingPage3 = () => {
                   fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 400,
                   lineHeight: 1.5,
-                  color: '#000',
+                  color: heroColors.textColor || '#000',
                   textAlign: 'center',
                   margin: 0,
                 }}>
@@ -1186,7 +1215,7 @@ const LandingPage3 = () => {
                 className="btn-hover"
                 onClick={() => openModal('LP3 - Hero Button')}
                 style={{
-                backgroundColor: '#000',
+                backgroundColor: heroColors.buttonBackground || '#000',
                 borderRadius: isMobile ? '630.925px' : '905.76px',
                 width: '100%',
                 height: isMobile ? '47px' : '68px',
@@ -1202,7 +1231,7 @@ const LandingPage3 = () => {
                   fontFamily: "'Gabarito', sans-serif",
                   fontSize: isMobile ? '16px' : '24px',
                   fontWeight: 600,
-                  color: '#fff',
+                  color: heroColors.buttonText || '#fff',
                   textTransform: 'uppercase',
                   lineHeight: 1,
                 }}>
@@ -2376,7 +2405,7 @@ const LandingPage3 = () => {
               <div style={{ position: 'relative', display: 'inline-block' }}>
                 <div style={{
                   position: 'absolute',
-                  backgroundColor: '#2558bf',
+                  backgroundColor: pricingColors.accentColor || '#2558bf',
                   height: isMobile ? '29px' : '55px',
                   top: 0,
                   left: 0,
@@ -2388,7 +2417,7 @@ const LandingPage3 = () => {
                   fontSize: isMobile ? '28px' : '46px',
                   fontWeight: 600,
                   lineHeight: 1.2,
-                  color: '#000',
+                  color: pricingColors.headingColor || '#000',
                   margin: 0,
                   position: 'relative',
                   zIndex: 1,
@@ -2401,7 +2430,7 @@ const LandingPage3 = () => {
                 fontSize: isMobile ? '28px' : '46px',
                 fontWeight: 600,
                 lineHeight: 1.2,
-                color: '#000',
+                color: pricingColors.headingColor || '#000',
                 margin: 0,
               }}>
                 {content.pricingSubtitle || 'Not for long'}
@@ -3261,7 +3290,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'footer'}
           isHidden={isSectionHidden('footer')}
           style={{
-            backgroundColor: '#101827',
+            backgroundColor: footerColors.backgroundColor || '#101827',
             padding: isMobile ? '12px 20px' : '12px 551px',
             display: 'flex',
             flexDirection: 'column',
@@ -3286,12 +3315,12 @@ const LandingPage3 = () => {
             fontFamily: "'Barlow', sans-serif",
             fontSize: isMobile ? '12px' : '16px',
             fontWeight: 400,
-            color: '#fff',
+            color: footerColors.textColor || '#fff',
             margin: 0,
             textAlign: 'center',
           }}>
             {content.copyrightText}{' '}
-            <a href={content.siteUseLink || '#'} target="_blank" rel="noopener noreferrer" style={{ color: '#fff', textDecoration: 'underline' }}>
+            <a href={content.siteUseLink || '#'} target="_blank" rel="noopener noreferrer" style={{ color: footerColors.linkColor || '#fff', textDecoration: 'underline' }}>
               {content.siteUseText}
             </a>
           </p>

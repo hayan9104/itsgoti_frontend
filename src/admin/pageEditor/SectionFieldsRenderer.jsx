@@ -12,6 +12,7 @@ import ProjectsArrayEditor from './fields/ProjectsArrayEditor';
 import PainPointsArrayEditor from './fields/PainPointsArrayEditor';
 import ServicesArrayEditor from './fields/ServicesArrayEditor';
 import FeaturesGroupArrayEditor from './fields/FeaturesGroupArrayEditor';
+import SectionColorPanel from './SectionColorPanel';
 
 const fieldComponents = {
   text: TextFieldEditor,
@@ -48,6 +49,10 @@ const SectionFieldsRenderer = () => {
       </div>
     );
   }
+
+  // Check if page supports color styling
+  const colorSupportedPages = ['landing-page-2', 'landing-page-3'];
+  const showColorPanel = colorSupportedPages.includes(pageName);
 
   return (
     <div style={{
@@ -121,6 +126,15 @@ const SectionFieldsRenderer = () => {
           );
         })}
       </div>
+
+      {/* Color Styling Panel - Only show for supported pages */}
+      {showColorPanel && (
+        <SectionColorPanel
+          sectionId={selectedSection}
+          sectionName={section.label}
+          pageName={pageName}
+        />
+      )}
     </div>
   );
 };

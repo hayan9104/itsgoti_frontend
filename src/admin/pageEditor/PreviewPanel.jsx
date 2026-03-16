@@ -3,7 +3,7 @@ import { usePageEditor } from '../../context/PageEditorContext';
 
 const PreviewPanel = ({ pageName, themeId }) => {
   const iframeRef = useRef(null);
-  const { formData, selectedSection, selectSection } = usePageEditor();
+  const { formData, selectedSection, selectSection, colorData } = usePageEditor();
 
   // Map page names to routes
   const pageRoutes = {
@@ -34,6 +34,7 @@ const PreviewPanel = ({ pageName, themeId }) => {
           payload: {
             section: selectedSection,
             data: formData,
+            colors: colorData,
           }
         }, window.location.origin);
       }
@@ -42,7 +43,7 @@ const PreviewPanel = ({ pageName, themeId }) => {
     // Debounce updates
     const timeoutId = setTimeout(sendUpdate, 100);
     return () => clearTimeout(timeoutId);
-  }, [formData, selectedSection]);
+  }, [formData, selectedSection, colorData]);
 
   // Listen for messages from iframe
   useEffect(() => {
@@ -60,6 +61,7 @@ const PreviewPanel = ({ pageName, themeId }) => {
             payload: {
               section: selectedSection,
               data: formData,
+              colors: colorData,
             }
           }, window.location.origin);
         }
@@ -68,7 +70,7 @@ const PreviewPanel = ({ pageName, themeId }) => {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [selectSection, selectedSection, formData]);
+  }, [selectSection, selectedSection, formData, colorData]);
 
   // Handle iframe load
   const handleIframeLoad = useCallback(() => {
@@ -80,11 +82,12 @@ const PreviewPanel = ({ pageName, themeId }) => {
           payload: {
             section: selectedSection,
             data: formData,
+            colors: colorData,
           }
         }, window.location.origin);
       }
     }, 500);
-  }, [selectedSection, formData]);
+  }, [selectedSection, formData, colorData]);
 
   return (
     <div style={{

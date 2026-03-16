@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { pagesAPI, themesAPI } from '../services/api';
+import { pagesAPI, themesAPI, themeColorsAPI } from '../services/api';
 
 const PageEditorContext = createContext(null);
 
@@ -396,6 +396,10 @@ export const PageEditorProvider = ({ children, pageName, themeId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Color styling state for live preview
+  const [colorData, setColorData] = useState({});
+  const [originalColorData, setOriginalColorData] = useState({});
+
   // Load page data (from theme if themeId is provided, otherwise from pages API)
   useEffect(() => {
     const fetchPageData = async () => {
@@ -438,6 +442,77 @@ export const PageEditorProvider = ({ children, pageName, themeId }) => {
 
     fetchPageData();
   }, [pageName, themeId]);
+
+  // Map page names to color API format
+  const colorPageNameMapping = {
+    'landing-page-2': 'landing-page-2',
+    'landing-page-3': 'landing-page-3',
+    'landing': 'landing-page-1',
+    'home': 'home-page',
+    'about': 'about-page',
+    'contact': 'contact-page',
+  };
+
+  // Load color data for color-supported pages
+  useEffect(() => {
+    const colorSupportedPages = ['landing-page-2', 'landing-page-3'];
+    if (!colorSupportedPages.includes(pageName)) return;
+
+    const fetchColorData = async () => {
+      try {
+        const apiPageName = colorPageNameMapping[pageName] || pageName;
+        const response = await themeColorsAPI.getByPage(apiPageName);
+        const themeData = response.data.data;
+
+        // Convert sections array to object keyed by sectionId
+        const colorsObj = {};
+        if (themeData?.sections) {
+          themeData.sections.forEach(section => {
+            colorsObj[section.sectionId] = section.colors || {};
+          });
+        }
+        setColorData(colorsObj);
+        setOriginalColorData(colorsObj);
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          console.error('Error fetching color data:', err);
+        }
+      }
+    };
+
+    fetchColorData();
+  }, [pageName]);
+
+  // Update colors for a section (for live preview - doesn't save to API)
+  const updateSectionColors = useCallback((sectionId, colors) => {
+    setColorData(prev => ({
+      ...prev,
+      [sectionId]: {
+        ...(prev[sectionId] || {}),
+        ...colors,
+      },
+    }));
+  }, []);
+
+  // Save section colors to API
+  const saveSectionColors = useCallback(async (sectionId, colors, sectionName) => {
+    const apiPageName = colorPageNameMapping[pageName] || pageName;
+    try {
+      await themeColorsAPI.updateSection(apiPageName, sectionId, { colors, sectionName });
+      // Update original color data after save
+      setOriginalColorData(prev => ({
+        ...prev,
+        [sectionId]: {
+          ...(prev[sectionId] || {}),
+          ...colors,
+        },
+      }));
+      return { success: true };
+    } catch (err) {
+      console.error('Error saving section colors:', err);
+      return { success: false, error: err.message };
+    }
+  }, [pageName]);
 
   // Check for dirty state
   useEffect(() => {
@@ -533,6 +608,10 @@ export const PageEditorProvider = ({ children, pageName, themeId }) => {
     selectSection,
     saveChanges,
     resetChanges,
+    // Color styling
+    colorData,
+    updateSectionColors,
+    saveSectionColors,
   };
 
   return (

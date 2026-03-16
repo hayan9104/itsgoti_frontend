@@ -145,4 +145,26 @@ export const uploadAPI = {
     }),
 };
 
+// Theme Colors API (Color Styling System)
+export const themeColorsAPI = {
+  // Get all theme color configurations
+  getAll: () => api.get('/theme-colors'),
+  // Get color schema (list of available color properties)
+  getSchema: () => api.get('/theme-colors/schema'),
+  // Get theme colors for a specific page
+  getByPage: (pageName) => api.get(`/theme-colors/${pageName}`),
+  // Create or update theme colors for a page
+  upsert: (pageName, data) => api.post(`/theme-colors/${pageName}`, data),
+  // Update colors for a specific section
+  updateSection: (pageName, sectionId, data) =>
+    api.put(`/theme-colors/${pageName}/section/${sectionId}`, data),
+  // Update global colors for a page
+  updateGlobal: (pageName, data) =>
+    api.put(`/theme-colors/${pageName}/global`, data),
+  // Reset theme colors to defaults
+  reset: (pageName) => api.post(`/theme-colors/${pageName}/reset`),
+  // Delete theme colors configuration
+  delete: (pageName) => api.delete(`/theme-colors/${pageName}`),
+};
+
 export default api;
