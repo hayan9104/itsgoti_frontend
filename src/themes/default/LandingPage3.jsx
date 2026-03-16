@@ -138,8 +138,12 @@ const LandingPage3 = () => {
   const [currentCaseStudy, setCurrentCaseStudy] = useState(0);
   const [currentFeatureGroup, setCurrentFeatureGroup] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
-  const [scrollCardIndex, setScrollCardIndex] = useState(0);
+  // Use a single floating-point value for smooth scroll position
+  // e.g., 0.0 = card 1 visible, 1.0 = card 2 visible, 1.5 = card 2 visible with card 3 halfway up
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [displayPosition, setDisplayPosition] = useState(0); // Smoothly animated position
   const caseStudyStickyRef = useRef(null);
+  const animationRef = useRef(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalFormSubmitted, setModalFormSubmitted] = useState(false);
   const [modalFormLoading, setModalFormLoading] = useState(false);
@@ -268,15 +272,43 @@ const LandingPage3 = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, [isEditorMode]);
 
-  // Scroll-lock effect for Case Studies - smoother version
-  const lastCardTime = useRef(0);
+  // Smooth animation loop - interpolates displayPosition towards scrollPosition
+  useEffect(() => {
+    if (isMobile) return;
+
+    const animate = () => {
+      setDisplayPosition(current => {
+        const diff = scrollPosition - current;
+        // If very close, snap to target
+        if (Math.abs(diff) < 0.001) {
+          return scrollPosition;
+        }
+        // Smooth easing - move 15% of the remaining distance each frame
+        return current + diff * 0.15;
+      });
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [scrollPosition, isMobile]);
+
+  // Scroll-lock effect for Case Studies - smooth progressive version
   const hasEnteredSection = useRef(false);
+  const isTransitioning = useRef(false);
 
   useEffect(() => {
     if (isMobile) return;
 
     const caseStudiesData = pageContent.caseStudies || defaultContent.caseStudies || [];
     const numCards = caseStudiesData.length || 1;
+    const scrollPerCard = 250; // Pixels of scroll needed to fully reveal one card
+    const maxPosition = numCards - 1; // Maximum scroll position
 
     const handleWheel = (e) => {
       if (!caseStudyStickyRef.current) return;
@@ -288,47 +320,71 @@ const LandingPage3 = () => {
       // Section position checks
       const sectionTop = rect.top;
       const sectionBottom = rect.bottom;
+      const sectionHeight = rect.height;
 
-      // Is section mostly visible in viewport?
-      const isInActiveZone = sectionTop < viewportHeight * 0.3 && sectionBottom > viewportHeight * 0.7;
+      // Check if section is visible at all
+      const isSectionVisible = sectionTop < viewportHeight && sectionBottom > 0;
+
+      // Is section in the active capture zone? (more forgiving)
+      // Capture when section top is in upper 50% of viewport and section is mostly visible
+      const isInActiveZone = sectionTop < viewportHeight * 0.5 && sectionTop > -sectionHeight * 0.3 && sectionBottom > viewportHeight * 0.3;
+
+      // Check if we're in the middle of a card transition (not at a whole number)
+      const isInTransition = scrollPosition > 0 && scrollPosition < maxPosition && scrollPosition % 1 !== 0;
+
+      // If we're mid-transition, stay locked regardless of cursor position
+      if (isInTransition && isSectionVisible) {
+        isTransitioning.current = true;
+      }
 
       // Scrolling DOWN
       if (e.deltaY > 0) {
-        // Entering section - check if we should lock
-        if (isInActiveZone && scrollCardIndex < numCards - 1) {
+        // Lock scroll if: in active zone OR mid-transition, and not at last card
+        if ((isInActiveZone || isTransitioning.current) && scrollPosition < maxPosition) {
           e.preventDefault();
           hasEnteredSection.current = true;
 
-          const now = Date.now();
-          if (now - lastCardTime.current > 300) {
-            setScrollCardIndex(prev => Math.min(prev + 1, numCards - 1));
-            lastCardTime.current = now;
+          // Calculate scroll increment
+          const increment = Math.abs(e.deltaY) / scrollPerCard;
+          const newPosition = Math.min(scrollPosition + increment, maxPosition);
+          setScrollPosition(newPosition);
+
+          // Check if we completed the transition to a whole number
+          if (Math.floor(newPosition) === newPosition || newPosition === maxPosition) {
+            isTransitioning.current = false;
           }
           return;
         }
 
-        // Last card - allow exit (don't prevent default)
-        if (scrollCardIndex >= numCards - 1) {
+        // Last card - allow page scroll
+        if (scrollPosition >= maxPosition) {
           hasEnteredSection.current = false;
+          isTransitioning.current = false;
         }
       }
 
       // Scrolling UP
       if (e.deltaY < 0) {
-        if (isInActiveZone && scrollCardIndex > 0) {
+        // Lock scroll if: in active zone OR mid-transition, and not at first card
+        if ((isInActiveZone || isTransitioning.current) && scrollPosition > 0) {
           e.preventDefault();
 
-          const now = Date.now();
-          if (now - lastCardTime.current > 300) {
-            setScrollCardIndex(prev => Math.max(prev - 1, 0));
-            lastCardTime.current = now;
+          // Calculate scroll decrement
+          const decrement = Math.abs(e.deltaY) / scrollPerCard;
+          const newPosition = Math.max(scrollPosition - decrement, 0);
+          setScrollPosition(newPosition);
+
+          // Check if we completed the transition to a whole number
+          if (Math.floor(newPosition) === newPosition || newPosition === 0) {
+            isTransitioning.current = false;
           }
           return;
         }
 
-        // First card - allow exit up
-        if (scrollCardIndex <= 0) {
+        // First card - allow page scroll up
+        if (scrollPosition <= 0) {
           hasEnteredSection.current = false;
+          isTransitioning.current = false;
         }
       }
     };
@@ -338,7 +394,7 @@ const LandingPage3 = () => {
     return () => {
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [isMobile, pageContent.caseStudies, scrollCardIndex]);
+  }, [isMobile, pageContent.caseStudies, scrollPosition]);
 
   const fetchPageContent = async () => {
     try {
@@ -1818,15 +1874,37 @@ const LandingPage3 = () => {
               margin: '0 auto',
               // Natural height based on card aspect ratio
               height: isMobile ? 'auto' : '500px',
+              // Hide cards that are positioned below (translateY 100%)
+              overflow: 'hidden',
             }}
           >
             {caseStudies.map((study, studyIndex) => {
               // On mobile, only show the current case study
               if (isMobile && studyIndex !== currentCaseStudy) return null;
 
-              // Calculate: cards not yet scrolled to are hidden below
-              const isVisible = studyIndex <= scrollCardIndex;
-              const translateY = isMobile ? 0 : (isVisible ? 0 : 100);
+              // Calculate smooth progress-based transforms using displayPosition (animated)
+              // displayPosition: 0 = first card, 1 = second card, 1.5 = second card with third halfway visible, etc.
+              let translateY = 0;
+
+              if (!isMobile) {
+                // How far into this card's reveal are we?
+                // Use displayPosition for smooth animation
+                const cardRevealPosition = displayPosition - (studyIndex - 1);
+
+                if (studyIndex === 0) {
+                  // First card is always visible
+                  translateY = 0;
+                } else if (cardRevealPosition >= 1) {
+                  // Card is fully revealed
+                  translateY = 0;
+                } else if (cardRevealPosition > 0) {
+                  // Card is partially revealed (0 to 1 progress)
+                  translateY = 100 - (cardRevealPosition * 100);
+                } else {
+                  // Card is not yet revealed (hidden below)
+                  translateY = 100;
+                }
+              }
 
               return (
                 <div
@@ -1837,13 +1915,13 @@ const LandingPage3 = () => {
                     left: 0,
                     width: '100%',
                     height: isMobile ? 'auto' : '100%',
-                    // Slide up/down animation (works both directions)
+                    // Smooth progressive slide - using will-change for GPU acceleration
                     transform: isMobile ? 'none' : `translateY(${translateY}%)`,
-                    transition: 'transform 0.8s cubic-bezier(0.19, 1, 0.3, 1), opacity 0.6s ease-out',
-                    // Later cards stack on top
+                    willChange: 'transform',
+                    // Later cards stack on top (higher index = higher z-index)
                     zIndex: studyIndex + 1,
-                    // Opacity for smooth fade in/out
-                    opacity: (isMobile || isVisible) ? 1 : 0,
+                    // Always fully opaque - no transparency
+                    opacity: 1,
                   }}
                 >
                   {isMobile ? (
