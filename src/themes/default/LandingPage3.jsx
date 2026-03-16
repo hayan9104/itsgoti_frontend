@@ -202,39 +202,77 @@ const LandingPage3 = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, [isEditorMode]);
 
-  // Scroll effect for Case Studies - uses Intersection Observer approach
+  // Scroll-lock effect for Case Studies - smoother version
+  const lastCardTime = useRef(0);
+  const hasEnteredSection = useRef(false);
+
   useEffect(() => {
     if (isMobile) return;
 
-    const handleScroll = () => {
+    const caseStudiesData = pageContent.caseStudies || defaultContent.caseStudies || [];
+    const numCards = caseStudiesData.length || 1;
+
+    const handleWheel = (e) => {
       if (!caseStudyStickyRef.current) return;
 
       const section = caseStudyStickyRef.current;
       const rect = section.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
 
-      // Calculate how far the section is from center of viewport
-      const sectionCenter = rect.top + rect.height / 2;
-      const viewportCenter = viewportHeight / 2;
+      // Section position checks
+      const sectionTop = rect.top;
+      const sectionBottom = rect.bottom;
 
-      // When section center is above viewport center, start transitioning
-      // Each 150px of scroll changes to next card
-      const scrollPastCenter = viewportCenter - sectionCenter;
-      const caseStudiesData = pageContent.caseStudies || defaultContent.caseStudies || [];
-      const numCards = caseStudiesData.length || 1;
+      // Is section mostly visible in viewport?
+      const isInActiveZone = sectionTop < viewportHeight * 0.3 && sectionBottom > viewportHeight * 0.7;
 
-      if (scrollPastCenter < 0) {
-        setScrollCardIndex(0);
-      } else {
-        const cardIndex = Math.min(Math.floor(scrollPastCenter / 50), numCards - 1);
-        setScrollCardIndex(cardIndex);
+      // Scrolling DOWN
+      if (e.deltaY > 0) {
+        // Entering section - check if we should lock
+        if (isInActiveZone && scrollCardIndex < numCards - 1) {
+          e.preventDefault();
+          hasEnteredSection.current = true;
+
+          const now = Date.now();
+          if (now - lastCardTime.current > 300) {
+            setScrollCardIndex(prev => Math.min(prev + 1, numCards - 1));
+            lastCardTime.current = now;
+          }
+          return;
+        }
+
+        // Last card - allow exit (don't prevent default)
+        if (scrollCardIndex >= numCards - 1) {
+          hasEnteredSection.current = false;
+        }
+      }
+
+      // Scrolling UP
+      if (e.deltaY < 0) {
+        if (isInActiveZone && scrollCardIndex > 0) {
+          e.preventDefault();
+
+          const now = Date.now();
+          if (now - lastCardTime.current > 300) {
+            setScrollCardIndex(prev => Math.max(prev - 1, 0));
+            lastCardTime.current = now;
+          }
+          return;
+        }
+
+        // First card - allow exit up
+        if (scrollCardIndex <= 0) {
+          hasEnteredSection.current = false;
+        }
       }
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll(); // Initial check
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isMobile, pageContent.caseStudies]);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, [isMobile, pageContent.caseStudies, scrollCardIndex]);
 
   const fetchPageContent = async () => {
     try {
@@ -1219,8 +1257,8 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'caseStudies'}
           isHidden={isSectionHidden('caseStudies')}
           style={{
-            padding: isMobile ? '20px 20px' : '15px 120px',
-            marginTop: isMobile ? '10px' : '10px',
+            padding: isMobile ? '20px 20px' : '40px 120px',
+            marginTop: isMobile ? '10px' : '20px',
           }}
         >
           {/* Cards container - natural height, no scroll runway */}
