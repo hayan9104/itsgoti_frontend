@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
@@ -65,6 +65,62 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
+// Service Icons
+const DesignIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M30 5L35 10L12.5 32.5L5 35L7.5 27.5L30 5Z" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M25 10L30 15" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const DevelopmentIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 13L5 20L13 27" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M27 13L35 20L27 27" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M23 8L17 32" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const SupportIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="20" cy="17" r="10" stroke="#000" strokeWidth="2.5"/>
+    <path d="M15 17C15 17 17 20 20 20C23 20 25 17 25 17" stroke="#000" strokeWidth="2.5" strokeLinecap="round"/>
+    <circle cx="16" cy="14" r="1.5" fill="#000"/>
+    <circle cx="24" cy="14" r="1.5" fill="#000"/>
+    <path d="M12 30L14 27H26L28 30" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M16 35H24" stroke="#000" strokeWidth="2.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const AppsIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="5" y="8" width="30" height="24" rx="2" stroke="#000" strokeWidth="2.5"/>
+    <path d="M5 14H35" stroke="#000" strokeWidth="2.5"/>
+    <rect x="9" y="18" width="8" height="6" stroke="#000" strokeWidth="2"/>
+    <path d="M9 27H17" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M23 18H31" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M23 22H28" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M23 26H31" stroke="#000" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const CopywritingIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="8" y="5" width="24" height="30" rx="2" stroke="#000" strokeWidth="2.5"/>
+    <path d="M13 12H27" stroke="#000" strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M13 18H27" stroke="#000" strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M13 24H22" stroke="#000" strokeWidth="2.5" strokeLinecap="round"/>
+  </svg>
+);
+
+const serviceIcons = {
+  design: DesignIcon,
+  development: DevelopmentIcon,
+  support: SupportIcon,
+  apps: AppsIcon,
+  copywriting: CopywritingIcon,
+};
+
 const LandingPage3 = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [pageContent, setPageContent] = useState({});
@@ -77,6 +133,8 @@ const LandingPage3 = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentCaseStudy, setCurrentCaseStudy] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
+  const [scrollCardIndex, setScrollCardIndex] = useState(0);
+  const caseStudyStickyRef = useRef(null);
 
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
 
@@ -144,6 +202,40 @@ const LandingPage3 = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, [isEditorMode]);
 
+  // Scroll effect for Case Studies - uses Intersection Observer approach
+  useEffect(() => {
+    if (isMobile) return;
+
+    const handleScroll = () => {
+      if (!caseStudyStickyRef.current) return;
+
+      const section = caseStudyStickyRef.current;
+      const rect = section.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      // Calculate how far the section is from center of viewport
+      const sectionCenter = rect.top + rect.height / 2;
+      const viewportCenter = viewportHeight / 2;
+
+      // When section center is above viewport center, start transitioning
+      // Each 150px of scroll changes to next card
+      const scrollPastCenter = viewportCenter - sectionCenter;
+      const caseStudiesData = pageContent.caseStudies || defaultContent.caseStudies || [];
+      const numCards = caseStudiesData.length || 1;
+
+      if (scrollPastCenter < 0) {
+        setScrollCardIndex(0);
+      } else {
+        const cardIndex = Math.min(Math.floor(scrollPastCenter / 50), numCards - 1);
+        setScrollCardIndex(cardIndex);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isMobile, pageContent.caseStudies]);
+
   const fetchPageContent = async () => {
     try {
       const response = await pagesAPI.getOne('landing-page-3');
@@ -208,7 +300,13 @@ const LandingPage3 = () => {
 
     // Solution Section
     solutionTitle: 'Design a Shopify store that actually sells.',
-    solutionDescription: 'We design high-performance Shopify experiences that turn visitors into customers.\n\nFrom product pages to checkout optimization, we build stores designed to increase conversions, average order value, and customer trust.',
+    services: [
+      { icon: 'design', text: 'Design' },
+      { icon: 'development', text: 'Developement' },
+      { icon: 'support', text: 'Support' },
+      { icon: 'apps', text: 'Third-Party Apps' },
+      { icon: 'copywriting', text: 'Copywriting' },
+    ],
 
     // Case Studies
     caseStudies: [
@@ -515,7 +613,7 @@ const LandingPage3 = () => {
                   color: '#000',
                   backgroundColor: '#E1FFA0',
                   padding: isMobile ? '0 10px' : '0 15px',
-                  borderRadius: isMobile ? '7.732px' : '0',
+                  borderRadius: '0',
                   display: 'inline-block',
                   lineHeight: isMobile ? '36px' : '1.2',
                   verticalAlign: 'middle',
@@ -1037,33 +1135,82 @@ const LandingPage3 = () => {
           }}
         >
           <h2 style={{
-            fontFamily: isMobile ? "'Gabarito', sans-serif" : "'Poppins', sans-serif",
+            fontFamily: "'Gabarito', sans-serif",
             fontSize: isMobile ? '22px' : '32px',
+            fontStyle: 'normal',
             fontWeight: 600,
-            lineHeight: isMobile ? 'normal' : 1.2,
+            lineHeight: '120%',
             color: '#000',
-            marginBottom: isMobile ? '16px' : '24px',
+            textAlign: 'center',
+            marginBottom: isMobile ? '32px' : '48px',
             maxWidth: isMobile ? '358px' : 'none',
-            margin: isMobile ? '0 auto 16px' : '0 0 24px 0',
+            margin: isMobile ? '0 auto 32px' : '0 auto 48px',
           }}>
             {content.solutionTitle}
           </h2>
-          <p style={{
-            fontFamily: "'Barlow', sans-serif",
-            fontSize: isMobile ? '18px' : '24px',
-            fontWeight: 500,
-            lineHeight: 1.5,
-            color: '#000',
-            maxWidth: isMobile ? '377px' : '702px',
+          {/* Services Grid */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: isMobile ? '24px 32px' : '40px 64px',
+            maxWidth: '900px',
             margin: '0 auto',
-            whiteSpace: 'pre-line',
           }}>
-            {content.solutionDescription}
-          </p>
+            {ensureArray(content.services, defaultContent.services).map((service, index) => {
+              const IconComponent = service.icon ? (serviceIcons[service.icon] || null) : null;
+              return (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '12px',
+                    minWidth: isMobile ? '80px' : '100px',
+                  }}
+                >
+                  {service.iconImage ? (
+                    <img
+                      src={service.iconImage}
+                      alt={service.text}
+                      style={{
+                        width: isMobile ? '28px' : '34.971px',
+                        height: isMobile ? '28px' : '34.971px',
+                        objectFit: 'contain',
+                      }}
+                    />
+                  ) : IconComponent ? (
+                    <div style={{ width: isMobile ? '28px' : '34.971px', height: isMobile ? '28px' : '34.971px' }}>
+                      <IconComponent />
+                    </div>
+                  ) : (
+                    <div style={{
+                      width: isMobile ? '28px' : '34.971px',
+                      height: isMobile ? '28px' : '34.971px',
+                      backgroundColor: '#e5e7eb',
+                      borderRadius: '8px',
+                    }} />
+                  )}
+                  <span style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '14px' : '18px',
+                    fontStyle: 'normal',
+                    fontWeight: 500,
+                    lineHeight: 'normal',
+                    color: '#000',
+                    textAlign: 'center',
+                  }}>
+                    {service.text}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </EditableSection>
       )}
 
-      {/* Case Studies Section */}
+      {/* Case Studies Section - Sticky Scroll Animation */}
       {shouldRenderSection('caseStudies') && (
         <EditableSection
           sectionId="caseStudies"
@@ -1072,29 +1219,45 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'caseStudies'}
           isHidden={isSectionHidden('caseStudies')}
           style={{
-            padding: isMobile ? '40px 20px' : '0px 120px 60px',
-            marginTop: isMobile ? '40px' : '60px',
+            padding: isMobile ? '20px 20px' : '15px 120px',
+            marginTop: isMobile ? '10px' : '10px',
           }}
         >
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: isMobile ? '40px' : '32px',
-            maxWidth: isMobile ? '388px' : '953px',
-            margin: '0 auto',
-          }}>
+          {/* Cards container - natural height, no scroll runway */}
+          <div
+            ref={caseStudyStickyRef}
+            style={{
+              position: 'relative',
+              maxWidth: isMobile ? '388px' : '959px',
+              margin: '0 auto',
+              // Natural height based on card aspect ratio
+              height: isMobile ? 'auto' : '500px',
+            }}
+          >
             {caseStudies.map((study, studyIndex) => {
               // On mobile, only show the current case study
               if (isMobile && studyIndex !== currentCaseStudy) return null;
+
+              // Calculate: cards not yet scrolled to are hidden below
+              const isVisible = studyIndex <= scrollCardIndex;
+              const translateY = isMobile ? 0 : (isVisible ? 0 : 100);
 
               return (
                 <div
                   key={study.id || studyIndex}
                   style={{
-                    position: 'relative',
+                    position: isMobile ? 'relative' : 'absolute',
+                    top: 0,
+                    left: 0,
                     width: '100%',
-                    maxWidth: isMobile ? '388px' : '959px',
-                    marginTop: studyIndex === 0 || isMobile ? '0px' : '50px',
+                    height: isMobile ? 'auto' : '100%',
+                    // Slide up/down animation (works both directions)
+                    transform: isMobile ? 'none' : `translateY(${translateY}%)`,
+                    transition: 'transform 0.8s cubic-bezier(0.19, 1, 0.3, 1), opacity 0.6s ease-out',
+                    // Later cards stack on top
+                    zIndex: studyIndex + 1,
+                    // Opacity for smooth fade in/out
+                    opacity: (isMobile || isVisible) ? 1 : 0,
                   }}
                 >
                   {isMobile ? (
@@ -1287,8 +1450,8 @@ const LandingPage3 = () => {
                       {/* Tab Label - positioned in the tab area */}
                       <span style={{
                         position: 'absolute',
-                        top: '2.5%',
-                        left: '11%',
+                        top: '5%',
+                        left: '10%',
                         fontFamily: "'Barlow', sans-serif",
                         fontSize: '18px',
                         fontWeight: 600,

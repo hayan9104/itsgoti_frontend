@@ -10,6 +10,7 @@ import TestimonialsArrayEditor from './fields/TestimonialsArrayEditor';
 import CaseStudiesArrayEditor from './fields/CaseStudiesArrayEditor';
 import ProjectsArrayEditor from './fields/ProjectsArrayEditor';
 import PainPointsArrayEditor from './fields/PainPointsArrayEditor';
+import ServicesArrayEditor from './fields/ServicesArrayEditor';
 
 const fieldComponents = {
   text: TextFieldEditor,
@@ -22,6 +23,7 @@ const fieldComponents = {
   caseStudiesArray: CaseStudiesArrayEditor,
   projectsArray: ProjectsArrayEditor,
   painPointsArray: PainPointsArrayEditor,
+  servicesArray: ServicesArrayEditor,
 };
 
 const SectionFieldsRenderer = () => {
@@ -85,7 +87,7 @@ const SectionFieldsRenderer = () => {
             );
           }
 
-          const isArrayField = ['imageArray', 'statsArray', 'logoArray', 'testimonialsArray', 'caseStudiesArray', 'projectsArray', 'painPointsArray'].includes(field.type);
+          const isArrayField = ['imageArray', 'statsArray', 'logoArray', 'testimonialsArray', 'caseStudiesArray', 'projectsArray', 'painPointsArray', 'servicesArray'].includes(field.type);
 
           return (
             <FieldComponent

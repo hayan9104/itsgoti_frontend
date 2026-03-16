@@ -45,10 +45,10 @@ export const landingPage3Sections = [
   {
     id: 'solution',
     label: 'Solution Section',
-    description: 'Design a store that sells',
+    description: 'Title with service icons grid',
     fields: [
       { key: 'solutionTitle', type: 'text', label: 'Section Title', hint: 'e.g. "Design a Shopify store that actually sells."' },
-      { key: 'solutionDescription', type: 'textarea', label: 'Section Description', hint: 'Detailed explanation of your approach' },
+      { key: 'services', type: 'servicesArray', label: 'Services', maxItems: 6, hint: 'Add services with icon and label' },
     ]
   },
   {
