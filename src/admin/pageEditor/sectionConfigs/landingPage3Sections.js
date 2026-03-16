@@ -37,7 +37,7 @@ export const landingPage3Sections = [
     fields: [
       { key: 'problemTitle', type: 'textarea', label: 'Problem Statement', hint: 'e.g. "Most Shopify stores are built to look good—not to convert..."' },
       { key: 'understandWhyTitle', type: 'text', label: 'Card Title', hint: 'e.g. "Understand Why"' },
-      { key: 'understandWhyItems', type: 'textarea', label: 'Pain Points (one per line)', hint: 'Each pain point on a new line' },
+      { key: 'painPoints', type: 'painPointsArray', label: 'Pain Points', maxItems: 8, hint: 'Add pain points with highlighted text and description' },
       { key: 'understandWhyConclusion', type: 'text', label: 'Conclusion Text', hint: 'e.g. "= Weeks of lost sales"' },
       { key: 'betterWayText', type: 'text', label: 'Better Way Text', hint: 'e.g. "There\'s a better way"' },
     ]

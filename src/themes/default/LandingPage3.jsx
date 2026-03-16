@@ -195,14 +195,13 @@ const LandingPage3 = () => {
     // Problem Section
     problemTitle: 'Most Shopify stores are built to look good—not to convert—resulting in high bounce rates and lost revenue.',
     understandWhyTitle: 'Understand Why',
-    understandWhyItems: [
-      '3 hrs trying to customize a Shopify theme',
-      '5 hrs fixing mobile layout issues',
-      '4 hrs optimizing product pages for conversions',
-      '3 hrs improving page speed',
-      '2 hrs installing and configuring apps',
-      '4 hrs fixing broken user journeys',
-      '+ ∞ hrs wondering why visitors aren\'t converting',
+    painPoints: [
+      { highlight: '20K INR', text: 'trying to customize a Shopify theme' },
+      { highlight: '5K INR', text: 'fixing mobile layout issues' },
+      { highlight: '10K INR', text: 'improving page speed' },
+      { highlight: '3K INR', text: 'installing and configuring apps' },
+      { highlight: '4K INR', text: 'fixing broken user journeys' },
+      { highlight: '+ ∞ hrs', text: "wondering why visitors aren't converting" },
     ],
     understandWhyConclusion: '= Weeks of lost sales',
     betterWayText: "There's a better way 👇",
@@ -495,7 +494,7 @@ const LandingPage3 = () => {
             maxWidth: isMobile ? '390px' : '954px',
             margin: '0 auto',
           }}>
-            {/* Title with Blue Highlight */}
+            {/* Title with Lime Highlight */}
             <div style={{
               position: 'relative',
               width: isMobile ? '354px' : '900px',
@@ -513,8 +512,8 @@ const LandingPage3 = () => {
               }}>
                 Your{' '}
                 <span style={{
-                  color: '#fff',
-                  backgroundColor: '#2558bf',
+                  color: '#000',
+                  backgroundColor: '#E1FFA0',
                   padding: isMobile ? '0 10px' : '0 15px',
                   borderRadius: isMobile ? '7.732px' : '0',
                   display: 'inline-block',
@@ -943,13 +942,10 @@ const LandingPage3 = () => {
 
           {/* Understand Why Card */}
           <div style={{
-            backgroundColor: '#fff',
-            border: '1px solid #000',
+            backgroundColor: '#311900',
             borderRadius: '16px',
-            boxShadow: '4px 4px 0px 0px #150634',
-            padding: isMobile ? '24px 16px' : '24px',
-            maxWidth: isMobile ? '390px' : '468px',
-            minHeight: isMobile ? '317px' : 'auto',
+            padding: isMobile ? '24px 16px' : '32px 40px',
+            maxWidth: isMobile ? '390px' : '500px',
             margin: '0 auto 40px',
             textAlign: 'center',
           }}>
@@ -958,26 +954,36 @@ const LandingPage3 = () => {
               fontSize: isMobile ? '22px' : '24px',
               fontWeight: 600,
               lineHeight: 1.2,
-              color: '#000',
-              marginBottom: '20px',
+              color: '#fff',
+              marginBottom: '24px',
             }}>
               {content.understandWhyTitle}
             </h3>
             <div style={{
               fontFamily: "'Barlow', sans-serif",
-              fontSize: isMobile ? '16px' : '18px',
-              fontWeight: 500,
-              lineHeight: 1.5,
-              color: '#000',
+              fontSize: isMobile ? '16px' : '20px',
+              fontWeight: 700,
+              lineHeight: '150%',
+              color: '#fff',
+              textAlign: 'center',
             }}>
-              {ensureArray(content.understandWhyItems, defaultContent.understandWhyItems).map((item, index) => (
-                <p key={index} style={{ margin: '0 0 4px' }}>{item}</p>
+              {ensureArray(content.painPoints, defaultContent.painPoints).map((item, index) => (
+                <p key={index} style={{ margin: '0 0 6px' }}>
+                  <span style={{
+                    backgroundColor: '#FFA562',
+                    color: '#7F3600',
+                  }}>
+                    {item.highlight}
+                  </span>
+                  {' '}{item.text}
+                </p>
               ))}
               <p style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: '20px',
+                fontSize: isMobile ? '16px' : '18px',
                 fontWeight: 600,
-                marginTop: '16px',
+                marginTop: '20px',
+                color: '#fff',
               }}>
                 {content.understandWhyConclusion}
               </p>
