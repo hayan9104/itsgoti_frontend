@@ -2,9 +2,10 @@ export const landingPage3Sections = [
   {
     id: 'header',
     label: 'Header',
-    description: 'Lime green header bar with logo',
+    description: 'Blue header bar with logo',
     fields: [
-      { key: 'logoText', type: 'text', label: 'Logo Text', hint: 'e.g. "GOTI"' },
+      { key: 'logoImage', type: 'image', label: 'Logo Image', hint: 'Upload logo image. If uploaded, it will be shown instead of text.' },
+      { key: 'logoText', type: 'text', label: 'Logo Text (Fallback)', hint: 'Used only if no logo image is uploaded. e.g. "GOTI"' },
     ]
   },
   {

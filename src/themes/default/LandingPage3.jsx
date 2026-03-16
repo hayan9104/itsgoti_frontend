@@ -440,7 +440,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'header'}
           isHidden={isSectionHidden('header')}
           style={{
-            backgroundColor: '#e1ffa0',
+            backgroundColor: '#2558BF',
             height: isMobile ? '73px' : '99px',
             display: 'flex',
             alignItems: 'center',
@@ -448,17 +448,29 @@ const LandingPage3 = () => {
             padding: '10px',
           }}
         >
-          <p style={{
-            fontFamily: "'Archivo Black', sans-serif",
-            fontSize: isMobile ? '34px' : '52.5px',
-            fontWeight: 400,
-            color: '#000',
-            lineHeight: '42px',
-            letterSpacing: '-0.7px',
-            margin: 0,
-          }}>
-            {content.logoText}
-          </p>
+          {content.logoImage ? (
+            <img
+              src={content.logoImage}
+              alt={content.logoText || 'Logo'}
+              style={{
+                height: isMobile ? '50px' : '70px',
+                width: 'auto',
+                objectFit: 'contain',
+              }}
+            />
+          ) : (
+            <p style={{
+              fontFamily: "'Archivo Black', sans-serif",
+              fontSize: isMobile ? '34px' : '52.5px',
+              fontWeight: 400,
+              color: '#fff',
+              lineHeight: '42px',
+              letterSpacing: '-0.7px',
+              margin: 0,
+            }}>
+              {content.logoText}
+            </p>
+          )}
         </EditableSection>
       )}
 
