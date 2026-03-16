@@ -52,6 +52,14 @@ export const landingPage3Sections = [
     ]
   },
   {
+    id: 'features',
+    label: 'Features Groups',
+    description: 'Auto-rotating feature groups with checkpoints',
+    fields: [
+      { key: 'featureGroups', type: 'featuresGroupArray', label: 'Feature Groups', maxGroups: 10, hint: 'Add groups of features. Each group auto-rotates based on the timer setting.' },
+    ]
+  },
+  {
     id: 'caseStudies',
     label: 'Case Studies',
     description: 'Client success stories with metrics',
@@ -62,11 +70,9 @@ export const landingPage3Sections = [
   {
     id: 'clients',
     label: 'Clients Marquee',
-    description: 'Scrolling client brand names or logos',
+    description: '⚠️ Client logos are fetched from Landing Page 2. Edit them in Landing Page 2 settings.',
     fields: [
-      { key: 'clientsTitle', type: 'text', label: 'Section Title', hint: 'e.g. "Our Shopify Clients"' },
-      { key: 'clientLogos', type: 'imageArray', label: 'Client Logos (optional)', maxItems: 15, hint: 'Upload logo images. If logos are added, they will be shown instead of text names.' },
-      { key: 'clientBrandsText', type: 'textarea', label: 'Client Brand Names (one per line)', hint: 'Used only if no logos are uploaded. e.g. "OSLET\nAQUA\nGOTI"' },
+      { key: '_info', type: 'text', label: 'ℹ️ Note', hint: 'This section displays client logos from Landing Page 2. To add/edit logos, go to Landing Page 2 editor.' },
     ]
   },
   {

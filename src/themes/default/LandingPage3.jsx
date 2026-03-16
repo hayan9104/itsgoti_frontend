@@ -5,6 +5,7 @@ import useWindowSize from '@/hooks/useWindowSize';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
+import TickMark from '@/assets/Tick mark.png';
 
 // SVG Icons as components
 const CheckmarkIcon = () => (
@@ -124,6 +125,7 @@ const serviceIcons = {
 const LandingPage3 = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [pageContent, setPageContent] = useState({});
+  const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for clients
   const [loading, setLoading] = useState(true);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -132,9 +134,14 @@ const LandingPage3 = () => {
   const isEditorMode = searchParams.get('editor') === 'true';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [currentCaseStudy, setCurrentCaseStudy] = useState(0);
+  const [currentFeatureGroup, setCurrentFeatureGroup] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
   const [scrollCardIndex, setScrollCardIndex] = useState(0);
   const caseStudyStickyRef = useRef(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalFormSubmitted, setModalFormSubmitted] = useState(false);
+  const [modalFormLoading, setModalFormLoading] = useState(false);
+  const [modalSource, setModalSource] = useState(''); // Track which button opened the modal
 
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
 
@@ -170,6 +177,58 @@ const LandingPage3 = () => {
     reset,
     formState: { errors },
   } = useForm();
+
+  // Modal form state
+  const [modalFormData, setModalFormData] = useState({
+    companyName: '',
+    contactNumber: '',
+    service: '',
+  });
+
+  const handleModalInputChange = (e) => {
+    const { name, value } = e.target;
+    setModalFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleModalSubmit = async (e) => {
+    e.preventDefault();
+    setModalFormLoading(true);
+    try {
+      await contactsAPI.create({
+        name: modalFormData.companyName,
+        companyName: modalFormData.companyName,
+        phone: modalFormData.contactNumber,
+        service: modalFormData.service,
+        subject: `Inquiry from ${modalFormData.companyName}`,
+        sourcePage: modalSource,
+        message: `Contact from ${modalSource}\nCompany: ${modalFormData.companyName}\nPhone: ${modalFormData.contactNumber}\nService: ${modalFormData.service}`,
+      });
+      setModalFormSubmitted(true);
+      setModalFormData({ companyName: '', contactNumber: '', service: '' });
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setModalFormSubmitted(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setModalFormLoading(false);
+    }
+  };
+
+  const openModal = (source) => {
+    setModalSource(source);
+    setIsModalOpen(true);
+    setModalFormSubmitted(false);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setModalFormSubmitted(false);
+    setModalSource('');
+    setModalFormData({ companyName: '', contactNumber: '', service: '' });
+  };
 
   useEffect(() => {
     fetchPageContent();
@@ -276,9 +335,17 @@ const LandingPage3 = () => {
 
   const fetchPageContent = async () => {
     try {
-      const response = await pagesAPI.getOne('landing-page-3');
-      if (response.data?.data?.content) {
-        setPageContent(response.data.data.content);
+      // Fetch both LP3 and LP2 content
+      const [lp3Response, lp2Response] = await Promise.all([
+        pagesAPI.getOne('landing-page-3'),
+        pagesAPI.getOne('landing-page-2'),
+      ]);
+
+      if (lp3Response.data?.data?.content) {
+        setPageContent(lp3Response.data.data.content);
+      }
+      if (lp2Response.data?.data?.content) {
+        setLp2Content(lp2Response.data.data.content);
       }
     } catch {
       console.log('Using default content');
@@ -293,8 +360,8 @@ const LandingPage3 = () => {
       await contactsAPI.create({
         ...data,
         subject: `Shopify Store Inquiry from ${data.companyName}`,
-        sourcePage: 'Landing Page 3',
-        message: `Contact from Landing Page 3\nCompany: ${data.companyName}\nPhone: ${data.phone}\nService: ${data.service}`,
+        sourcePage: 'LP3 - Contact Form',
+        message: `Contact from LP3 - Contact Form\nCompany: ${data.companyName}\nPhone: ${data.phone}\nService: ${data.service}`,
       });
       setFormSubmitted(true);
       reset();
@@ -345,6 +412,31 @@ const LandingPage3 = () => {
       { icon: 'apps', text: 'Third-Party Apps' },
       { icon: 'copywriting', text: 'Copywriting' },
     ],
+
+    // Features Groups (auto-rotating)
+    featureGroups: [
+      {
+        title: 'DESIGN:',
+        points: [
+          'Improve layouts and product pages',
+          'customer flow to reduce friction',
+          '30+ pre-built UI components & animated sections',
+          '20+ flexible themes powered by daisyUI',
+        ],
+        highlightPoint: 'Money Saved: 20K INR + Time Saved: 20Hrs',
+      },
+      {
+        title: 'DEVELOPMENT:',
+        points: [
+          'Custom Shopify theme development',
+          'Speed optimization & performance',
+          'Third-party app integrations',
+          'Mobile-first responsive design',
+        ],
+        highlightPoint: 'Money Saved: 30K INR + Time Saved: 40Hrs',
+      },
+    ],
+    featureRotationSpeed: 3, // seconds
 
     // Case Studies
     caseStudies: [
@@ -421,6 +513,19 @@ const LandingPage3 = () => {
   };
 
   const content = { ...defaultContent, ...pageContent };
+
+  // Auto-rotate features groups
+  useEffect(() => {
+    const featureGroups = content.featureGroups || [];
+    if (featureGroups.length <= 1) return;
+
+    const interval = (content.featureRotationSpeed || 3) * 1000;
+    const timer = setInterval(() => {
+      setCurrentFeatureGroup(prev => (prev + 1) % featureGroups.length);
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [content.featureGroups, content.featureRotationSpeed]);
 
   // Helper to check if section is visible
   const isSectionVisible = (sectionId) => {
@@ -514,11 +619,22 @@ const LandingPage3 = () => {
     }}>
       {/* Google Fonts */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Gabarito:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Caveat:wght@400;500;600;700&family=Gabarito:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+        @font-face {
+          font-family: 'BRITH BRUSH';
+          src: url('/fonts/BRITH-BRUSH.ttf') format('truetype');
+          font-weight: 400;
+          font-style: normal;
+        }
 
         @keyframes marquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+
+        @keyframes marqueeReverse {
+          0% { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
         }
 
         .form-input::placeholder {
@@ -564,7 +680,318 @@ const LandingPage3 = () => {
         .btn-hover:active {
           transform: scale(0.98);
         }
+
+        @keyframes modalFadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+
+        @keyframes modalSlideIn {
+          0% { transform: translateY(-30px) scale(0.95); opacity: 0; }
+          100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .modal-overlay {
+          animation: modalFadeIn 0.25s ease forwards;
+        }
+
+        .modal-content {
+          animation: modalSlideIn 0.3s ease forwards;
+        }
+
+        .modal-input {
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .modal-input:focus {
+          outline: none;
+          border-color: #000;
+          box-shadow: 4px 4px 0px 0px #150634;
+        }
+
+        .modal-input::placeholder {
+          color: #000;
+          opacity: 1;
+        }
       `}</style>
+
+      {/* Get Started Modal */}
+      {isModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={closeModal}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: isMobile ? '20px' : '40px',
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '24px',
+              boxShadow: '8px 8px 0px 0px #150634',
+              padding: isMobile ? '32px 24px' : '40px 70px',
+              width: '100%',
+              maxWidth: isMobile ? '340px' : '580px',
+              position: 'relative',
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={closeModal}
+              style={{
+                position: 'absolute',
+                top: isMobile ? '10px' : '14px',
+                right: isMobile ? '10px' : '14px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6L18 18" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {modalFormSubmitted ? (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  backgroundColor: '#10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}>
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </div>
+                <h3 style={{
+                  fontFamily: "'Gabarito', sans-serif",
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  color: '#000',
+                  marginBottom: '8px',
+                }}>
+                  Thank You!
+                </h3>
+                <p style={{
+                  fontFamily: "'Barlow', sans-serif",
+                  fontSize: '16px',
+                  color: '#666',
+                }}>
+                  We'll get back to you soon.
+                </p>
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: isMobile ? '24px' : '32px',
+                alignItems: 'center',
+              }}>
+                {/* Header */}
+                <div style={{
+                  textAlign: 'center',
+                  maxWidth: '480px',
+                }}>
+                  <h2 style={{
+                    fontFamily: "'Gabarito', sans-serif",
+                    fontSize: isMobile ? '26px' : '36px',
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                    color: '#000',
+                    margin: 0,
+                  }}>
+                    Let's Get Started 🚀
+                  </h2>
+                  <p style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '13px' : '15px',
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                    color: '#000',
+                    margin: isMobile ? '8px 0 0' : '10px 0 0',
+                  }}>
+                    Just a few details and we'll help you find the right service for your needs
+                  </p>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleModalSubmit} style={{
+                  width: '100%',
+                  maxWidth: '440px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: isMobile ? '14px' : '16px',
+                }}>
+                  <input
+                    type="text"
+                    name="companyName"
+                    value={modalFormData.companyName}
+                    onChange={handleModalInputChange}
+                    placeholder="COMPANY NAME"
+                    required
+                    className="modal-input"
+                    style={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #000',
+                      borderRadius: '14px',
+                      boxShadow: '3px 3px 0px 0px #150634',
+                      padding: isMobile ? '16px 18px' : '18px 20px',
+                      fontFamily: "'Barlow', sans-serif",
+                      fontSize: isMobile ? '14px' : '16px',
+                      fontWeight: 500,
+                      color: '#000',
+                      width: '100%',
+                    }}
+                  />
+                  <input
+                    type="tel"
+                    name="contactNumber"
+                    value={modalFormData.contactNumber}
+                    onChange={handleModalInputChange}
+                    placeholder="CONTACT NUMBER"
+                    required
+                    className="modal-input"
+                    style={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #000',
+                      borderRadius: '14px',
+                      boxShadow: '3px 3px 0px 0px #150634',
+                      padding: isMobile ? '16px 18px' : '18px 20px',
+                      fontFamily: "'Barlow', sans-serif",
+                      fontSize: isMobile ? '14px' : '16px',
+                      fontWeight: 500,
+                      color: '#000',
+                      width: '100%',
+                    }}
+                  />
+                  <input
+                    type="text"
+                    name="service"
+                    value={modalFormData.service}
+                    onChange={handleModalInputChange}
+                    placeholder="WHAT SERVICE YOU ARE LOOKING FOR?"
+                    required
+                    className="modal-input"
+                    style={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #000',
+                      borderRadius: '14px',
+                      boxShadow: '3px 3px 0px 0px #150634',
+                      padding: isMobile ? '16px 18px' : '18px 20px',
+                      fontFamily: "'Barlow', sans-serif",
+                      fontSize: isMobile ? '14px' : '16px',
+                      fontWeight: 500,
+                      color: '#000',
+                      width: '100%',
+                    }}
+                  />
+
+                  {/* Submit Button */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginTop: isMobile ? '6px' : '10px',
+                  }}>
+                    <button
+                      type="submit"
+                      disabled={modalFormLoading}
+                      className="btn-hover"
+                      style={{
+                        background: 'linear-gradient(166deg, #170935 23.75%, #000 93.95%)',
+                        borderRadius: '770px',
+                        padding: isMobile ? '12px 20px' : '12px 18px',
+                        border: 'none',
+                        cursor: modalFormLoading ? 'wait' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        opacity: modalFormLoading ? 0.7 : 1,
+                      }}
+                    >
+                      <span style={{
+                        fontFamily: "'Gabarito', sans-serif",
+                        fontSize: isMobile ? '15px' : '17px',
+                        fontWeight: 600,
+                        lineHeight: 1,
+                        color: '#fff',
+                        textTransform: 'uppercase',
+                      }}>
+                        {modalFormLoading ? 'SUBMITTING...' : 'GET STARTED'}
+                      </span>
+                      <div style={{
+                        backgroundColor: '#ffa562',
+                        borderRadius: '50%',
+                        padding: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                          <path d="M1 11L11 1M11 1H3M11 1V9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
+                </form>
+
+                {/* WhatsApp Link */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <p style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '13px' : '15px',
+                    fontWeight: 500,
+                    fontStyle: 'italic',
+                    color: '#000',
+                    margin: 0,
+                  }}>
+                    Need instant response? Let's connect on{' '}
+                    <a
+                      href="https://wa.me/919876543210"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: '#000',
+                        fontWeight: 600,
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      WhatsApp
+                    </a>
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Header - Lime Green Bar */}
       {shouldRenderSection('header') && (
@@ -757,7 +1184,7 @@ const LandingPage3 = () => {
             }}>
               <button
                 className="btn-hover"
-                onClick={() => scrollToSection('pricing-section')}
+                onClick={() => openModal('LP3 - Hero Button')}
                 style={{
                 backgroundColor: '#000',
                 borderRadius: isMobile ? '630.925px' : '905.76px',
@@ -1248,6 +1675,98 @@ const LandingPage3 = () => {
         </EditableSection>
       )}
 
+      {/* Features Section - Auto-rotating groups */}
+      {shouldRenderSection('features') && (() => {
+        const featureGroups = content.featureGroups || defaultContent.featureGroups || [];
+        const currentGroup = featureGroups[currentFeatureGroup] || featureGroups[0];
+
+        if (!currentGroup) return null;
+
+        return (
+          <EditableSection
+            sectionId="features"
+            label="Features Section"
+            isEditorMode={isEditorMode}
+            isSelected={selectedSection === 'features'}
+            isHidden={isSectionHidden('features')}
+            style={{
+              backgroundColor: 'rgba(242, 240, 235, 0.80)',
+              padding: isMobile ? '30px 20px' : '50px 120px',
+              minHeight: isMobile ? 'auto' : '257px',
+            }}
+          >
+            <div style={{
+              maxWidth: isMobile ? '100%' : '959px',
+              width: '100%',
+              margin: '0 auto',
+              paddingLeft: isMobile ? '0' : '0',
+            }}>
+              {/* Group Title */}
+              <h3 style={{
+                fontFamily: "'Barlow', sans-serif",
+                fontSize: isMobile ? '18px' : '22px',
+                fontWeight: 700,
+                lineHeight: '150%',
+                color: '#000',
+                marginBottom: isMobile ? '16px' : '20px',
+              }}>
+                {currentGroup.title}
+              </h3>
+
+              {/* Points List */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: isMobile ? '8px' : '12px',
+              }}>
+                {(currentGroup.points || []).map((point, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                    }}
+                  >
+                    <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
+                    <span style={{
+                      fontFamily: "'Barlow', sans-serif",
+                      fontSize: isMobile ? '16px' : '20px',
+                      fontWeight: 500,
+                      lineHeight: '150%',
+                      color: '#000',
+                    }}>
+                      {point}
+                    </span>
+                  </div>
+                ))}
+
+                {/* Highlight Point (last point, bold) */}
+                {currentGroup.highlightPoint && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                  }}>
+                    <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
+                    <span style={{
+                      fontFamily: "'Barlow', sans-serif",
+                      fontSize: isMobile ? '16px' : '20px',
+                      fontWeight: 700,
+                      lineHeight: '150%',
+                      color: '#311900',
+                    }}>
+                      {currentGroup.highlightPoint}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </EditableSection>
+        );
+      })()}
+
       {/* Case Studies Section - Sticky Scroll Animation */}
       {shouldRenderSection('caseStudies') && (
         <EditableSection
@@ -1702,96 +2221,130 @@ const LandingPage3 = () => {
         </EditableSection>
       )}
 
-      {/* Clients Marquee Section */}
-      {shouldRenderSection('clients') && (
-        <EditableSection
-          sectionId="clients"
-          label="Clients Section"
-          isEditorMode={isEditorMode}
-          isSelected={selectedSection === 'clients'}
-          isHidden={isSectionHidden('clients')}
-          style={{
-            padding: isMobile ? '40px 0' : '80px 0',
-          }}
-        >
-          <h2 style={{
-            fontFamily: "'Barlow', sans-serif",
-            fontSize: isMobile ? '20px' : '32px',
-            fontWeight: 500,
-            lineHeight: 1.5,
-            color: '#000',
-            textAlign: 'center',
-            marginBottom: isMobile ? '24px' : '40px',
-          }}>
-            {content.clientsTitle}
-          </h2>
+      {/* Clients Marquee Section - Fetches logos from Landing Page 2 */}
+      {shouldRenderSection('clients') && (() => {
+        // Get client logos from LP2, fallback to LP3 or default
+        const lp2ClientLogos = lp2Content.clientLogos || [];
+        const lp2HasLogos = lp2ClientLogos.length > 0;
 
-          {/* Marquee Rows */}
-          {[0, 1].map((rowIndex) => {
-            const items = hasClientLogos ? clientLogos : clientBrands;
-            const repeatedItems = [...items, ...items, ...items, ...items];
+        // Default client names for fallback
+        const defaultClientNames = ['Tomattic', 'Wealthsimple', 'SpaceX', 'Gusto', 'Attentive', 'Square', 'Dribbble', 'Drips', 'Dropbox', 'Sonic'];
 
-            return (
-              <div
-                key={rowIndex}
-                style={{
-                  overflow: 'hidden',
-                  marginBottom: isMobile ? '12px' : '20px',
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  gap: isMobile ? '12px' : '20px',
-                  animation: `marquee ${20 + rowIndex * 5}s linear infinite`,
-                  width: 'fit-content',
-                  paddingLeft: rowIndex === 0 ? (isMobile ? '44px' : '98px') : '0',
-                }}>
-                  {repeatedItems.map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                        borderRadius: isMobile ? '7.133px' : '16px',
-                        width: isMobile ? '87.383px' : '196px',
-                        height: isMobile ? '42.8px' : '96px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        overflow: 'hidden',
-                        padding: isMobile ? '4.458px' : '10px',
-                      }}
-                    >
-                      {hasClientLogos ? (
-                        <img
-                          src={item.startsWith('http') ? item : `${import.meta.env.VITE_API_URL || ''}${item}`}
-                          alt={`Client logo ${index + 1}`}
-                          style={{
-                            maxWidth: '80%',
-                            maxHeight: '80%',
-                            objectFit: 'contain',
-                          }}
-                        />
-                      ) : (
-                        <span style={{
-                          fontFamily: "'Archivo Black', sans-serif",
-                          fontSize: isMobile ? '14px' : '32px',
-                          fontWeight: 400,
-                          lineHeight: isMobile ? '18.332px' : '41px',
-                          letterSpacing: isMobile ? '-0.3034px' : '-0.68px',
-                          color: '#000',
-                        }}>
-                          {item}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+        return (
+          <EditableSection
+            sectionId="clients"
+            label="Clients Section (Data from Landing Page 2)"
+            isEditorMode={isEditorMode}
+            isSelected={selectedSection === 'clients'}
+            isHidden={isSectionHidden('clients')}
+            style={{
+              padding: isMobile ? '40px 20px' : '60px 0',
+            }}
+          >
+            {/* Heading */}
+            <h2 style={{
+              fontFamily: "'Gabarito', sans-serif",
+              fontSize: isMobile ? '28px' : '46px',
+              fontWeight: 600,
+              lineHeight: '120%',
+              color: '#000',
+              textAlign: 'center',
+              marginBottom: isMobile ? '30px' : '50px',
+            }}>
+              Our Shopify Clients
+            </h2>
+
+            {/* Two Row Marquee */}
+            {[0, 1].map((rowIndex) => {
+              // For row 1, use first half; for row 2, use second half or shift
+              const items = lp2HasLogos ? lp2ClientLogos : defaultClientNames;
+              const repeatedItems = [...items, ...items, ...items, ...items];
+
+              return (
+                <div
+                  key={rowIndex}
+                  style={{
+                    overflow: 'hidden',
+                    marginBottom: isMobile ? '24px' : '65px',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    gap: isMobile ? '30px' : '60px',
+                    animation: `marquee${rowIndex === 0 ? '' : 'Reverse'} ${25 + rowIndex * 5}s linear infinite`,
+                    width: 'fit-content',
+                  }}>
+                    {repeatedItems.map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          padding: isMobile ? '8px' : '12px',
+                        }}
+                      >
+                        {lp2HasLogos && typeof item === 'string' && item.includes('/uploads/') ? (
+                          <img
+                            src={item.startsWith('http') ? item : `${import.meta.env.VITE_API_URL || ''}${item}`}
+                            alt={`Client ${index + 1}`}
+                            style={{
+                              height: isMobile ? '35px' : '55px',
+                              width: 'auto',
+                              objectFit: 'contain',
+                              filter: 'grayscale(100%)',
+                              opacity: 0.7,
+                            }}
+                          />
+                        ) : lp2HasLogos && typeof item === 'object' && item.url ? (
+                          <img
+                            src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || ''}${item.url}`}
+                            alt={item.name || `Client ${index + 1}`}
+                            style={{
+                              height: isMobile ? '35px' : '55px',
+                              width: 'auto',
+                              objectFit: 'contain',
+                              filter: 'grayscale(100%)',
+                              opacity: 0.7,
+                            }}
+                          />
+                        ) : (
+                          <span style={{
+                            fontFamily: "'Inter', sans-serif",
+                            fontSize: isMobile ? '16px' : '24px',
+                            fontWeight: 500,
+                            color: '#888',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {typeof item === 'object' ? item.name : item}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              );
+            })}
+
+            {/* Editor mode note */}
+            {isEditorMode && (
+              <div style={{
+                textAlign: 'center',
+                padding: '12px',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '8px',
+                marginTop: '20px',
+                border: '1px dashed #3b82f6',
+              }}>
+                <span style={{ fontSize: '13px', color: '#1d4ed8' }}>
+                  ℹ️ Client logos are fetched from Landing Page 2. Edit them there.
+                </span>
               </div>
-            );
-          })}
-        </EditableSection>
-      )}
+            )}
+          </EditableSection>
+        );
+      })()}
 
       {/* Pricing Section */}
       {shouldRenderSection('pricing') && (
@@ -1803,45 +2356,31 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('pricing')}
           id="pricing-section"
           style={{
-            padding: isMobile ? '40px 20px' : '100px 120px',
+            padding: isMobile ? '40px 20px' : '80px 120px',
             position: 'relative',
           }}
         >
-          {/* Purple gradient blob (decorative) */}
-          <div style={{
-            position: 'absolute',
-            right: isMobile ? '-50px' : '200px',
-            top: '150px',
-            width: '393px',
-            height: '870px',
-            background: 'radial-gradient(ellipse at center, rgba(180, 130, 255, 0.45) 0%, rgba(200, 150, 255, 0.3) 40%, transparent 70%)',
-            filter: 'blur(80px)',
-            pointerEvents: 'none',
-            zIndex: 0,
-          }} />
-
-          {/* Header */}
+          {/* Header - Side by side layout */}
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-start',
-            alignItems: 'flex-start',
-            marginBottom: isMobile ? '24px' : '100px',
-            maxWidth: isMobile ? '358px' : '1200px',
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            marginBottom: isMobile ? '24px' : '60px',
+            maxWidth: '1200px',
             margin: isMobile ? '0 auto 24px' : '0 auto 60px',
-            gap: isMobile ? '13px' : '0',
+            gap: isMobile ? '13px' : '40px',
           }}>
-            <div style={{ maxWidth: isMobile ? '358px' : '488px' }}>
-              {/* Blue highlight behind title */}
-              <div style={{ position: 'relative' }}>
+            {/* Left - Title */}
+            <div style={{ maxWidth: isMobile ? '100%' : '488px', flexShrink: 0 }}>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
                 <div style={{
                   position: 'absolute',
                   backgroundColor: '#2558bf',
-                  height: isMobile ? '29px' : '51px',
-                  top: isMobile ? '2.2px' : 0,
+                  height: isMobile ? '29px' : '55px',
+                  top: 0,
                   left: 0,
-                  width: isMobile ? '100%' : '100%',
-                  borderRadius: isMobile ? '7.732px' : 0,
+                  right: 0,
                   zIndex: 0,
                 }} />
                 <h2 style={{
@@ -1854,217 +2393,281 @@ const LandingPage3 = () => {
                   position: 'relative',
                   zIndex: 1,
                 }}>
-                  <span style={{ color: '#fff' }}>{content.pricingTitle}</span>
-                  <br />
-                  {content.pricingSubtitle}
+                  <span style={{ color: '#fff' }}>{content.pricingTitle || 'Stuck at 7 figures/year?'}</span>
                 </h2>
               </div>
+              <h2 style={{
+                fontFamily: "'Gabarito', sans-serif",
+                fontSize: isMobile ? '28px' : '46px',
+                fontWeight: 600,
+                lineHeight: 1.2,
+                color: '#000',
+                margin: 0,
+              }}>
+                {content.pricingSubtitle || 'Not for long'}
+              </h2>
             </div>
+            {/* Right - Description */}
             <p style={{
               fontFamily: "'Barlow', sans-serif",
               fontSize: isMobile ? '14px' : '18px',
               fontWeight: 400,
               lineHeight: 1.5,
               color: '#000',
-              maxWidth: isMobile ? '358px' : '541px',
+              maxWidth: isMobile ? '100%' : '541px',
               margin: 0,
             }}>
-              {content.pricingDescription}
+              {content.pricingDescription || "You need a design system that's built for performance—one that improves user experience, increases conversions, and helps your brand grow consistently."}
             </p>
           </div>
 
-          {/* Pricing Cards */}
+          {/* Pricing Cards Container */}
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
-            gap: isMobile ? '32px' : '60px',
-            maxWidth: isMobile ? '372px' : '1200px',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '40px' : '0',
+            maxWidth: '1200px',
             margin: '0 auto',
             alignItems: isMobile ? 'center' : 'flex-start',
-            ...(isMobile ? {} : { flexDirection: 'row' }),
+            position: 'relative',
           }}>
-            {/* Plan 1 - Green Card */}
+            {/* Plan 1 - Green Card (Main/Popular) */}
             <div style={{
-              backgroundColor: 'rgba(225, 255, 160, 0.75)',
-              border: isMobile ? '2px solid #000' : '2.67px solid #000',
-              borderRadius: isMobile ? '16px' : '21px',
-              boxShadow: isMobile ? '4px 4px 0px 0px #150634' : '5.34px 5.34px 0px 0px #150634',
-              padding: isMobile ? '20px 18px' : '32px',
-              width: isMobile ? '100%' : '622px',
-              maxWidth: isMobile ? '358px' : 'none',
-              minHeight: isMobile ? 'auto' : '838px',
-              display: 'flex',
-              flexDirection: 'column',
+              position: 'relative',
+              zIndex: 2,
+              marginTop: '80px',
             }}>
-              {/* Price Header */}
-              <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
-                <p style={{
-                  fontFamily: "'Gabarito', sans-serif",
-                  fontSize: isMobile ? '16px' : '21px',
-                  fontWeight: 700,
-                  color: '#000',
-                  textTransform: 'uppercase',
-                  margin: 0,
-                }}>
-                  Starts from <span style={{ fontSize: isMobile ? '24px' : '32px' }}>{content.plan1Price}</span>
-                </p>
-                <p style={{
-                  fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '13px' : '16px',
-                  fontWeight: 400,
-                  lineHeight: 1.4,
-                  color: '#000',
-                  margin: '8px 0 0',
-                }}>
-                  {content.plan1Subtitle}
-                </p>
-              </div>
-
-              {/* Divider */}
-              <div style={{
-                height: '1px',
-                backgroundColor: '#000',
-                margin: isMobile ? '0 0 16px' : '0 0 24px',
-              }} />
-
-              {/* If your business */}
-              <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
-                <p style={{
-                  fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '18px' : '27px',
-                  fontWeight: 400,
-                  lineHeight: 1.4,
-                  color: '#000',
-                  margin: isMobile ? '0 0 12px' : '0 0 16px',
-                }}>
-                  {content.plan1BusinessTitle}
-                </p>
+              {/* "Most Popular" Label with Arrow - positioned above white card */}
+              {!isMobile && (
                 <div style={{
-                  fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '14px' : '23px',
-                  fontWeight: 400,
-                  lineHeight: 1.6,
-                  color: '#000',
-                  paddingLeft: isMobile ? '8px' : '12px',
+                  position: 'absolute',
+                  top: '-75px',
+                  right: '-340px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  zIndex: 10,
                 }}>
-                  {ensureArray(content.plan1Criteria, defaultContent.plan1Criteria).map((item, index) => (
-                    <p key={index} style={{ margin: '0 0 4px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: isMobile ? '14px' : '20px' }}>✓</span>
-                      <span>
-                        {typeof item === 'string' && (item.includes('$50K+') || item.includes('marketing') || item.includes('improve'))
-                          ? <><span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[0]}</span>
-                             <strong>{item.match(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)?.[0]}</strong>
-                             <span>{item.split(/(\$50K\+|marketing or paid ads|improve conversion and scale faster)/)[2] || ''}</span></>
-                          : item}
-                      </span>
+                  {/* Arrow pointing to green card */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="128" height="36" viewBox="0 0 128 36" fill="none" style={{ marginBottom: '5px', marginLeft: '-20px' }}>
+                    <path d="M1.80713 35.38C0.978872 35.397 0.293694 34.7393 0.276735 33.9111L0.00033106 20.4139C-0.0166279 19.5856 0.641056 18.9005 1.46931 18.8835C2.29757 18.8665 2.98274 19.5242 2.9997 20.3525L3.24539 32.35L15.2429 32.1043C16.0711 32.0873 16.7563 32.745 16.7733 33.5733C16.7902 34.4015 16.1326 35.0867 15.3043 35.1036L1.80713 35.38ZM124.277 24.8796L122.944 24.191C125.124 19.9732 125.366 16.6276 124.39 13.9901C123.404 11.3277 121.055 9.05631 117.364 7.26279C109.937 3.65439 97.7715 2.32921 83.655 3.31639C69.5975 4.29944 53.8299 7.55945 39.3392 12.9135C24.8321 18.2736 11.7162 25.6911 2.85857 34.9191L1.77642 33.8804L0.694267 32.8416C9.98032 23.1673 23.5542 15.5475 38.2995 10.0994C53.0612 4.64527 69.1087 1.3263 83.4457 0.323699C97.7236 -0.674772 110.532 0.607713 118.675 4.56445C122.769 6.55351 125.854 9.30402 127.203 12.9485C128.562 16.6178 128.04 20.8639 125.609 25.5683L124.277 24.8796Z" fill="black"/>
+                  </svg>
+                  {/* Text - MOST POPULAR on one line, FOR GROWING STORES on another */}
+                  <div style={{
+                    fontFamily: "'BRITH BRUSH', cursive",
+                    fontSize: '28px',
+                    fontWeight: 700,
+                    color: '#000',
+                    lineHeight: 'normal',
+                    letterSpacing: '-2px',
+                    marginLeft: '50px',
+                  }}>
+                    <p style={{ margin: 0 }}>MOST POPULAR</p>
+                    <p style={{ margin: 0 }}>FOR GROWING STORES</p>
+                  </div>
+                </div>
+              )}
+
+              <div style={{
+                backgroundColor: '#e1ffa0',
+                border: isMobile ? '2px solid #000' : '2.67px solid #000',
+                borderRadius: isMobile ? '16px' : '21px',
+                boxShadow: isMobile ? '4px 4px 0px 0px #150634, 0px 25px 50px 0px rgba(0,0,0,0.25)' : '5.34px 5.34px 0px 0px #150634, 0px 25px 50px 0px rgba(0,0,0,0.25)',
+                padding: isMobile ? '20px 18px' : '32px 38px',
+                width: isMobile ? '100%' : '622px',
+                maxWidth: isMobile ? '358px' : 'none',
+                height: isMobile ? 'auto' : 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* Price Header */}
+                <div style={{ marginBottom: isMobile ? '12px' : '16px' }}>
+                  <p style={{
+                    fontFamily: "'Gabarito', sans-serif",
+                    fontSize: isMobile ? '16px' : '21px',
+                    fontWeight: 700,
+                    color: '#000',
+                    textTransform: 'uppercase',
+                    margin: 0,
+                  }}>
+                    <span style={{ fontWeight: 400 }}>Starts from</span> <span style={{ fontSize: isMobile ? '24px' : '32px' }}>{content.plan1Price || '$XX / MONTH'}</span>
+                  </p>
+                  <p style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '13px' : '16px',
+                    fontWeight: 400,
+                    lineHeight: 1.4,
+                    color: '#000',
+                    margin: '8px 0 0',
+                  }}>
+                    {content.plan1Subtitle || 'Everything you need to scale faster.'}
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div style={{
+                  height: '1.5px',
+                  backgroundColor: '#000',
+                  margin: isMobile ? '0 0 16px' : '0 0 20px',
+                  opacity: 0.3,
+                  borderStyle: 'dashed',
+                }} />
+
+                {/* What do you receive */}
+                <div style={{ marginBottom: isMobile ? '20px' : '24px' }}>
+                  <p style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '18px' : '24px',
+                    fontWeight: 500,
+                    lineHeight: 1.4,
+                    color: '#000',
+                    margin: isMobile ? '0 0 12px' : '0 0 16px',
+                  }}>
+                    What do you receive
+                  </p>
+                  <div style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '14px' : '20px',
+                    fontWeight: 500,
+                    lineHeight: 1.6,
+                    color: '#000',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: isMobile ? '4px' : '6px',
+                  }}>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Custom Shopify Theme Development</p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Responsive Mobile Optimization</p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> SEO Setup & Optimization</p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Product Page Templates</p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Shopping Cart & Checkout Customization</p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> 30 Days Post-Launch Support</p>
+                  </div>
+                </div>
+
+                {/* White Inner Box - HOW IS THIS RIGHT FOR YOU? */}
+                <div style={{
+                  backgroundColor: '#fff',
+                  borderRadius: '12px',
+                  padding: isMobile ? '16px' : '16px 28px 24px',
+                }}>
+                  <p style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '16px' : '20px',
+                    fontWeight: 600,
+                    lineHeight: 1.4,
+                    color: '#000',
+                    margin: isMobile ? '0 0 14px' : '0 0 16px',
+                  }}>
+                    HOW IS THIS RIGHT FOR YOU?
+                  </p>
+                  <div style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '14px' : '18px',
+                    fontWeight: 400,
+                    lineHeight: 1.6,
+                    color: '#000',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: isMobile ? '12px' : '16px',
+                  }}>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} /> <span>Generates <strong>$50K+ in monthly revenue</strong></span>
                     </p>
-                  ))}
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} /> <span>Actively investing in <strong>marketing or paid ads</strong></span>
+                    </p>
+                    <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} /> <span>Companies looking to <strong>improve conversion and scale faster</strong></span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginTop: 'auto',
+                  paddingTop: isMobile ? '16px' : '20px',
+                }}>
+                  <button
+                    className="btn-hover"
+                    onClick={() => openModal('LP3 - Plan 1 Button')}
+                    style={{
+                      background: 'linear-gradient(166deg, #170935 23.75%, #000 93.95%)',
+                      borderRadius: '770px',
+                      padding: isMobile ? '14px 24px' : '12px 18px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '15px',
+                    }}>
+                    <span style={{
+                      fontFamily: "'Gabarito', sans-serif",
+                      fontSize: isMobile ? '16px' : '20px',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                      color: '#fff',
+                      textTransform: 'uppercase',
+                    }}>
+                      {content.plan1ButtonText || 'GET STARTED'}
+                    </span>
+                    <div style={{
+                      backgroundColor: '#ffa562',
+                      borderRadius: '50%',
+                      padding: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M1 11L11 1M11 1H3M11 1V9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </button>
                 </div>
               </div>
-
-              {/* What this means */}
-              <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
-                <p style={{
-                  fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '16px' : '24px',
-                  fontWeight: 600,
-                  fontStyle: 'italic',
-                  lineHeight: 1.4,
-                  color: '#000',
-                  margin: isMobile ? '0 0 12px' : '0 0 20px',
-                }}>
-                  {content.plan1MeansTitle}
-                </p>
-                <p style={{
-                  fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '14px' : '23px',
-                  fontWeight: 400,
-                  lineHeight: 1.6,
-                  color: '#000',
-                  margin: 0,
-                }}>
-                  {content.plan1MeansDescription}
-                </p>
-              </div>
-
-              {/* Conclusion */}
-              <p style={{
-                fontFamily: "'Barlow', sans-serif",
-                fontSize: isMobile ? '14px' : '21px',
-                fontWeight: 700,
-                lineHeight: 1.6,
-                color: '#000',
-                textAlign: 'center',
-                margin: isMobile ? '0 0 20px' : '0 0 32px',
-              }}>
-                {content.plan1Conclusion}
-              </p>
-
-              {/* CTA Button */}
-              <button
-                className="btn-hover"
-                onClick={() => scrollToSection('contact-section')}
-                style={{
-                backgroundColor: '#000',
-                borderRadius: '1457.664px',
-                padding: isMobile ? '14px 28px' : '23.32px 40.81px',
-                border: 'none',
-                cursor: 'pointer',
-                alignSelf: 'center',
-                marginTop: isMobile ? '10px' : '20px',
-              }}>
-                <span style={{
-                  fontFamily: "'Gabarito', sans-serif",
-                  fontSize: isMobile ? '18px' : '29.153px',
-                  fontWeight: 600,
-                  lineHeight: '100%',
-                  color: '#fff',
-                  textTransform: 'uppercase',
-                }}>
-                  {content.plan1ButtonText}
-                </span>
-              </button>
             </div>
 
-            {/* Plan 2 - White Card */}
+            {/* Plan 2 - White Card (Starter) */}
             <div style={{
               backgroundColor: '#fff',
-              border: isMobile ? '2px solid #000' : '2px solid #000',
-              borderRadius: isMobile ? '16px' : '16px',
-              boxShadow: isMobile ? '4px 4px 0px 0px #150634' : '4px 4px 0px 0px #150634',
-              padding: isMobile ? '18px 16px' : '24px',
-              width: isMobile ? '100%' : '466px',
+              border: '2px solid #000',
+              borderRadius: '16px',
+              boxShadow: '4px 4px 0px 0px #150634',
+              padding: isMobile ? '18px 16px' : '35px 50px 35px 50px',
+              width: isMobile ? '100%' : '578px',
               maxWidth: isMobile ? '310px' : 'none',
-              minHeight: isMobile ? 'auto' : '500px',
+              height: 'auto',
               display: 'flex',
               flexDirection: 'column',
               position: 'relative',
               zIndex: 1,
-              marginTop: isMobile ? '0' : '180px',
-              marginLeft: isMobile ? 'auto' : '-40px',
+              marginTop: isMobile ? '0' : '156px',
+              marginLeft: isMobile ? 'auto' : '-30px',
               marginRight: isMobile ? 'auto' : '0',
             }}>
               {/* Price Header */}
-              <div style={{ marginBottom: isMobile ? '16px' : '24px' }}>
+              <div style={{ marginBottom: isMobile ? '12px' : '16px' }}>
                 <p style={{
                   fontFamily: "'Gabarito', sans-serif",
-                  fontSize: isMobile ? '14px' : '16px',
+                  fontSize: isMobile ? '14px' : '18px',
                   fontWeight: 700,
                   color: '#000',
                   textTransform: 'uppercase',
                   margin: 0,
                 }}>
-                  Starts from <span style={{ fontSize: isMobile ? '20px' : '24px' }}>{content.plan2Price}</span>
+                  <span style={{ fontWeight: 400 }}>Starts from</span> <span style={{ fontSize: isMobile ? '20px' : '26px' }}>{content.plan2Price || '$XX / MONTH'}</span>
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '12px' : '12px',
+                  fontSize: isMobile ? '12px' : '14px',
                   fontWeight: 400,
                   lineHeight: 1.4,
                   color: '#000',
                   margin: '6px 0 0',
                 }}>
-                  {content.plan2Subtitle}
+                  {content.plan2Subtitle || 'Perfect for businesses getting started with growth.'}
                 </p>
               </div>
 
@@ -2072,81 +2675,124 @@ const LandingPage3 = () => {
               <div style={{
                 height: '1px',
                 backgroundColor: '#000',
-                margin: isMobile ? '0 0 16px' : '0 0 24px',
+                margin: isMobile ? '0 0 14px' : '0 0 18px',
+                opacity: 0.3,
               }} />
 
-              {/* If your business */}
-              <div style={{ marginBottom: isMobile ? '20px' : '31px' }}>
+              {/* What do you receive */}
+              <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
                   fontSize: isMobile ? '16px' : '20px',
-                  fontWeight: 400,
+                  fontWeight: 500,
                   lineHeight: 1.4,
                   color: '#000',
                   margin: isMobile ? '0 0 10px' : '0 0 12px',
                 }}>
-                  {content.plan2BusinessTitle}
+                  What do you receive
                 </p>
                 <div style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '13px' : '17.5px',
-                  fontWeight: 400,
-                  lineHeight: 1.6,
+                  fontSize: isMobile ? '13px' : '16px',
+                  fontWeight: 500,
+                  lineHeight: 1.5,
                   color: '#000',
-                  paddingLeft: isMobile ? '6px' : '9px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: isMobile ? '3px' : '4px',
                 }}>
-                  {ensureArray(content.plan2Criteria, defaultContent.plan2Criteria).map((item, index) => (
-                    <p key={index} style={{ margin: '0 0 4px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <span style={{ color: '#000', flexShrink: 0, fontWeight: 700, fontSize: isMobile ? '13px' : '18px' }}>✓</span>
-                      <span>
-                        {typeof item === 'string' && (item.includes('$20K') || item.includes('own marketing') || item.includes('improve'))
-                          ? <><span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[0]}</span>
-                             <strong>{item.match(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)?.[0]}</strong>
-                             <span>{item.split(/(< \$20K monthly revenue|own marketing|improve conversion fundamentals)/)[2] || ''}</span></>
-                          : item}
-                      </span>
-                    </p>
-                  ))}
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Pre-built Shopify Theme <strong>(No Custom Development)</strong></span></p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Standard Mobile Responsiveness <strong>(Theme Default)</strong></span></p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Basic Shopify SEO Settings Only</span></p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Standard Cart & Checkout</span></p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>No Post-Launch Support Included</span></p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Theme-Based Design Only <strong>(No Custom Features)</strong></span></p>
                 </div>
               </div>
 
-              {/* What this means */}
-              <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
+              {/* White Inner Box - HOW IS THIS RIGHT FOR YOU? */}
+              <div style={{
+                backgroundColor: '#fff',
+                border: '1px solid #000',
+                borderRadius: '10px',
+                padding: isMobile ? '14px' : '13px 20px 20px',
+              }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '14px' : '18px',
+                  fontSize: isMobile ? '14px' : '16px',
                   fontWeight: 600,
-                  fontStyle: 'italic',
                   lineHeight: 1.4,
                   color: '#000',
-                  margin: isMobile ? '0 0 10px' : '0 0 15px',
+                  margin: isMobile ? '0 0 10px' : '0 0 12px',
                 }}>
-                  {content.plan2MeansTitle}
+                  HOW IS THIS RIGHT FOR YOU?
                 </p>
-                <p style={{
+                <div style={{
                   fontFamily: "'Barlow', sans-serif",
-                  fontSize: isMobile ? '13px' : '17.5px',
+                  fontSize: isMobile ? '12px' : '14px',
                   fontWeight: 400,
-                  lineHeight: 1.6,
+                  lineHeight: 1.5,
                   color: '#000',
-                  margin: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: isMobile ? '8px' : '10px',
                 }}>
-                  {content.plan2MeansDescription}
-                </p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                    <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} /> <span>Generates <strong>$50K+ in monthly revenue</strong></span>
+                  </p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                    <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} /> <span>Actively investing in <strong>marketing or paid ads</strong></span>
+                  </p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                    <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} /> <span>Companies looking to <strong>improve conversion and scale faster</strong></span>
+                  </p>
+                </div>
               </div>
 
-              {/* Conclusion */}
-              <p style={{
-                fontFamily: "'Barlow', sans-serif",
-                fontSize: isMobile ? '13px' : '16px',
-                fontWeight: 700,
-                lineHeight: 1.6,
-                color: '#000',
-                textAlign: 'center',
-                margin: 0,
+              {/* CTA Button */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                marginTop: 'auto',
+                paddingTop: isMobile ? '12px' : '16px',
               }}>
-                {content.plan2Conclusion}
-              </p>
+                <button
+                  className="btn-hover"
+                  onClick={() => openModal('LP3 - Plan 2 Button')}
+                  style={{
+                    background: 'linear-gradient(166deg, #170935 23.75%, #000 93.95%)',
+                    borderRadius: '770px',
+                    padding: isMobile ? '12px 20px' : '12px 18px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '15px',
+                  }}>
+                  <span style={{
+                    fontFamily: "'Gabarito', sans-serif",
+                    fontSize: isMobile ? '14px' : '20px',
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    color: '#fff',
+                    textTransform: 'uppercase',
+                  }}>
+                  GET STARTED
+                  </span>
+                  <div style={{
+                    backgroundColor: '#ffa562',
+                    borderRadius: '50%',
+                    padding: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M1 11L11 1M11 1H3M11 1V9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         </EditableSection>

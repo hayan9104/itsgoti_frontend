@@ -11,6 +11,7 @@ import CaseStudiesArrayEditor from './fields/CaseStudiesArrayEditor';
 import ProjectsArrayEditor from './fields/ProjectsArrayEditor';
 import PainPointsArrayEditor from './fields/PainPointsArrayEditor';
 import ServicesArrayEditor from './fields/ServicesArrayEditor';
+import FeaturesGroupArrayEditor from './fields/FeaturesGroupArrayEditor';
 
 const fieldComponents = {
   text: TextFieldEditor,
@@ -24,6 +25,7 @@ const fieldComponents = {
   projectsArray: ProjectsArrayEditor,
   painPointsArray: PainPointsArrayEditor,
   servicesArray: ServicesArrayEditor,
+  featuresGroupArray: FeaturesGroupArrayEditor,
 };
 
 const SectionFieldsRenderer = () => {
@@ -87,7 +89,21 @@ const SectionFieldsRenderer = () => {
             );
           }
 
-          const isArrayField = ['imageArray', 'statsArray', 'logoArray', 'testimonialsArray', 'caseStudiesArray', 'projectsArray', 'painPointsArray', 'servicesArray'].includes(field.type);
+          const isArrayField = ['imageArray', 'statsArray', 'logoArray', 'testimonialsArray', 'caseStudiesArray', 'projectsArray', 'painPointsArray', 'servicesArray', 'featuresGroupArray'].includes(field.type);
+
+          // Special handling for featuresGroupArray with rotation speed
+          if (field.type === 'featuresGroupArray') {
+            return (
+              <FieldComponent
+                key={field.key}
+                field={field}
+                value={formData[field.key]}
+                onChange={(value) => updateArrayField(field.key, value)}
+                rotationSpeed={formData.featureRotationSpeed || 3}
+                onRotationSpeedChange={(value) => updateField('featureRotationSpeed', value)}
+              />
+            );
+          }
 
           return (
             <FieldComponent

@@ -8,6 +8,8 @@ const ContactsManager = () => {
   const [filter, setFilter] = useState('all'); // all, unread, read
   const [sourceFilter, setSourceFilter] = useState('all'); // all, Contact Page, Landing Page, Landing Page 2
   const [searchQuery, setSearchQuery] = useState('');
+  const [mainTab, setMainTab] = useState('all'); // all, lp1, lp2, lp3, contact
+  const [lp3SubTab, setLp3SubTab] = useState('all'); // all, hero, plan1, plan2, contactForm
 
   useEffect(() => {
     fetchContacts();
@@ -60,8 +62,43 @@ const ContactsManager = () => {
     if (filter === 'unread' && contact.read) return false;
     if (filter === 'read' && !contact.read) return false;
 
-    // Source filter
-    if (sourceFilter !== 'all' && contact.sourcePage !== sourceFilter) return false;
+    // Main tab filter
+    if (mainTab !== 'all') {
+      switch (mainTab) {
+        case 'lp1':
+          if (contact.sourcePage !== 'Landing Page' && contact.sourcePage !== 'Landing Page 1') return false;
+          break;
+        case 'lp2':
+          if (contact.sourcePage !== 'Landing Page 2') return false;
+          break;
+        case 'lp3':
+          if (!contact.sourcePage?.startsWith('LP3') && contact.sourcePage !== 'Landing Page 3') return false;
+          // LP3 sub-tab filter
+          if (lp3SubTab !== 'all') {
+            switch (lp3SubTab) {
+              case 'hero':
+                if (contact.sourcePage !== 'LP3 - Hero Button') return false;
+                break;
+              case 'plan1':
+                if (contact.sourcePage !== 'LP3 - Plan 1 Button') return false;
+                break;
+              case 'plan2':
+                if (contact.sourcePage !== 'LP3 - Plan 2 Button') return false;
+                break;
+              case 'contactForm':
+                if (contact.sourcePage !== 'LP3 - Contact Form') return false;
+                break;
+            }
+          }
+          break;
+        case 'contact':
+          if (contact.sourcePage !== 'Contact Page' && contact.sourcePage) return false;
+          break;
+      }
+    }
+
+    // Legacy source filter (dropdown) - only applies when mainTab is 'all'
+    if (mainTab === 'all' && sourceFilter !== 'all' && contact.sourcePage !== sourceFilter) return false;
 
     // Search filter
     if (searchQuery) {
@@ -81,7 +118,25 @@ const ContactsManager = () => {
   const unreadCount = contacts.filter(c => !c.read).length;
   const totalCount = contacts.length;
 
-  // Source counts
+  // Source counts for main tabs
+  const mainTabCounts = {
+    all: contacts.length,
+    lp1: contacts.filter(c => c.sourcePage === 'Landing Page' || c.sourcePage === 'Landing Page 1').length,
+    lp2: contacts.filter(c => c.sourcePage === 'Landing Page 2').length,
+    lp3: contacts.filter(c => c.sourcePage?.startsWith('LP3') || c.sourcePage === 'Landing Page 3').length,
+    contact: contacts.filter(c => c.sourcePage === 'Contact Page' || !c.sourcePage).length,
+  };
+
+  // LP3 sub-tab counts
+  const lp3SubCounts = {
+    all: contacts.filter(c => c.sourcePage?.startsWith('LP3') || c.sourcePage === 'Landing Page 3').length,
+    hero: contacts.filter(c => c.sourcePage === 'LP3 - Hero Button').length,
+    plan1: contacts.filter(c => c.sourcePage === 'LP3 - Plan 1 Button').length,
+    plan2: contacts.filter(c => c.sourcePage === 'LP3 - Plan 2 Button').length,
+    contactForm: contacts.filter(c => c.sourcePage === 'LP3 - Contact Form').length,
+  };
+
+  // Legacy source counts (keep for dropdown compatibility)
   const sourceStats = {
     'Contact Page': contacts.filter(c => c.sourcePage === 'Contact Page' || !c.sourcePage).length,
     'Landing Page': contacts.filter(c => c.sourcePage === 'Landing Page').length,
@@ -105,11 +160,30 @@ const ContactsManager = () => {
   };
 
   const getSourceColor = (sourcePage) => {
+    // LP3 sources
+    if (sourcePage?.startsWith('LP3')) {
+      switch (sourcePage) {
+        case 'LP3 - Hero Button':
+          return { bg: '#DCFCE7', text: '#15803D', border: '#86EFAC' };
+        case 'LP3 - Plan 1 Button':
+          return { bg: '#FEF9C3', text: '#A16207', border: '#FDE047' };
+        case 'LP3 - Plan 2 Button':
+          return { bg: '#E0E7FF', text: '#4338CA', border: '#A5B4FC' };
+        case 'LP3 - Contact Form':
+          return { bg: '#FCE7F3', text: '#BE185D', border: '#F9A8D4' };
+        default:
+          return { bg: '#F0FDF4', text: '#16A34A', border: '#BBF7D0' };
+      }
+    }
+
     switch (sourcePage) {
       case 'Landing Page 2':
         return { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE' };
       case 'Landing Page':
+      case 'Landing Page 1':
         return { bg: '#F0FDF4', text: '#16A34A', border: '#BBF7D0' };
+      case 'Landing Page 3':
+        return { bg: '#DCFCE7', text: '#15803D', border: '#86EFAC' };
       case 'Contact Page':
       default:
         return { bg: '#FEF3C7', text: '#D97706', border: '#FDE68A' };
@@ -177,6 +251,108 @@ const ContactsManager = () => {
         </div>
       </div>
 
+      {/* Main Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '12px',
+        borderBottom: '1px solid #e5e7eb',
+        paddingBottom: '12px',
+      }}>
+        {[
+          { value: 'all', label: 'All', count: mainTabCounts.all },
+          { value: 'lp1', label: 'Landing Page 1', count: mainTabCounts.lp1 },
+          { value: 'lp2', label: 'Landing Page 2', count: mainTabCounts.lp2 },
+          { value: 'lp3', label: 'Landing Page 3', count: mainTabCounts.lp3 },
+          { value: 'contact', label: 'Contact Page', count: mainTabCounts.contact },
+        ].map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => {
+              setMainTab(tab.value);
+              setLp3SubTab('all');
+              setSourceFilter('all');
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: mainTab === tab.value ? '2px solid #2563eb' : '1px solid #e5e7eb',
+              fontSize: '13px',
+              fontWeight: mainTab === tab.value ? 600 : 400,
+              backgroundColor: mainTab === tab.value ? '#EFF6FF' : '#fff',
+              color: mainTab === tab.value ? '#2563eb' : '#6b7280',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {tab.label}
+            <span style={{
+              backgroundColor: mainTab === tab.value ? '#2563eb' : '#e5e7eb',
+              color: mainTab === tab.value ? '#fff' : '#6b7280',
+              padding: '2px 8px',
+              borderRadius: '100px',
+              fontSize: '11px',
+              fontWeight: 600,
+            }}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* LP3 Sub-tabs (only show when LP3 is selected) */}
+      {mainTab === 'lp3' && (
+        <div style={{
+          display: 'flex',
+          gap: '6px',
+          marginBottom: '12px',
+          paddingLeft: '8px',
+        }}>
+          <span style={{ fontSize: '12px', color: '#9ca3af', alignSelf: 'center', marginRight: '4px' }}>Filter by:</span>
+          {[
+            { value: 'all', label: 'All', count: lp3SubCounts.all },
+            { value: 'hero', label: 'Hero Button', count: lp3SubCounts.hero },
+            { value: 'plan1', label: 'Plan 1 Button', count: lp3SubCounts.plan1 },
+            { value: 'plan2', label: 'Plan 2 Button', count: lp3SubCounts.plan2 },
+            { value: 'contactForm', label: 'Contact Form', count: lp3SubCounts.contactForm },
+          ].map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setLp3SubTab(tab.value)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '6px',
+                border: lp3SubTab === tab.value ? '1.5px solid #15803D' : '1px solid #e5e7eb',
+                fontSize: '12px',
+                fontWeight: lp3SubTab === tab.value ? 600 : 400,
+                backgroundColor: lp3SubTab === tab.value ? '#DCFCE7' : '#fff',
+                color: lp3SubTab === tab.value ? '#15803D' : '#6b7280',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {tab.label}
+              <span style={{
+                backgroundColor: lp3SubTab === tab.value ? '#15803D' : '#f3f4f6',
+                color: lp3SubTab === tab.value ? '#fff' : '#6b7280',
+                padding: '1px 6px',
+                borderRadius: '100px',
+                fontSize: '10px',
+                fontWeight: 600,
+              }}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{
         display: 'flex',
@@ -209,29 +385,6 @@ const ContactsManager = () => {
               {opt.label}
             </button>
           ))}
-        </div>
-
-        {/* Source Filter */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '13px', color: '#6b7280' }}>Source:</span>
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid #e5e7eb',
-              fontSize: '13px',
-              backgroundColor: '#fff',
-              cursor: 'pointer',
-              outline: 'none',
-            }}
-          >
-            <option value="all">All Sources</option>
-            <option value="Contact Page">Contact Page ({sourceStats['Contact Page']})</option>
-            <option value="Landing Page">Landing Page ({sourceStats['Landing Page']})</option>
-            <option value="Landing Page 2">Landing Page 2 ({sourceStats['Landing Page 2']})</option>
-          </select>
         </div>
       </div>
 
