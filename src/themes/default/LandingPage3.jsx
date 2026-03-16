@@ -1572,6 +1572,7 @@ const LandingPage3 = () => {
           style={{
             padding: isMobile ? '40px 20px' : '80px 120px',
             textAlign: 'center',
+            backgroundColor: problemColors.backgroundColor || 'transparent',
           }}
         >
           {/* Problem Statement */}
@@ -1682,6 +1683,7 @@ const LandingPage3 = () => {
           style={{
             padding: isMobile ? '60px 20px 40px' : '60px 120px',
             textAlign: 'center',
+            backgroundColor: solutionColors.backgroundColor || 'transparent',
           }}
         >
           <h2 style={{
@@ -1863,6 +1865,7 @@ const LandingPage3 = () => {
           style={{
             padding: isMobile ? '20px 20px' : '40px 120px',
             marginTop: isMobile ? '10px' : '20px',
+            backgroundColor: caseStudiesColors.backgroundColor || 'transparent',
           }}
         >
           {/* Cards container - natural height, no scroll runway */}
@@ -2346,6 +2349,7 @@ const LandingPage3 = () => {
             isHidden={isSectionHidden('clients')}
             style={{
               padding: isMobile ? '40px 20px' : '60px 0',
+              backgroundColor: clientsColors.backgroundColor || 'transparent',
             }}
           >
             {/* Heading */}
@@ -2465,6 +2469,7 @@ const LandingPage3 = () => {
           style={{
             padding: isMobile ? '40px 20px' : '80px 120px',
             position: 'relative',
+            backgroundColor: pricingColors.backgroundColor || 'transparent',
           }}
         >
           {/* Header - Side by side layout */}
@@ -2576,8 +2581,8 @@ const LandingPage3 = () => {
               )}
 
               <div style={{
-                backgroundColor: '#e1ffa0',
-                border: isMobile ? '2px solid #000' : '2.67px solid #000',
+                backgroundColor: pricingColors.card1Background || '#e1ffa0',
+                border: isMobile ? `2px solid ${pricingColors.card1BorderColor || '#000'}` : `2.67px solid ${pricingColors.card1BorderColor || '#000'}`,
                 borderRadius: isMobile ? '16px' : '21px',
                 boxShadow: isMobile ? '4px 4px 0px 0px #150634, 0px 25px 50px 0px rgba(0,0,0,0.25)' : '5.34px 5.34px 0px 0px #150634, 0px 25px 50px 0px rgba(0,0,0,0.25)',
                 padding: isMobile ? '20px 18px' : '32px 38px',
@@ -2738,8 +2743,8 @@ const LandingPage3 = () => {
 
             {/* Plan 2 - White Card (Starter) */}
             <div style={{
-              backgroundColor: '#fff',
-              border: '2px solid #000',
+              backgroundColor: pricingColors.card2Background || '#fff',
+              border: `2px solid ${pricingColors.card2BorderColor || '#000'}`,
               borderRadius: '16px',
               boxShadow: '4px 4px 0px 0px #150634',
               padding: isMobile ? '18px 16px' : '35px 50px 35px 50px',
@@ -2916,6 +2921,7 @@ const LandingPage3 = () => {
           id="contact-section"
           style={{
             padding: isMobile ? '40px 20px' : '100px 120px',
+            backgroundColor: contactColors.backgroundColor || 'transparent',
           }}
         >
           <div style={{
@@ -3260,7 +3266,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'stickyCta'}
           isHidden={isSectionHidden('stickyCta')}
           style={{
-            backgroundColor: '#fff',
+            backgroundColor: stickyCtaColors.backgroundColor || '#fff',
             borderTop: '1px solid #000',
             padding: isMobile ? '20px' : '20px 80px',
           }}

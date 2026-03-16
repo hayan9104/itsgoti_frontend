@@ -19,6 +19,11 @@ const colorProperties = [
   { key: 'highlightColor', label: 'Highlight Color', description: 'Secondary highlight color' },
   { key: 'cardBackground', label: 'Card Background', description: 'Background for cards' },
   { key: 'cardBorderColor', label: 'Card Border', description: 'Border color for cards' },
+  // Pricing section specific - separate card colors
+  { key: 'card1Background', label: 'Card 1 Background', description: 'Background for Plan 1 card' },
+  { key: 'card1BorderColor', label: 'Card 1 Border', description: 'Border color for Plan 1 card' },
+  { key: 'card2Background', label: 'Card 2 Background', description: 'Background for Plan 2 card' },
+  { key: 'card2BorderColor', label: 'Card 2 Border', description: 'Border color for Plan 2 card' },
 ];
 
 // Section-specific color properties mapping
@@ -31,7 +36,7 @@ const sectionColorMapping = {
   features: ['backgroundColor', 'headingColor', 'textColor', 'accentColor', 'cardBackground'],
   caseStudies: ['backgroundColor', 'headingColor', 'textColor', 'cardBackground', 'cardBorderColor'],
   clients: ['backgroundColor', 'headingColor', 'textColor'],
-  pricing: ['backgroundColor', 'headingColor', 'textColor', 'cardBackground', 'cardBorderColor', 'buttonBackground', 'buttonText', 'accentColor'],
+  pricing: ['backgroundColor', 'headingColor', 'textColor', 'card1Background', 'card1BorderColor', 'card2Background', 'card2BorderColor', 'buttonBackground', 'buttonText', 'accentColor'],
   contact: ['backgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText', 'borderColor', 'accentColor'],
   contactForm: ['backgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText', 'borderColor'],
   stickyCta: ['backgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText'],
