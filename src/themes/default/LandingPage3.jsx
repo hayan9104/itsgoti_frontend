@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
 import useThemeColors from '@/hooks/useThemeColors';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
@@ -127,6 +129,10 @@ const serviceIcons = {
 const LandingPage3 = () => {
   const { isMobile, isTablet } = useWindowSize();
   const { getSectionColors, getColor, themeColors } = useThemeColors('landing-page-3');
+
+  // Initialize smooth scrolling and scroll animations (disabled on mobile for performance)
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
   const [pageContent, setPageContent] = useState({});
   const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for clients
   const [loading, setLoading] = useState(true);
@@ -1502,7 +1508,9 @@ const LandingPage3 = () => {
             textAlign: 'center',
           }}
         >
-          <div style={{
+          <div
+            className="animate-fade-up"
+            style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -1933,7 +1941,7 @@ const LandingPage3 = () => {
 
       {/* Problem Section */}
       {shouldRenderSection('problem') && (
-        <div className="scroll-reveal">
+        <div className="animate-fade-up">
         <EditableSection
           sectionId="problem"
           label="Problem Section"
