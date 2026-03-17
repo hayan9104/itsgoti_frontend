@@ -211,10 +211,7 @@ const SiteSettings = () => {
                 outline: 'none',
               }}
             />
-            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
-              The title for Home and 4 other pages won't be updated, as they are already set. <a href="#" style={{ color: '#3b82f6' }}>Learn more</a>
-            </p>
-          </div>
+                      </div>
 
           {/* Site Language */}
           <div>
@@ -259,10 +256,7 @@ const SiteSettings = () => {
               resize: 'vertical',
             }}
           />
-          <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px' }}>
-            The description for Home and 3 other pages won't be updated, as they are already set. <a href="#" style={{ color: '#3b82f6' }}>Learn more</a>
-          </p>
-        </div>
+                  </div>
 
         {/* Preview */}
         <div>
