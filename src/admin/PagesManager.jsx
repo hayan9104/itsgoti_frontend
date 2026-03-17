@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pagesAPI } from '../services/api';
+import { pagesAPI, themesAPI } from '../services/api';
 import WorkPageEditor from './WorkPageEditor';
 import AboutPageEditor from './AboutPageEditor';
 import ContactPageEditor from './ContactPageEditor';
@@ -15,6 +15,9 @@ const PagesManager = () => {
   const [togglingPage, setTogglingPage] = useState(null);
   const [showRedirectModal, setShowRedirectModal] = useState(false);
   const [pageToHide, setPageToHide] = useState(null);
+  const [liveTheme, setLiveTheme] = useState(null);
+  const [defaultLandingPage, setDefaultLandingPage] = useState('landing');
+  const [savingDefault, setSavingDefault] = useState(false);
 
   // Pages that use the new visual editor
   const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
@@ -34,7 +37,38 @@ const PagesManager = () => {
 
   useEffect(() => {
     fetchPages();
+    fetchLiveTheme();
   }, []);
+
+  const fetchLiveTheme = async () => {
+    try {
+      const response = await themesAPI.getAll();
+      const themes = response.data.data;
+      const live = themes.find(t => t.isLive);
+      if (live) {
+        setLiveTheme(live);
+        // Fetch full theme data to get defaultLandingPage
+        const themeResponse = await themesAPI.getOne(live._id);
+        setDefaultLandingPage(themeResponse.data.data.defaultLandingPage || 'landing');
+      }
+    } catch (error) {
+      console.error('Error fetching live theme:', error);
+    }
+  };
+
+  const handleDefaultLandingChange = async (newDefault) => {
+    if (!liveTheme || savingDefault) return;
+
+    setSavingDefault(true);
+    try {
+      await themesAPI.update(liveTheme._id, { defaultLandingPage: newDefault });
+      setDefaultLandingPage(newDefault);
+    } catch (error) {
+      console.error('Error updating default landing page:', error);
+    } finally {
+      setSavingDefault(false);
+    }
+  };
 
   const fetchPages = async () => {
     try {
@@ -182,9 +216,90 @@ const PagesManager = () => {
     return <div>Loading...</div>;
   }
 
+  // Landing page options for the dropdown
+  const landingPageOptions = [
+    { value: 'landing', label: 'Landing Page' },
+    { value: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
+    { value: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+  ];
+
   return (
     <div>
-      <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', marginBottom: '24px' }}>Pages</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', margin: 0 }}>Pages</h1>
+
+        {/* Default Landing Page Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <label style={{
+            fontSize: '14px',
+            fontWeight: 500,
+            color: '#374151',
+          }}>
+            Default First Page:
+          </label>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={defaultLandingPage}
+              onChange={(e) => handleDefaultLandingChange(e.target.value)}
+              disabled={savingDefault || !liveTheme}
+              style={{
+                padding: '8px 32px 8px 12px',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#111827',
+                backgroundColor: savingDefault ? '#f3f4f6' : '#fff',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                cursor: savingDefault || !liveTheme ? 'not-allowed' : 'pointer',
+                appearance: 'none',
+                minWidth: '200px',
+              }}
+            >
+              {landingPageOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {/* Dropdown arrow */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#6b7280"
+              strokeWidth="2"
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+              }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            {/* Saving indicator */}
+            {savingDefault && (
+              <div style={{
+                position: 'absolute',
+                right: '36px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+              }}>
+                <div style={{
+                  width: '14px',
+                  height: '14px',
+                  border: '2px solid #d1d5db',
+                  borderTopColor: '#2563eb',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
         {defaultPages.map((page) => {

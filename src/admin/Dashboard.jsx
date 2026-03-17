@@ -366,6 +366,8 @@ const ThemePagesWrapper = () => {
   const [showRedirectModal, setShowRedirectModal] = useState(false);
   const [pageToHide, setPageToHide] = useState(null);
   const [selectedPage, setSelectedPage] = useState(null);
+  const [defaultLandingPage, setDefaultLandingPage] = useState('landing');
+  const [savingDefault, setSavingDefault] = useState(false);
 
   const defaultPages = [
     { name: 'landing', label: 'Landing Page' },
@@ -390,7 +392,9 @@ const ThemePagesWrapper = () => {
   const fetchTheme = async () => {
     try {
       const res = await themesAPI.getOne(themeId);
-      setTheme(res.data.data);
+      const themeData = res.data.data;
+      setTheme(themeData);
+      setDefaultLandingPage(themeData.defaultLandingPage || 'landing');
     } catch {
     } finally {
       setLoading(false);
@@ -398,6 +402,19 @@ const ThemePagesWrapper = () => {
   };
 
   useEffect(() => { fetchTheme(); }, [themeId]);
+
+  const handleDefaultLandingChange = async (newDefault) => {
+    if (savingDefault) return;
+    setSavingDefault(true);
+    try {
+      await themesAPI.update(themeId, { defaultLandingPage: newDefault });
+      setDefaultLandingPage(newDefault);
+    } catch (error) {
+      console.error('Error updating default landing page:', error);
+    } finally {
+      setSavingDefault(false);
+    }
+  };
 
   const getPageData = (pageName) => theme?.pages?.[pageName];
 
@@ -450,12 +467,89 @@ const ThemePagesWrapper = () => {
     });
   };
 
+  // Landing page options for the dropdown
+  const landingPageOptions = [
+    { value: 'landing', label: 'Landing Page' },
+    { value: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
+    { value: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+  ];
+
   if (loading) return <div style={{ color: '#6b7280' }}>Loading...</div>;
   if (!theme) return <div style={{ color: '#dc2626' }}>Theme not found</div>;
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', marginBottom: 24 }}>Pages</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: 0 }}>Pages</h1>
+
+        {/* Default Landing Page Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>
+            Default First Page:
+          </label>
+          <div style={{ position: 'relative' }}>
+            <select
+              value={defaultLandingPage}
+              onChange={(e) => handleDefaultLandingChange(e.target.value)}
+              disabled={savingDefault}
+              style={{
+                padding: '8px 36px 8px 12px',
+                fontSize: 14,
+                fontWeight: 500,
+                color: '#111827',
+                backgroundColor: savingDefault ? '#f3f4f6' : '#fff',
+                border: '1px solid #d1d5db',
+                borderRadius: 8,
+                cursor: savingDefault ? 'not-allowed' : 'pointer',
+                appearance: 'none',
+                minWidth: 220,
+              }}
+            >
+              {landingPageOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {/* Dropdown arrow */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#6b7280"
+              strokeWidth="2"
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+              }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+            {/* Saving indicator */}
+            {savingDefault && (
+              <div style={{
+                position: 'absolute',
+                right: 36,
+                top: '50%',
+                transform: 'translateY(-50%)',
+              }}>
+                <div style={{
+                  width: 14,
+                  height: 14,
+                  border: '2px solid #d1d5db',
+                  borderTopColor: '#2563eb',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
         {defaultPages.map((page) => {

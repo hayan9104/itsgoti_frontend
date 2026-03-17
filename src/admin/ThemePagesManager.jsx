@@ -7,6 +7,8 @@ const ThemePagesManager = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [defaultLandingPage, setDefaultLandingPage] = useState('landing');
+  const [savingDefault, setSavingDefault] = useState(false);
 
   const defaultPages = [
     { name: 'landing', label: 'Landing Page' },
@@ -30,11 +32,27 @@ const ThemePagesManager = () => {
   const fetchTheme = async () => {
     try {
       const response = await themesAPI.getOne(themeId);
-      setTheme(response.data.data);
+      const themeData = response.data.data;
+      setTheme(themeData);
+      setDefaultLandingPage(themeData.defaultLandingPage || 'landing');
     } catch (error) {
       console.error('Error fetching theme:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDefaultLandingChange = async (newDefault) => {
+    if (savingDefault) return;
+
+    setSavingDefault(true);
+    try {
+      await themesAPI.update(themeId, { defaultLandingPage: newDefault });
+      setDefaultLandingPage(newDefault);
+    } catch (error) {
+      console.error('Error updating default landing page:', error);
+    } finally {
+      setSavingDefault(false);
     }
   };
 
@@ -49,6 +67,13 @@ const ThemePagesManager = () => {
   if (!theme) {
     return <div style={{ padding: '40px 0', color: '#dc2626', textAlign: 'center' }}>Theme not found</div>;
   }
+
+  // Landing page options for the dropdown
+  const landingPageOptions = [
+    { value: 'landing', label: 'Landing Page' },
+    { value: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
+    { value: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+  ];
 
   return (
     <div style={{ maxWidth: '960px' }}>
@@ -90,6 +115,95 @@ const ThemePagesManager = () => {
           Select a page to edit its content within this theme.
         </p>
       </div>
+
+      {/* Default Landing Page Dropdown */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 24,
+        padding: '16px 20px',
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        border: '1px solid #e2e8f0',
+      }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
+          <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        <label style={{
+          fontSize: '14px',
+          fontWeight: 500,
+          color: '#374151',
+        }}>
+          Default First Page:
+        </label>
+        <div style={{ position: 'relative' }}>
+          <select
+            value={defaultLandingPage}
+            onChange={(e) => handleDefaultLandingChange(e.target.value)}
+            disabled={savingDefault}
+            style={{
+              padding: '8px 36px 8px 12px',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#111827',
+              backgroundColor: savingDefault ? '#f3f4f6' : '#fff',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              cursor: savingDefault ? 'not-allowed' : 'pointer',
+              appearance: 'none',
+              minWidth: '220px',
+            }}
+          >
+            {landingPageOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {/* Dropdown arrow */}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#6b7280"
+            strokeWidth="2"
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none',
+            }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+          {/* Saving indicator */}
+          {savingDefault && (
+            <div style={{
+              position: 'absolute',
+              right: '36px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+            }}>
+              <div style={{
+                width: '14px',
+                height: '14px',
+                border: '2px solid #d1d5db',
+                borderTopColor: '#2563eb',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+              }} />
+            </div>
+          )}
+        </div>
+        <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>
+          This page will show when visitors open your site
+        </span>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Pages Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>

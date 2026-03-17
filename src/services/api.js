@@ -126,6 +126,8 @@ export const themesAPI = {
   updatePage: (themeId, pageName, data) => api.put(`/themes/${themeId}/pages/${pageName}`, data),
   getAllPages: (id) => api.get(`/themes/${id}/all-pages`),
   pushAllPages: (id, data) => api.put(`/themes/${id}/all-pages`, data),
+  // Get default landing page for live theme (public)
+  getDefaultLanding: () => api.get('/themes/default-landing'),
 };
 
 // Upload API

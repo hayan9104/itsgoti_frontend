@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
@@ -7,6 +8,57 @@ import { getThemeComponent } from './themes/themeRegistry';
 import AdminLogin from './admin/Login';
 import AdminDashboard from './admin/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Component to render the default landing page based on theme settings
+function DefaultLandingRouter({ themeCode }) {
+  const [defaultPage, setDefaultPage] = useState(null);
+  const [loadingDefault, setLoadingDefault] = useState(true);
+
+  const Landing = getThemeComponent(themeCode, 'Landing');
+  const LandingPage2 = getThemeComponent(themeCode, 'LandingPage2');
+  const LandingPage3 = getThemeComponent(themeCode, 'LandingPage3');
+
+  useEffect(() => {
+    const fetchDefaultLanding = async () => {
+      try {
+        const response = await fetch('/api/themes/default-landing');
+        const data = await response.json();
+        setDefaultPage(data.data?.defaultLandingPage || 'landing');
+      } catch (error) {
+        console.error('Error fetching default landing page:', error);
+        setDefaultPage('landing');
+      } finally {
+        setLoadingDefault(false);
+      }
+    };
+
+    fetchDefaultLanding();
+  }, []);
+
+  if (loadingDefault) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // Map page name to component and visibility page name
+  const pageMap = {
+    'landing': { Component: Landing, pageName: 'landing' },
+    'landing-page-2': { Component: LandingPage2, pageName: 'landing-page-2' },
+    'landing-page-3': { Component: LandingPage3, pageName: 'landing-page-3' },
+  };
+
+  const selected = pageMap[defaultPage] || pageMap['landing'];
+
+  return (
+    <PageVisibilityWrapper pageName={selected.pageName} fallbackPath="/home">
+      {selected.Component && <selected.Component />}
+    </PageVisibilityWrapper>
+  );
+}
 
 function App() {
   const { themeCode, loading } = useThemeCode();
@@ -38,7 +90,9 @@ function App() {
       <ScrollToTop />
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={
+        <Route path="/" element={<DefaultLandingRouter themeCode={themeCode} />} />
+
+        <Route path="/landing" element={
           <PageVisibilityWrapper pageName="landing" fallbackPath="/home">
             {Landing && <Landing />}
           </PageVisibilityWrapper>
