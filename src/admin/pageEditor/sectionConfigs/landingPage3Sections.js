@@ -116,16 +116,17 @@ export const landingPage3Sections = [
       { key: 'formPlaceholder3', type: 'text', label: 'Service Placeholder', hint: 'e.g. "WHAT SERVICE YOU ARE LOOKING FOR?"' },
       { key: 'submitButtonText', type: 'text', label: 'Submit Button Text', hint: 'e.g. "SUBMIT"' },
       { key: 'whatsappText', type: 'text', label: 'WhatsApp Text', hint: 'e.g. "Need instant response? Let\'s connect on WhatsApp"' },
-      { key: 'whatsappLink', type: 'text', label: 'WhatsApp Link', hint: 'e.g. "https://wa.me/919876543210"' },
     ]
   },
   {
     id: 'stickyCta',
-    label: 'Sticky CTA Bar',
-    description: 'Bottom CTA bar with queue counter',
+    label: 'Sticky CTA Bar & WhatsApp',
+    description: 'Bottom CTA bar with queue counter and WhatsApp settings',
     fields: [
       { key: 'queueCount', type: 'text', label: 'Queue Count', hint: 'e.g. "05"' },
       { key: 'queueText', type: 'text', label: 'Queue Text', hint: 'e.g. "Projects sessions in the queue"' },
+      { key: 'whatsappNumber', type: 'whatsappNumber', label: 'WhatsApp Business Number', hint: 'Enter your WhatsApp number with country code. This will be used for all WhatsApp buttons on this page.' },
+      { key: 'whatsappDefaultMessage', type: 'text', label: 'Default WhatsApp Message', hint: 'Pre-filled message when user clicks WhatsApp. e.g. "Hi, I\'m interested in web design services"' },
     ]
   },
   {

@@ -178,6 +178,38 @@ const LandingPage3 = () => {
     }
   };
 
+  // WhatsApp URL helper - converts stored format to wa.me link
+  const getWhatsAppUrl = (whatsappNumber, defaultMessage = '') => {
+    if (!whatsappNumber) return 'https://wa.me/919876543210'; // Fallback
+
+    // Country code mapping for dial codes
+    const countryDialCodes = {
+      IN: '91', US: '1', GB: '44', AE: '971', SA: '966', AU: '61', CA: '1',
+      DE: '49', FR: '33', SG: '65', MY: '60', PH: '63', ID: '62', TH: '66',
+      JP: '81', CN: '86', KR: '82', BR: '55', MX: '52', ZA: '27', NG: '234',
+      EG: '20', PK: '92', BD: '880', NP: '977', LK: '94', IT: '39', ES: '34',
+      NL: '31', RU: '7',
+    };
+
+    let fullNumber = '';
+
+    // Check if it's in "CountryCode:PhoneNumber" format (e.g., "IN:9876543210")
+    if (whatsappNumber.includes(':')) {
+      const [countryCode, phone] = whatsappNumber.split(':');
+      const dialCode = countryDialCodes[countryCode] || '91';
+      fullNumber = dialCode + phone.replace(/\D/g, '');
+    } else {
+      // Legacy format - just the number (assume already has country code)
+      fullNumber = whatsappNumber.replace(/\D/g, '');
+    }
+
+    let url = `https://wa.me/${fullNumber}`;
+    if (defaultMessage) {
+      url += `?text=${encodeURIComponent(defaultMessage)}`;
+    }
+    return url;
+  };
+
   const {
     register,
     handleSubmit,
@@ -562,9 +594,11 @@ const LandingPage3 = () => {
     submitButtonText: 'SUBMIT',
     whatsappText: "Need instant response? Let's connect on WhatsApp",
 
-    // Sticky CTA
+    // Sticky CTA & WhatsApp
     queueCount: '05',
     queueText: 'Projects sessions in the queue',
+    whatsappNumber: 'IN:9876543210', // Format: "CountryCode:PhoneNumber"
+    whatsappDefaultMessage: "Hi, I'm interested in web design services",
 
     // Footer
     instagramLink: '#',
@@ -1059,7 +1093,7 @@ const LandingPage3 = () => {
                   }}>
                     Need instant response? Let's connect on{' '}
                     <a
-                      href="https://wa.me/919876543210"
+                      href={getWhatsAppUrl(content.whatsappNumber, content.whatsappDefaultMessage)}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -3229,13 +3263,19 @@ const LandingPage3 = () => {
                 )}
 
                 {/* WhatsApp Link */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: isMobile ? '6px' : '12px',
-                  marginTop: '12px',
-                }}>
+                <a
+                  href={getWhatsAppUrl(content.whatsappNumber, content.whatsappDefaultMessage)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isMobile ? '6px' : '12px',
+                    marginTop: '12px',
+                    textDecoration: 'none',
+                  }}
+                >
                   <div style={{ width: isMobile ? '16px' : '28px', height: isMobile ? '16px' : '28px', flexShrink: 0 }}>
                     <ZapIcon />
                   </div>
@@ -3250,7 +3290,7 @@ const LandingPage3 = () => {
                     {content.whatsappText.split('WhatsApp')[0]}
                     <span style={{ textDecoration: 'underline', fontWeight: 600 }}>WhatsApp</span>
                   </p>
-                </div>
+                </a>
               </div>
             </div>
           </div>
@@ -3324,9 +3364,11 @@ const LandingPage3 = () => {
             </div>
 
             {/* WhatsApp CTA Button */}
-            <button
+            <a
+              href={getWhatsAppUrl(content.whatsappNumber, content.whatsappDefaultMessage)}
+              target="_blank"
+              rel="noopener noreferrer"
               className="btn-hover"
-              onClick={() => scrollToSection('pricing-section')}
               style={{
               backgroundColor: '#000',
               borderRadius: isMobile ? '834.813px' : '906px',
@@ -3339,6 +3381,7 @@ const LandingPage3 = () => {
               justifyContent: 'center',
               gap: isMobile ? '11px' : '20px',
               cursor: 'pointer',
+              textDecoration: 'none',
             }}>
               <span style={{
                 fontFamily: "'Gabarito', sans-serif",
@@ -3360,7 +3403,7 @@ const LandingPage3 = () => {
               }}>
                 <WhatsAppIcon />
               </div>
-            </button>
+            </a>
           </div>
         </EditableSection>
       )}
