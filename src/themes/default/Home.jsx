@@ -1977,7 +1977,7 @@ const Home = () => {
                     width: '48px',
                     height: '48px',
                     borderRadius: '50%',
-                    border: '1px solid #E2775A',
+                    border: '1px solid #000',
                     backgroundColor: 'transparent',
                     cursor: currentTestimonialIndex === 0 ? 'not-allowed' : 'pointer',
                     opacity: currentTestimonialIndex === 0 ? 0.4 : 1,
@@ -1987,7 +1987,7 @@ const Home = () => {
                     transition: 'all 0.3s ease',
                   }}
                 >
-                  <img src={arrowLeft} alt="Previous" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                  <img src={arrowLeft} alt="Previous" style={{ width: '16px', height: '16px', filter: 'brightness(0)' }} />
                 </button>
                 <button
                   onClick={() => setCurrentTestimonialIndex((prev) => Math.min(testimonials.length - 1, prev + 1))}
@@ -1996,7 +1996,7 @@ const Home = () => {
                     width: '48px',
                     height: '48px',
                     borderRadius: '50%',
-                    border: '1px solid #E2775A',
+                    border: '1px solid #000',
                     backgroundColor: 'transparent',
                     cursor: currentTestimonialIndex === testimonials.length - 1 ? 'not-allowed' : 'pointer',
                     opacity: currentTestimonialIndex === testimonials.length - 1 ? 0.4 : 1,
@@ -2006,7 +2006,7 @@ const Home = () => {
                     transition: 'all 0.3s ease',
                   }}
                 >
-                  <img src={arrowRight} alt="Next" style={{ width: '16px', height: '16px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                  <img src={arrowRight} alt="Next" style={{ width: '16px', height: '16px', filter: 'brightness(0)' }} />
                 </button>
               </div>
             )}
@@ -2019,75 +2019,131 @@ const Home = () => {
       <EditableSection sectionId="brands" label="Brands Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'brands'} isHidden={isSectionHidden('brands')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isMobile ? 'flex-start' : 'flex-start',
         }}>
           <h2 style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '28px' : isTablet ? '36px' : '42px',
+            fontFamily: "'Gilroy-Medium', sans-serif",
+            fontSize: isMobile ? '32px' : isTablet ? '40px' : '50px',
             fontWeight: 400,
             color: '#000',
             marginBottom: '16px',
+            letterSpacing: '-1px',
+            lineHeight: 'normal',
           }}>
             {pageContent.brandsTitle}{' '}
-            <span style={{ fontStyle: 'italic' }}>{pageContent.brandsTitleItalic}</span>
+            <span style={{ fontFamily: "'Gilroy-MediumItalic', sans-serif", fontStyle: 'italic' }}>{pageContent.brandsTitleItalic}</span>
             <br />
-            <span style={{ fontStyle: 'italic' }}>{pageContent.brandsTitleEnd}</span>
+            <span style={{ fontFamily: "'Gilroy-MediumItalic', sans-serif", fontStyle: 'italic' }}>{pageContent.brandsTitleEnd}</span>
           </h2>
           <p style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '14px' : '16px',
+            fontFamily: "'Gilroy-Medium', sans-serif",
+            fontSize: isMobile ? '16px' : '20px',
             fontWeight: 400,
-            color: '#666',
-            maxWidth: '500px',
-            marginBottom: '32px',
+            color: '#000',
+            maxWidth: '600px',
+            marginBottom: '48px',
+            lineHeight: '28px',
           }}>
             {pageContent.brandsDescription}
           </p>
 
-          {/* Accordion */}
-          <div style={{ maxWidth: '800px' }}>
+          {/* Accordion - 4 Boxes */}
+          <div style={{
+            width: '100%',
+            maxWidth: isMobile ? '100%' : '1178px',
+          }}>
             {accordionItems.map((item, index) => (
               <div key={index} style={{
                 borderTop: '1px solid #E5E5E5',
-                borderBottom: index === accordionItems.length - 1 ? '1px solid #E5E5E5' : 'none',
+                borderBottom: '1px solid #E5E5E5',
+                marginBottom: index < accordionItems.length - 1 ? '-1px' : '0',
               }}>
                 <button
                   onClick={() => setExpandedAccordion(expandedAccordion === index ? -1 : index)}
                   style={{
                     width: '100%',
+                    minHeight: isMobile ? '80px' : '146px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '20px 0',
+                    padding: isMobile ? '20px 16px' : '0 24px',
                     backgroundColor: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
+                    gap: '24px',
                   }}
                 >
+                  {/* Left side - Title */}
                   <span style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: isMobile ? '16px' : '20px',
+                    fontFamily: "'Gilroy-Medium', sans-serif",
+                    fontSize: isMobile ? '18px' : '24px',
                     fontWeight: 500,
                     color: '#000',
+                    flexShrink: 0,
+                    minWidth: isMobile ? 'auto' : '280px',
+                    textAlign: 'left',
                   }}>
                     {item.title}
                   </span>
+
+                  {/* Middle - Items Grid (only when expanded, desktop only) */}
+                  {!isMobile && expandedAccordion === index && item.items.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '12px 60px',
+                      flex: 1,
+                      marginTop: '40px',
+                    }}>
+                      {item.items.map((subItem, subIndex) => (
+                        <div key={subIndex} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                        }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#E2775A',
+                            flexShrink: 0,
+                          }} />
+                          <span style={{
+                            fontFamily: "'Gilroy-Medium', sans-serif",
+                            fontSize: '16px',
+                            fontWeight: 400,
+                            color: '#000',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {subItem}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Right side - Arrow */}
                   <img
                     src={expandedAccordion === index ? arrowLeft : arrowRight}
                     alt={expandedAccordion === index ? "collapse" : "expand"}
                     style={{
-                      width: '20px',
-                      height: '20px',
+                      width: isMobile ? '20px' : '24px',
+                      height: isMobile ? '20px' : '24px',
                       filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)',
+                      flexShrink: 0,
                     }}
                   />
                 </button>
-                {expandedAccordion === index && item.items.length > 0 && (
+
+                {/* Mobile - Items below when expanded */}
+                {isMobile && expandedAccordion === index && item.items.length > 0 && (
                   <div style={{
-                    padding: '0 0 20px 0',
+                    padding: '0 16px 20px 16px',
                     display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                    gap: '12px 40px',
-                    marginLeft: isMobile ? '0' : '200px',
+                    gridTemplateColumns: '1fr',
+                    gap: '12px',
                   }}>
                     {item.items.map((subItem, subIndex) => (
                       <div key={subIndex} style={{
@@ -2103,8 +2159,8 @@ const Home = () => {
                           flexShrink: 0,
                         }} />
                         <span style={{
-                          fontFamily: "'Plus Jakarta Sans', sans-serif",
-                          fontSize: '16px',
+                          fontFamily: "'Gilroy-Medium', sans-serif",
+                          fontSize: '14px',
                           fontWeight: 400,
                           color: '#000',
                         }}>
@@ -2119,19 +2175,32 @@ const Home = () => {
           </div>
 
           {/* CTA Button - Centered */}
-          <div style={{ marginTop: '40px', textAlign: 'center' }}>
+          <div style={{
+            marginTop: '40px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            alignSelf: 'center',
+          }}>
             <Link to="/contact" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
+              display: 'flex',
+              width: isMobile ? '280px' : '346px',
+              height: '64px',
+              padding: '12px 24px',
               justifyContent: 'center',
-              padding: '16px 32px',
+              alignItems: 'center',
+              gap: '12px',
+              borderRadius: '200px',
               backgroundColor: '#2558BF',
               color: '#fff',
-              borderRadius: '100px',
               textDecoration: 'none',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '16px',
-              fontWeight: 500,
+              fontFamily: "'Gilroy-SemiBold', sans-serif",
+              fontSize: isMobile ? '18px' : '20px',
+              fontWeight: 400,
+              lineHeight: '24px',
+              textAlign: 'center',
             }}>
               {pageContent.ctaMidButtonText}
             </Link>
@@ -2140,13 +2209,15 @@ const Home = () => {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              marginTop: '12px',
+              marginTop: '16px',
             }}>
-              <img src={vectorIcon} alt="" style={{ width: '14px', height: '14px' }} />
+              <img src={vectorIcon} alt="" style={{ width: '16px', height: '16px', filter: 'brightness(0)' }} />
               <span style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '14px',
-                color: '#666',
+                fontFamily: "'Gilroy-Medium', sans-serif",
+                fontSize: '16px',
+                fontWeight: 400,
+                color: '#000',
+                lineHeight: 'normal',
               }}>
                 {pageContent.ctaMidInstantText}
               </span>

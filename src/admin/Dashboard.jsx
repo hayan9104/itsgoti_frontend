@@ -301,25 +301,107 @@ const ThemeAdminPanel = () => {
   );
 };
 
+// Link Icon for URL Settings
+const LinkIcon = () => (
+  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+  </svg>
+);
+
 // ─────────────────────────────────────────────────
 // Theme Dashboard Home (stats for this theme)
 // ─────────────────────────────────────────────────
 const ThemeDashboardHome = () => {
   const { themeId } = useParams();
   const [theme, setTheme] = useState(null);
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [slugs, setSlugs] = useState({
+    'landing': { slug: 'landing_page1', label: 'Landing Page 1' },
+    'landing-page-2': { slug: 'landing_page2', label: 'Landing Page 2' },
+    'landing-page-3': { slug: 'landing_page3', label: 'Landing Page 3' },
+  });
+  const [savingSlugs, setSavingSlugs] = useState(false);
+  const [slugError, setSlugError] = useState('');
+
+  const fetchTheme = () => {
+    themesAPI.getOne(themeId).then((res) => {
+      const data = res.data.data;
+      setTheme(data);
+      if (data.landingPageSlugs) {
+        setSlugs(data.landingPageSlugs);
+      }
+    }).catch(() => {});
+  };
 
   useEffect(() => {
-    themesAPI.getOne(themeId).then((res) => setTheme(res.data.data)).catch(() => {});
+    fetchTheme();
   }, [themeId]);
 
   const pageCount = theme?.pages ? Object.keys(theme.pages).length : 0;
+
+  const validateSlug = (slug) => {
+    // Only allow lowercase letters, numbers, hyphens, underscores
+    return /^[a-z0-9_-]+$/.test(slug) && slug.length > 0 && slug.length <= 50;
+  };
+
+  const handleSlugChange = (pageKey, field, value) => {
+    setSlugs(prev => ({
+      ...prev,
+      [pageKey]: {
+        ...prev[pageKey],
+        [field]: value,
+      },
+    }));
+    setSlugError('');
+  };
+
+  const saveSlugs = async () => {
+    // Validate all slugs
+    const slugValues = Object.values(slugs).map(s => s.slug);
+
+    // Check for empty slugs
+    for (const [key, data] of Object.entries(slugs)) {
+      if (!data.slug || !data.slug.trim()) {
+        setSlugError(`URL path for "${data.label || key}" cannot be empty`);
+        return;
+      }
+      if (!validateSlug(data.slug)) {
+        setSlugError(`Invalid URL path "${data.slug}". Use only lowercase letters, numbers, hyphens, and underscores.`);
+        return;
+      }
+      if (!data.label || !data.label.trim()) {
+        setSlugError(`Display name for URL "/${data.slug}" cannot be empty`);
+        return;
+      }
+    }
+
+    // Check for duplicate slugs
+    const uniqueSlugs = new Set(slugValues);
+    if (uniqueSlugs.size !== slugValues.length) {
+      setSlugError('Each landing page must have a unique URL path');
+      return;
+    }
+
+    setSavingSlugs(true);
+    try {
+      await themesAPI.update(themeId, { landingPageSlugs: slugs });
+      setShowUrlModal(false);
+      fetchTheme();
+    } catch (error) {
+      setSlugError('Failed to save URL settings. Please try again.');
+    } finally {
+      setSavingSlugs(false);
+    }
+  };
 
   return (
     <div>
       <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', marginBottom: 24 }}>
         Theme Dashboard
       </h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+
+      {/* Stats Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 24 }}>
         <div style={{ backgroundColor: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: 24 }}>
           <h3 style={{ color: '#6b7280', fontSize: 14, marginBottom: 8 }}>Pages</h3>
           <p style={{ fontSize: 30, fontWeight: 700, color: '#111827' }}>{pageCount}</p>
@@ -337,6 +419,256 @@ const ThemeDashboardHome = () => {
           </p>
         </div>
       </div>
+
+      {/* URL Settings Card */}
+      <div style={{
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        padding: 24,
+        border: '1px solid #e5e7eb',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 10,
+                backgroundColor: '#eff6ff', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', color: '#2563eb',
+              }}>
+                <LinkIcon />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>
+                URL Settings
+              </h2>
+            </div>
+            <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16, marginLeft: 50 }}>
+              Customize the URL paths for your landing pages
+            </p>
+
+            {/* Current URLs Preview */}
+            <div style={{ marginLeft: 50, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Object.entries(slugs).map(([key, data]) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#6b7280', width: 140 }}>{data.label}:</span>
+                  <code style={{
+                    fontSize: 13, backgroundColor: '#f3f4f6', padding: '2px 8px',
+                    borderRadius: 4, color: '#111827', fontFamily: 'monospace',
+                  }}>
+                    /{data.slug}
+                  </code>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowUrlModal(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', backgroundColor: '#2563eb', color: '#fff',
+              borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontSize: 14, fontWeight: 500, transition: 'background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit URLs
+          </button>
+        </div>
+      </div>
+
+      {/* URL Settings Modal */}
+      {showUrlModal && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+          padding: 20,
+        }}>
+          <div style={{
+            backgroundColor: '#fff', borderRadius: 16,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: 560, width: '100%', padding: 0,
+            maxHeight: 'calc(100vh - 40px)',
+            display: 'flex', flexDirection: 'column',
+            overflow: 'hidden',
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px', borderBottom: '1px solid #e5e7eb',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  backgroundColor: '#eff6ff', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', color: '#2563eb',
+                }}>
+                  <LinkIcon />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>
+                    Landing Page URLs
+                  </h3>
+                  <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                    Customize URL paths and display names
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowUrlModal(false); setSlugError(''); }}
+                style={{
+                  width: 32, height: 32, borderRadius: 6,
+                  backgroundColor: '#f3f4f6', border: 'none',
+                  cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <svg width="18" height="18" fill="none" stroke="#6b7280" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+              {/* Error Message */}
+              {slugError && (
+                <div style={{
+                  backgroundColor: '#fef2f2', border: '1px solid #fecaca',
+                  borderRadius: 8, padding: '12px 16px', marginBottom: 20,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  <svg width="18" height="18" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span style={{ fontSize: 14, color: '#dc2626' }}>{slugError}</span>
+                </div>
+              )}
+
+              {/* URL Fields */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {Object.entries(slugs).map(([pageKey, data], index) => (
+                  <div key={pageKey} style={{
+                    padding: 16, backgroundColor: '#f9fafb',
+                    borderRadius: 10, border: '1px solid #e5e7eb',
+                  }}>
+                    <div style={{
+                      fontSize: 12, fontWeight: 600, color: '#6b7280',
+                      marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px',
+                    }}>
+                      Landing Page {index + 1}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {/* Display Name */}
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 4 }}>
+                          Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={data.label}
+                          onChange={(e) => handleSlugChange(pageKey, 'label', e.target.value)}
+                          placeholder="e.g., Shopify Landing"
+                          style={{
+                            width: '100%', padding: '10px 12px',
+                            fontSize: 14, border: '1px solid #d1d5db',
+                            borderRadius: 6, backgroundColor: '#fff',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, margin: '4px 0 0 0' }}>
+                          Shown in dropdown menus and admin panel
+                        </p>
+                      </div>
+
+                      {/* URL Path */}
+                      <div>
+                        <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 4 }}>
+                          URL Path
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <span style={{
+                            padding: '10px 12px', backgroundColor: '#e5e7eb',
+                            border: '1px solid #d1d5db', borderRight: 'none',
+                            borderRadius: '6px 0 0 6px', fontSize: 14, color: '#6b7280',
+                          }}>
+                            /
+                          </span>
+                          <input
+                            type="text"
+                            value={data.slug}
+                            onChange={(e) => handleSlugChange(pageKey, 'slug', e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                            placeholder="e.g., shopify-pro"
+                            style={{
+                              flex: 1, padding: '10px 12px',
+                              fontSize: 14, border: '1px solid #d1d5db',
+                              borderRadius: '0 6px 6px 0', backgroundColor: '#fff',
+                              fontFamily: 'monospace',
+                            }}
+                          />
+                        </div>
+                        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, margin: '4px 0 0 0' }}>
+                          Only lowercase letters, numbers, hyphens, and underscores
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px', borderTop: '1px solid #e5e7eb',
+              display: 'flex', justifyContent: 'flex-end', gap: 12,
+              backgroundColor: '#f9fafb',
+              flexShrink: 0,
+            }}>
+              <button
+                onClick={() => { setShowUrlModal(false); setSlugError(''); }}
+                style={{
+                  padding: '10px 20px', backgroundColor: '#fff',
+                  color: '#374151', borderRadius: 8,
+                  border: '1px solid #d1d5db', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 500,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveSlugs}
+                disabled={savingSlugs}
+                style={{
+                  padding: '10px 24px',
+                  backgroundColor: savingSlugs ? '#9ca3af' : '#2563eb',
+                  color: '#fff', borderRadius: 8, border: 'none',
+                  cursor: savingSlugs ? 'not-allowed' : 'pointer',
+                  fontSize: 14, fontWeight: 500,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}
+              >
+                {savingSlugs && (
+                  <div style={{
+                    width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff', borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }} />
+                )}
+                {savingSlugs ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spinner animation */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
@@ -368,11 +700,17 @@ const ThemePagesWrapper = () => {
   const [selectedPage, setSelectedPage] = useState(null);
   const [defaultLandingPage, setDefaultLandingPage] = useState('landing');
   const [savingDefault, setSavingDefault] = useState(false);
+  const [landingPageSlugs, setLandingPageSlugs] = useState({
+    'landing': { slug: 'landing_page1', label: 'Landing Page 1' },
+    'landing-page-2': { slug: 'landing_page2', label: 'Landing Page 2' },
+    'landing-page-3': { slug: 'landing_page3', label: 'Landing Page 3' },
+  });
 
-  const defaultPages = [
-    { name: 'landing', label: 'Landing Page' },
-    { name: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
-    { name: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+  // Generate default pages list with dynamic labels for landing pages
+  const getDefaultPages = () => [
+    { name: 'landing', label: landingPageSlugs['landing']?.label || 'Landing Page 1' },
+    { name: 'landing-page-2', label: landingPageSlugs['landing-page-2']?.label || 'Landing Page 2' },
+    { name: 'landing-page-3', label: landingPageSlugs['landing-page-3']?.label || 'Landing Page 3' },
     { name: 'home', label: 'Home Page' },
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
@@ -381,6 +719,8 @@ const ThemePagesWrapper = () => {
     { name: 'contact', label: 'Contact' },
     { name: 'footer', label: 'Footer' },
   ];
+
+  const defaultPages = getDefaultPages();
 
   // Pages that use the visual editor
   const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
@@ -395,6 +735,9 @@ const ThemePagesWrapper = () => {
       const themeData = res.data.data;
       setTheme(themeData);
       setDefaultLandingPage(themeData.defaultLandingPage || 'landing');
+      if (themeData.landingPageSlugs) {
+        setLandingPageSlugs(themeData.landingPageSlugs);
+      }
     } catch {
     } finally {
       setLoading(false);
@@ -467,11 +810,11 @@ const ThemePagesWrapper = () => {
     });
   };
 
-  // Landing page options for the dropdown
+  // Landing page options for the dropdown (using custom labels)
   const landingPageOptions = [
-    { value: 'landing', label: 'Landing Page' },
-    { value: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
-    { value: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+    { value: 'landing', label: landingPageSlugs['landing']?.label || 'Landing Page 1' },
+    { value: 'landing-page-2', label: landingPageSlugs['landing-page-2']?.label || 'Landing Page 2' },
+    { value: 'landing-page-3', label: landingPageSlugs['landing-page-3']?.label || 'Landing Page 3' },
   ];
 
   if (loading) return <div style={{ color: '#6b7280' }}>Loading...</div>;
@@ -684,9 +1027,10 @@ const ThemePagesWrapper = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24, maxHeight: 300, overflowY: 'auto' }}>
               {getAvailableRedirectPages().map((page) => {
-                const routePath = page.name === 'landing' ? '/'
-                  : page.name === 'landing-page-2' ? '/landing_page2'
-                  : page.name === 'landing-page-3' ? '/landing_page3'
+                // Use custom slugs for landing pages
+                const routePath = page.name === 'landing' ? `/${landingPageSlugs['landing']?.slug || 'landing_page1'}`
+                  : page.name === 'landing-page-2' ? `/${landingPageSlugs['landing-page-2']?.slug || 'landing_page2'}`
+                  : page.name === 'landing-page-3' ? `/${landingPageSlugs['landing-page-3']?.slug || 'landing_page3'}`
                   : page.name === 'case-study' ? '/case-studies'
                   : `/${page.name}`;
                 return (
