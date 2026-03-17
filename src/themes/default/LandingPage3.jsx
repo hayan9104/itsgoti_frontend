@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import useWindowSize from '@/hooks/useWindowSize';
 import useThemeColors from '@/hooks/useThemeColors';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
+
+// Register ScrollTrigger
+gsap.registerPlugin(ScrollTrigger);
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
 import TickMark from '@/assets/Tick mark.png';
@@ -150,6 +155,8 @@ const LandingPage3 = () => {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [displayPosition, setDisplayPosition] = useState(0); // Smoothly animated position
   const caseStudyStickyRef = useRef(null);
+  const caseStudySectionRef = useRef(null);
+  const featuresSectionRef = useRef(null);
   const animationRef = useRef(null);
   const footerRef = useRef(null);
   const stickyCtaRef = useRef(null);
@@ -339,103 +346,47 @@ const LandingPage3 = () => {
     };
   }, [scrollPosition, isMobile]);
 
-  // Scroll-lock effect for Case Studies - smooth progressive version
-  const hasEnteredSection = useRef(false);
-  const isTransitioning = useRef(false);
-
+  // GSAP ScrollTrigger pinning for Case Studies section
   useEffect(() => {
-    if (isMobile) return;
+    if (isMobile || !caseStudySectionRef.current) return;
 
     const caseStudiesData = pageContent.caseStudies || defaultContent.caseStudies || [];
     const numCards = caseStudiesData.length || 1;
-    const scrollPerCard = 250; // Pixels of scroll needed to fully reveal one card
-    const maxPosition = numCards - 1; // Maximum scroll position
+    const maxPosition = numCards - 1;
 
-    const handleWheel = (e) => {
-      if (!caseStudyStickyRef.current) return;
-
-      const section = caseStudyStickyRef.current;
-      const rect = section.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-
-      // Section position checks
-      const sectionTop = rect.top;
-      const sectionBottom = rect.bottom;
-      const sectionHeight = rect.height;
-
-      // Check if section is visible at all
-      const isSectionVisible = sectionTop < viewportHeight && sectionBottom > 0;
-
-      // Is section in the active capture zone? (more forgiving)
-      // Capture when section top is in upper 50% of viewport and section is mostly visible
-      const isInActiveZone = sectionTop < viewportHeight * 0.5 && sectionTop > -sectionHeight * 0.3 && sectionBottom > viewportHeight * 0.3;
-
-      // Check if we're in the middle of a card transition (not at a whole number)
-      const isInTransition = scrollPosition > 0 && scrollPosition < maxPosition && scrollPosition % 1 !== 0;
-
-      // If we're mid-transition, stay locked regardless of cursor position
-      if (isInTransition && isSectionVisible) {
-        isTransitioning.current = true;
-      }
-
-      // Scrolling DOWN
-      if (e.deltaY > 0) {
-        // Lock scroll if: in active zone OR mid-transition, and not at last card
-        if ((isInActiveZone || isTransitioning.current) && scrollPosition < maxPosition) {
-          e.preventDefault();
-          hasEnteredSection.current = true;
-
-          // Calculate scroll increment
-          const increment = Math.abs(e.deltaY) / scrollPerCard;
-          const newPosition = Math.min(scrollPosition + increment, maxPosition);
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      // Create ScrollTrigger for pinning the section
+      const trigger = ScrollTrigger.create({
+        trigger: caseStudySectionRef.current,
+        start: 'top top',
+        end: () => `+=${numCards * 400}`, // Scroll distance based on number of cards
+        pin: true,
+        pinSpacing: true,
+        scrub: 0.8, // Smooth scrubbing
+        anticipatePin: 1,
+        onUpdate: (self) => {
+          // Map scroll progress (0-1) to card position (0 to maxPosition)
+          const newPosition = self.progress * maxPosition;
           setScrollPosition(newPosition);
+          setDisplayPosition(newPosition);
+        },
+      });
 
-          // Check if we completed the transition to a whole number
-          if (Math.floor(newPosition) === newPosition || newPosition === maxPosition) {
-            isTransitioning.current = false;
-          }
-          return;
-        }
+      // Refresh ScrollTrigger after setup
+      ScrollTrigger.refresh();
 
-        // Last card - allow page scroll
-        if (scrollPosition >= maxPosition) {
-          hasEnteredSection.current = false;
-          isTransitioning.current = false;
-        }
-      }
-
-      // Scrolling UP
-      if (e.deltaY < 0) {
-        // Lock scroll if: in active zone OR mid-transition, and not at first card
-        if ((isInActiveZone || isTransitioning.current) && scrollPosition > 0) {
-          e.preventDefault();
-
-          // Calculate scroll decrement
-          const decrement = Math.abs(e.deltaY) / scrollPerCard;
-          const newPosition = Math.max(scrollPosition - decrement, 0);
-          setScrollPosition(newPosition);
-
-          // Check if we completed the transition to a whole number
-          if (Math.floor(newPosition) === newPosition || newPosition === 0) {
-            isTransitioning.current = false;
-          }
-          return;
-        }
-
-        // First card - allow page scroll up
-        if (scrollPosition <= 0) {
-          hasEnteredSection.current = false;
-          isTransitioning.current = false;
-        }
-      }
-    };
-
-    window.addEventListener('wheel', handleWheel, { passive: false });
+      // Store trigger for cleanup
+      caseStudySectionRef.current._scrollTrigger = trigger;
+    }, 100);
 
     return () => {
-      window.removeEventListener('wheel', handleWheel);
+      clearTimeout(timer);
+      if (caseStudySectionRef.current?._scrollTrigger) {
+        caseStudySectionRef.current._scrollTrigger.kill();
+      }
     };
-  }, [isMobile, pageContent.caseStudies, scrollPosition]);
+  }, [isMobile, pageContent.caseStudies]);
 
   const fetchPageContent = async () => {
     try {
@@ -650,18 +601,55 @@ const LandingPage3 = () => {
 
   const content = { ...defaultContent, ...pageContent };
 
-  // Auto-rotate features groups
+  // Auto-rotate features groups - starts when section first enters view, runs continuously after
+  const rotationTimerRef = useRef(null);
+  const rotationStartedRef = useRef(false);
+  const featureGroupsLengthRef = useRef(5); // Default to 5, will be updated
+
+  // Update the length ref when content changes
   useEffect(() => {
-    const featureGroups = content.featureGroups || [];
-    if (featureGroups.length <= 1) return;
+    const featureGroups = content.featureGroups || defaultContent.featureGroups || [];
+    featureGroupsLengthRef.current = featureGroups.length;
+  }, [content.featureGroups]);
 
-    const interval = (content.featureRotationSpeed || 3) * 1000;
-    const timer = setInterval(() => {
-      setCurrentFeatureGroup(prev => (prev + 1) % featureGroups.length);
-    }, interval);
+  useEffect(() => {
+    const startRotation = () => {
+      if (rotationStartedRef.current) return;
+      rotationStartedRef.current = true;
 
-    return () => clearInterval(timer);
-  }, [content.featureGroups, content.featureRotationSpeed]);
+      const interval = 5000; // 5 seconds
+
+      rotationTimerRef.current = setInterval(() => {
+        setCurrentFeatureGroup(prev => (prev + 1) % featureGroupsLengthRef.current);
+      }, interval);
+    };
+
+    // Use IntersectionObserver to detect when section FIRST enters view
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !rotationStartedRef.current) {
+            startRotation();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+
+    const checkAndObserve = () => {
+      if (featuresSectionRef.current) {
+        observer.observe(featuresSectionRef.current);
+      } else {
+        setTimeout(checkAndObserve, 100);
+      }
+    };
+    checkAndObserve();
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Premium scroll reveal animations using Intersection Observer
   useEffect(() => {
@@ -2059,7 +2047,7 @@ const LandingPage3 = () => {
         const services = ensureArray(content.services, defaultContent.services);
 
         return (
-          <div className="scroll-reveal-scale">
+          <div ref={featuresSectionRef} className="scroll-reveal-scale">
           <EditableSection
             sectionId="solution"
             label="Solution Section"
@@ -2167,11 +2155,23 @@ const LandingPage3 = () => {
                 padding: isMobile ? '30px 20px' : '50px 120px',
                 minHeight: isMobile ? 'auto' : '257px',
               }}>
-                <div style={{
-                  maxWidth: isMobile ? '100%' : '959px',
-                  width: '100%',
-                  margin: '0 auto',
-                }}>
+                <div
+                  key={currentFeatureGroup}
+                  style={{
+                    maxWidth: isMobile ? '100%' : '959px',
+                    width: '100%',
+                    margin: '0 auto',
+                    animation: 'fadeInContent 0.4s ease-out',
+                  }}
+                >
+                  <style>
+                    {`
+                      @keyframes fadeInContent {
+                        from { opacity: 0; transform: translateY(10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                      }
+                    `}
+                  </style>
                   {/* Group Title */}
                   <h3 style={{
                     fontFamily: "'Barlow', sans-serif",
@@ -2242,7 +2242,15 @@ const LandingPage3 = () => {
 
       {/* Case Studies Section - Sticky Scroll Animation */}
       {shouldRenderSection('caseStudies') && (
-        <div className="scroll-reveal">
+        <div
+          ref={caseStudySectionRef}
+          style={{
+            backgroundColor: '#EFEBE2',
+            minHeight: isMobile ? 'auto' : '100vh',
+            position: 'relative',
+            zIndex: 10,
+          }}
+        >
         <EditableSection
           sectionId="caseStudies"
           label="Case Studies"
@@ -2251,24 +2259,30 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('caseStudies')}
           style={{
             padding: isMobile ? '20px 20px' : '40px 120px',
-            marginTop: isMobile ? '10px' : '20px',
-            backgroundColor: caseStudiesColors.backgroundColor || 'transparent',
           }}
         >
+          {/* Cards container wrapper for vertical centering */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              minHeight: isMobile ? 'auto' : 'calc(100vh - 80px)',
+            }}
+          >
           {/* Cards container - natural height, no scroll runway */}
           <div
             ref={caseStudyStickyRef}
             style={{
               position: 'relative',
+              width: '100%',
               maxWidth: isMobile ? '388px' : '959px',
               margin: '0 auto',
               // Natural height based on card aspect ratio
               height: isMobile ? 'auto' : '500px',
-              // Hide cards that are positioned below (translateY 100%)
-              overflow: 'hidden',
             }}
           >
-            {caseStudies.map((study, studyIndex) => {
+            {caseStudies.length > 0 ? caseStudies.map((study, studyIndex) => {
               // On mobile, only show the current case study
               if (isMobile && studyIndex !== currentCaseStudy) return null;
 
@@ -2642,7 +2656,7 @@ const LandingPage3 = () => {
                   )}
                 </div>
               );
-            })}
+            }) : null}
           </div>
 
           {/* Mobile Carousel Navigation for Case Studies */}
@@ -2715,6 +2729,7 @@ const LandingPage3 = () => {
               </button>
             </div>
           )}
+          </div>
         </EditableSection>
         </div>
       )}
