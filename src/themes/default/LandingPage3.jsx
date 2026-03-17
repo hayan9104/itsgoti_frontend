@@ -3735,7 +3735,7 @@ const LandingPage3 = () => {
           style={{
             backgroundColor: stickyCtaColors.backgroundColor || '#fff',
             borderTop: '1px solid #000',
-            padding: isMobile ? '20px' : '15px 80px',
+            padding: isMobile ? '10px 16px' : '15px 80px',
           }}
         >
           <div style={{
@@ -3743,25 +3743,25 @@ const LandingPage3 = () => {
             flexDirection: isMobile ? 'column' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: isMobile ? '20px' : '30px',
-            maxWidth: isMobile ? '386px' : 'none',
+            gap: isMobile ? '10px' : '30px',
+            maxWidth: isMobile ? '100%' : 'none',
             margin: '0 auto',
           }}>
             {/* Queue Counter */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: isMobile ? '6px' : '10px',
             }}>
-              <div style={{ display: 'flex', gap: isMobile ? '2.3px' : '3.33px' }}>
+              <div style={{ display: 'flex', gap: isMobile ? '2px' : '3.33px' }}>
                 {content.queueCount.split('').map((digit, index) => (
                   <div
                     key={index}
                     style={{
                       backgroundColor: '#000',
-                      borderRadius: isMobile ? '2.3px' : '3.33px',
-                      width: isMobile ? '15.183px' : '22px',
-                      height: isMobile ? '20.704px' : '30px',
+                      borderRadius: isMobile ? '2px' : '3.33px',
+                      width: isMobile ? '14px' : '22px',
+                      height: isMobile ? '18px' : '30px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -3769,7 +3769,7 @@ const LandingPage3 = () => {
                   >
                     <span style={{
                       fontFamily: "'Gabarito', sans-serif",
-                      fontSize: isMobile ? '16px' : '28px',
+                      fontSize: isMobile ? '13px' : '28px',
                       fontWeight: 600,
                       color: '#fff',
                       lineHeight: 1.2,
@@ -3781,7 +3781,7 @@ const LandingPage3 = () => {
               </div>
               <span style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: isMobile ? '16px' : '18px',
+                fontSize: isMobile ? '13px' : '18px',
                 fontWeight: 600,
                 color: '#000',
                 lineHeight: 1.5,
@@ -3798,32 +3798,33 @@ const LandingPage3 = () => {
               className="btn-hover"
               style={{
               backgroundColor: '#000',
-              borderRadius: isMobile ? '834.813px' : '906px',
-              height: isMobile ? '62.674px' : '68px',
-              width: isMobile ? '353px' : 'auto',
+              borderRadius: '100px',
+              height: isMobile ? '42px' : '68px',
+              width: 'auto',
               padding: isMobile ? '0 14px' : '0 14px 0 31px',
               border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: isMobile ? '11px' : '20px',
+              gap: isMobile ? '8px' : '20px',
               cursor: 'pointer',
               textDecoration: 'none',
             }}>
               <span style={{
                 fontFamily: "'Gabarito', sans-serif",
-                fontSize: isMobile ? '18.433px' : '22px',
+                fontSize: isMobile ? '13px' : '22px',
                 fontWeight: 600,
                 color: '#fff',
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
               }}>
                 {content.heroButtonText}
               </span>
               <div style={{
                 backgroundColor: '#63dd77',
                 borderRadius: '50%',
-                width: isMobile ? '30.415px' : '46px',
-                height: isMobile ? '30.415px' : '46px',
+                width: isMobile ? '28px' : '46px',
+                height: isMobile ? '28px' : '46px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3838,7 +3839,7 @@ const LandingPage3 = () => {
 
       {/* Spacer for sticky CTA */}
       {shouldRenderSection('stickyCta') && (
-        <div style={{ height: isMobile ? '120px' : '100px' }} />
+        <div style={{ height: isMobile ? '85px' : '100px' }} />
       )}
 
       {/* Footer */}
@@ -3852,26 +3853,14 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('footer')}
           style={{
             backgroundColor: footerColors.backgroundColor || '#101827',
-            padding: isMobile ? '12px 20px' : '12px 551px',
+            padding: isMobile ? '20px' : '30px 20px',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: isMobile ? '87px' : '155px',
+            minHeight: isMobile ? '60px' : '80px',
           }}
         >
-          {/* Social Icons */}
-          <div style={{
-            display: 'flex',
-            gap: isMobile ? '16.428px' : '23px',
-            marginBottom: isMobile ? '16px' : '20px',
-          }}>
-            <a href={content.instagramLink || '#'} target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><InstagramIcon /></a>
-            <a href={content.facebookLink || '#'} target="_blank" rel="noopener noreferrer" aria-label="Facebook" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><FacebookIcon /></a>
-            <a href={content.linkedinLink || '#'} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" style={{ width: isMobile ? '17.048px' : '24px', height: isMobile ? '17.048px' : '24px' }}><LinkedInIcon /></a>
-          </div>
-
-          {/* Copyright */}
+          {/* Copyright - Centered */}
           <p style={{
             fontFamily: "'Barlow', sans-serif",
             fontSize: isMobile ? '12px' : '16px',
