@@ -10,46 +10,45 @@ import AdminDashboard from './admin/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import useSEO from './hooks/useSEO';
 
-// Context for landing page slugs
+// Context for landing page slugs - with defaults to avoid loading
+const defaultSlugs = {
+  'landing': { slug: 'landing_page1', label: 'Landing Page 1' },
+  'landing-page-2': { slug: 'landing_page2', label: 'Landing Page 2' },
+  'landing-page-3': { slug: 'landing_page3', label: 'Landing Page 3' },
+};
+
 const LandingSlugsContext = createContext({
-  slugs: {},
-  defaultLandingPage: 'landing',
-  loading: true,
+  slugs: defaultSlugs,
+  defaultLandingPage: 'landing-page-3',
+  loading: false,
 });
 
 export const useLandingSlugs = () => useContext(LandingSlugsContext);
 
 // Provider component for landing page slugs
 function LandingSlugsProvider({ children }) {
-  const [slugs, setSlugs] = useState({
-    'landing': { slug: 'landing_page1', label: 'Landing Page 1' },
-    'landing-page-2': { slug: 'landing_page2', label: 'Landing Page 2' },
-    'landing-page-3': { slug: 'landing_page3', label: 'Landing Page 3' },
-  });
-  const [defaultLandingPage, setDefaultLandingPage] = useState('landing');
-  const [loading, setLoading] = useState(true);
+  const [slugs, setSlugs] = useState(defaultSlugs);
+  const [defaultLandingPage, setDefaultLandingPage] = useState('landing-page-3');
 
   useEffect(() => {
+    // Fetch in background, don't block rendering
     const fetchSlugs = async () => {
       try {
         const response = await fetch('/api/themes/landing-slugs');
         const data = await response.json();
         if (data.success && data.data) {
           setSlugs(data.data.slugs);
-          setDefaultLandingPage(data.data.defaultLandingPage || 'landing');
+          setDefaultLandingPage(data.data.defaultLandingPage || 'landing-page-3');
         }
-      } catch (error) {
-        console.error('Error fetching landing slugs:', error);
-      } finally {
-        setLoading(false);
+      } catch {
+        // Silent fail - use defaults
       }
     };
-
     fetchSlugs();
   }, []);
 
   return (
-    <LandingSlugsContext.Provider value={{ slugs, defaultLandingPage, loading }}>
+    <LandingSlugsContext.Provider value={{ slugs, defaultLandingPage, loading: false }}>
       {children}
     </LandingSlugsContext.Provider>
   );
@@ -57,20 +56,11 @@ function LandingSlugsProvider({ children }) {
 
 // Component to render the default landing page based on theme settings
 function DefaultLandingRouter({ themeCode }) {
-  const { defaultLandingPage, loading: loadingDefault } = useLandingSlugs();
+  const { defaultLandingPage } = useLandingSlugs();
 
   const Landing = getThemeComponent(themeCode, 'Landing');
   const LandingPage2 = getThemeComponent(themeCode, 'LandingPage2');
   const LandingPage3 = getThemeComponent(themeCode, 'LandingPage3');
-
-  if (loadingDefault) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
 
   // Map page name to component and visibility page name
   const pageMap = {
@@ -79,7 +69,7 @@ function DefaultLandingRouter({ themeCode }) {
     'landing-page-3': { Component: LandingPage3, pageName: 'landing-page-3' },
   };
 
-  const selected = pageMap[defaultLandingPage] || pageMap['landing'];
+  const selected = pageMap[defaultLandingPage] || pageMap['landing-page-3'];
 
   return (
     <PageVisibilityWrapper pageName={selected.pageName} fallbackPath="/home">
@@ -91,20 +81,11 @@ function DefaultLandingRouter({ themeCode }) {
 // Dynamic landing page router - matches any slug to the correct landing page
 function DynamicLandingRouter({ themeCode }) {
   const { slug } = useParams();
-  const { slugs, loading } = useLandingSlugs();
+  const { slugs } = useLandingSlugs();
 
   const Landing = getThemeComponent(themeCode, 'Landing');
   const LandingPage2 = getThemeComponent(themeCode, 'LandingPage2');
   const LandingPage3 = getThemeComponent(themeCode, 'LandingPage3');
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
 
   // Find which landing page this slug belongs to
   const pageComponentMap = {
@@ -132,19 +113,10 @@ function DynamicLandingRouter({ themeCode }) {
 }
 
 function App() {
-  const { themeCode, loading } = useThemeCode();
+  const { themeCode } = useThemeCode();
 
   // Apply SEO settings (title, description, favicon, social preview)
   useSEO();
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
 
   // Resolve components from the active theme
   const Home = getThemeComponent(themeCode, 'Home');

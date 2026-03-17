@@ -1,10 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-const ThemeCodeContext = createContext({ themeCode: 'default', loading: true });
+const ThemeCodeContext = createContext({ themeCode: 'default', loading: false });
 
 export const ThemeCodeProvider = ({ children }) => {
   const [themeCode, setThemeCode] = useState('default');
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check URL param first (for preview)
@@ -13,20 +12,18 @@ export const ThemeCodeProvider = ({ children }) => {
 
     if (previewThemeCode) {
       setThemeCode(previewThemeCode);
-      setLoading(false);
       return;
     }
 
-    // Fetch live theme code from API
+    // Fetch live theme code in background
     fetch('/api/themes/live-code')
       .then(res => res.json())
       .then(data => setThemeCode(data.data?.themeCode || 'default'))
-      .catch(() => setThemeCode('default'))
-      .finally(() => setLoading(false));
+      .catch(() => {}); // Silent fail - use default
   }, []);
 
   return (
-    <ThemeCodeContext.Provider value={{ themeCode, loading }}>
+    <ThemeCodeContext.Provider value={{ themeCode, loading: false }}>
       {children}
     </ThemeCodeContext.Provider>
   );
