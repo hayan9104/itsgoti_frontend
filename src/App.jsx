@@ -92,7 +92,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<DefaultLandingRouter themeCode={themeCode} />} />
 
-        <Route path="/landing" element={
+        <Route path="/landing_page1" element={
           <PageVisibilityWrapper pageName="landing" fallbackPath="/home">
             {Landing && <Landing />}
           </PageVisibilityWrapper>
