@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { themesAPI, uploadAPI } from '../services/api';
 
@@ -20,6 +20,21 @@ const SiteSettings = () => {
 
   const [uploadingField, setUploadingField] = useState(null);
 
+  // Track original values to detect changes
+  const [originalSettings, setOriginalSettings] = useState(null);
+
+  // Check if there are unsaved changes
+  const hasChanges = useMemo(() => {
+    if (!originalSettings) return false;
+    return (
+      siteTitle !== originalSettings.siteTitle ||
+      siteDescription !== originalSettings.siteDescription ||
+      siteLanguage !== originalSettings.siteLanguage ||
+      favicon !== originalSettings.favicon ||
+      socialPreview !== originalSettings.socialPreview
+    );
+  }, [siteTitle, siteDescription, siteLanguage, favicon, socialPreview, originalSettings]);
+
   useEffect(() => {
     fetchSettings();
   }, [themeId]);
@@ -30,11 +45,22 @@ const SiteSettings = () => {
       const response = await themesAPI.getOne(themeId);
       const theme = response.data.data;
 
-      setSiteTitle(theme.siteSettings?.siteTitle || theme.name || '');
-      setSiteDescription(theme.siteSettings?.siteDescription || '');
-      setSiteLanguage(theme.siteSettings?.siteLanguage || 'en');
-      setFavicon(theme.siteSettings?.favicon || '');
-      setSocialPreview(theme.siteSettings?.socialPreview || '');
+      const settings = {
+        siteTitle: theme.siteSettings?.siteTitle || theme.name || '',
+        siteDescription: theme.siteSettings?.siteDescription || '',
+        siteLanguage: theme.siteSettings?.siteLanguage || 'en',
+        favicon: theme.siteSettings?.favicon || '',
+        socialPreview: theme.siteSettings?.socialPreview || '',
+      };
+
+      setSiteTitle(settings.siteTitle);
+      setSiteDescription(settings.siteDescription);
+      setSiteLanguage(settings.siteLanguage);
+      setFavicon(settings.favicon);
+      setSocialPreview(settings.socialPreview);
+
+      // Store original values
+      setOriginalSettings(settings);
     } catch (err) {
       console.error('Error fetching settings:', err);
       setError('Failed to load settings');
@@ -56,6 +82,15 @@ const SiteSettings = () => {
           favicon,
           socialPreview,
         }
+      });
+
+      // Update original settings after successful save
+      setOriginalSettings({
+        siteTitle,
+        siteDescription,
+        siteLanguage,
+        favicon,
+        socialPreview,
       });
 
       setSuccessMessage('Settings saved successfully!');
@@ -117,23 +152,25 @@ const SiteSettings = () => {
           <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>Site Settings</h1>
           <p style={{ fontSize: '14px', color: '#6b7280' }}>Configure your site title, description, and images</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            padding: '10px 24px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: '#2563eb',
-            color: '#fff',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-          }}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+{hasChanges && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              padding: '10px 24px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: '#2563eb',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        )}
       </div>
 
       {/* Messages */}
