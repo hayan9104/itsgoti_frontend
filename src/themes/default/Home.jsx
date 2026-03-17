@@ -48,6 +48,7 @@ const Home = () => {
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [projectSliding, setProjectSliding] = useState(false);
   const [works, setWorks] = useState([]);
+  const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for client logos
 
   // Refs for GSAP animation
   const heroSectionRef = useRef(null);
@@ -231,14 +232,24 @@ const Home = () => {
 
   const fetchPageContent = async () => {
     try {
-      const response = await pagesAPI.getOne('home');
-      if (response.data.data?.content) {
-        const content = response.data.data.content;
+      // Fetch both Home and LP2 content (for client logos)
+      const [homeResponse, lp2Response] = await Promise.all([
+        pagesAPI.getOne('home'),
+        pagesAPI.getOne('landing-page-2'),
+      ]);
+
+      if (homeResponse.data.data?.content) {
+        const content = homeResponse.data.data.content;
         setPageContent(prev => ({ ...prev, ...content }));
         // Fetch works with selected project IDs
         fetchWorks(content.selectedProjectIds || []);
       } else {
         fetchWorks([]);
+      }
+
+      // Store LP2 content for client logos
+      if (lp2Response.data?.data?.content) {
+        setLp2Content(lp2Response.data.data.content);
       }
     } catch (error) {
       console.log('Using default content for home page');
@@ -724,13 +735,26 @@ const Home = () => {
         )}
       </section>
 
-      {/* Partner Brands Section */}
+      {/* Partner Brands Section - Marquee Animation */}
       {shouldRenderSection('partners') && (
       <EditableSection sectionId="partners" label="Partner Brands" isEditorMode={isEditorMode} isSelected={selectedSection === 'partners'} isHidden={isSectionHidden('partners')}>
         <section style={{
-          padding: isMobile ? '64px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '64px 0 60px 0' : isTablet ? '60px 0' : '80px 0',
           textAlign: 'center',
+          overflow: 'hidden',
         }}>
+          {/* Marquee Animation Styles */}
+          <style>{`
+            @keyframes marqueeHome {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+            @keyframes marqueeHomeReverse {
+              0% { transform: translateX(-50%); }
+              100% { transform: translateX(0); }
+            }
+          `}</style>
+
           <p style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             fontSize: isMobile ? '20px' : '28px',
@@ -739,147 +763,128 @@ const Home = () => {
             color: '#000',
             lineHeight: isMobile ? '30px' : 'normal',
             width: isMobile ? '390px' : '645px',
-            maxWidth: '100%',
+            maxWidth: '90%',
             margin: `0 auto ${isMobile ? '36px' : '60px'}`,
             textAlign: 'center',
           }}>
             {pageContent.partnerTitle}
           </p>
 
-          {/* Logo Grid - Two rows like About page */}
+          {/* Marquee Rows - Fetches logos from Landing Page 2 */}
           {(() => {
-            // Helper to get logo path
-            const getLogoPath = (logo) => {
-              if (typeof logo === 'string') return logo;
-              if (typeof logo === 'object' && logo !== null) {
-                return logo.image || logo.url || logo.path || logo.src || '';
+            // Parse client logos from LP2 content
+            const parseClientLogos = () => {
+              const logos = lp2Content.clientLogos;
+              if (logos && Array.isArray(logos) && logos.length > 0) {
+                return logos.map((logo, index) => {
+                  if (typeof logo === 'string') {
+                    return { image: logo, name: `Client ${index + 1}` };
+                  }
+                  return { image: logo.url || logo.image || '', name: logo.name || `Client ${index + 1}` };
+                });
               }
-              return '';
+              // Default placeholder logos (text only)
+              return [
+                { name: 'Automattic' },
+                { name: 'Wealthsimple' },
+                { name: 'SpaceX' },
+                { name: 'Gusto' },
+                { name: 'Attentive' },
+                { name: 'Square' },
+                { name: 'Dribbble' },
+                { name: 'Drips' },
+                { name: 'Dropbox' },
+                { name: 'Sonic' },
+              ];
             };
 
-            // Split logos into two rows (6 in first row, rest in second)
-            const logosRow1 = partnerLogos.slice(0, 6);
-            const logosRow2 = isMobile ? [] : partnerLogos.slice(6, 10);
+            const clientLogos = parseClientLogos();
+            const hasImages = clientLogos.some(logo => logo.image);
 
-            // Render logo item
-            const renderLogo = (logo, index) => {
-              const logoPath = getLogoPath(logo);
-              if (!logoPath) {
-                if (logo?.name) {
-                  return (
-                    <span key={index} style={{
-                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                      fontSize: isMobile ? '14px' : isTablet ? '16px' : '18px',
-                      color: '#999',
-                      fontWeight: 500,
-                      height: isMobile ? '28px' : isTablet ? '40px' : '48px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      {logo.name}
-                    </span>
-                  );
-                }
-                return null;
-              }
+            // Mobile: 3 rows, Desktop: 2 rows
+            const rowCount = isMobile ? 3 : 2;
+
+            return Array.from({ length: rowCount }).map((_, rowIndex) => {
+              const repeatedItems = [...clientLogos, ...clientLogos, ...clientLogos, ...clientLogos];
+
               return (
-                <img
-                  key={index}
-                  src={getImageUrl(logoPath)}
-                  alt={logo?.name || `Partner logo ${index + 1}`}
+                <div
+                  key={rowIndex}
                   style={{
-                    width: 'auto',
-                    height: isMobile ? '28px' : isTablet ? '40px' : '48px',
-                    objectFit: 'contain',
-                    filter: 'grayscale(100%)',
-                    opacity: 0.6,
-                    transition: 'opacity 0.3s, filter 0.3s',
+                    overflow: 'hidden',
+                    marginBottom: isMobile ? '20px' : '40px',
                   }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '1';
-                    e.target.style.filter = 'grayscale(0%)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '0.6';
-                    e.target.style.filter = 'grayscale(100%)';
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-              );
-            };
-
-            if (partnerLogos.length === 0) {
-              // Fallback text logos
-              return (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: isMobile ? '24px 32px' : isTablet ? '40px' : '81px',
-                  maxWidth: '1200px',
-                  margin: '0 auto',
-                }}>
-                  {fallbackLogos.map((logo, index) => (
-                    <span key={index} style={{
-                      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                      fontSize: isMobile ? '14px' : isTablet ? '16px' : '18px',
-                      color: '#999',
-                      fontWeight: 500,
-                    }}>
-                      {logo}
-                    </span>
-                  ))}
+                >
+                  <div style={{
+                    display: 'flex',
+                    gap: isMobile ? '40px' : '80px',
+                    // Mobile: 1st & 3rd row left, 2nd row right | Desktop: 1st left, 2nd right
+                    animation: `marqueeHome${rowIndex === 1 ? 'Reverse' : ''} ${22 + rowIndex * 3}s linear infinite`,
+                    width: 'fit-content',
+                  }}>
+                    {repeatedItems.map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          padding: isMobile ? '4px' : '12px',
+                        }}
+                      >
+                        {item.image ? (
+                          <img
+                            src={item.image.startsWith('http') ? item.image : `${import.meta.env.VITE_API_URL || ''}${item.image}`}
+                            alt={item.name}
+                            style={{
+                              height: isMobile ? '28px' : '48px',
+                              width: 'auto',
+                              objectFit: 'contain',
+                              filter: 'grayscale(100%)',
+                              opacity: 0.7,
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling && (e.target.nextSibling.style.display = 'block');
+                            }}
+                          />
+                        ) : null}
+                        <span style={{
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: isMobile ? '14px' : '20px',
+                          fontWeight: 500,
+                          color: '#888',
+                          whiteSpace: 'nowrap',
+                          display: item.image ? 'none' : 'block',
+                        }}>
+                          {item.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
-            }
-
-            return (
-              <>
-                {/* Mobile: All logos in flex wrap */}
-                {isMobile && (
-                  <div style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '24px 32px',
-                    justifyContent: 'center',
-                  }}>
-                    {partnerLogos.map((logo, index) => renderLogo(logo, index))}
-                  </div>
-                )}
-
-                {/* Desktop/Tablet: Row 1 */}
-                {!isMobile && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: isTablet ? '40px' : '81px',
-                    marginBottom: '56px',
-                    flexWrap: 'nowrap',
-                  }}>
-                    {logosRow1.map((logo, index) => renderLogo(logo, index))}
-                  </div>
-                )}
-
-                {/* Desktop/Tablet: Row 2 */}
-                {!isMobile && logosRow2.length > 0 && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: isTablet ? '40px' : '81px',
-                    flexWrap: 'nowrap',
-                  }}>
-                    {logosRow2.map((logo, index) => renderLogo(logo, index + 6))}
-                  </div>
-                )}
-              </>
-            );
+            });
           })()}
+
+          {/* Editor mode note */}
+          {isEditorMode && (
+            <div style={{
+              textAlign: 'center',
+              padding: '12px',
+              backgroundColor: '#f0f9ff',
+              borderRadius: '8px',
+              marginTop: '20px',
+              border: '1px dashed #3b82f6',
+              maxWidth: '90%',
+              margin: '20px auto 0',
+            }}>
+              <span style={{ fontSize: '13px', color: '#1d4ed8' }}>
+                ℹ️ Client logos are fetched from Landing Page 2. Edit them there.
+              </span>
+            </div>
+          )}
         </section>
       </EditableSection>
       )}
@@ -890,48 +895,48 @@ const Home = () => {
         <section style={{
           backgroundColor: isMobile ? '#E1FFA0' : 'transparent',
           borderRadius: isMobile ? '0 0 300px 300px' : '0',
-          padding: isMobile ? '48px 20px 80px' : isTablet ? '40px 40px 60px' : '40px 100px 80px',
+          padding: isMobile ? '48px 0 80px' : isTablet ? '40px 40px 60px' : '40px 100px 80px',
           textAlign: 'center',
-          minHeight: isMobile ? '733px' : 'auto',
-          marginTop: isMobile ? '-100px' : '0',
+          minHeight: isMobile ? 'auto' : 'auto',
+          marginTop: isMobile ? '0' : '0',
           position: 'relative',
-          zIndex: 1,
+          zIndex: isMobile ? 12 : 1, // Higher z-index on mobile to overlap next card
+          overflow: 'hidden',
         }}>
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: isMobile ? '11px' : '0',
-            marginBottom: isMobile ? '40px' : isTablet ? '32px' : '40px',
+            marginBottom: isMobile ? '30px' : isTablet ? '32px' : '40px',
+            padding: isMobile ? '0 25px' : '0',
           }}>
             <h2 style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '28px' : isTablet ? '36px' : '48px',
-              fontWeight: 500,
+              fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
+              fontSize: isMobile ? '24px' : isTablet ? '36px' : '48px',
+              fontWeight: isMobile ? 400 : 500,
               color: '#000',
-              lineHeight: isMobile ? 'normal' : 1.2,
+              lineHeight: isMobile ? 1.3 : 1.2,
               letterSpacing: isMobile ? '-0.5px' : '0',
               margin: 0,
-              width: isMobile ? '373px' : 'auto',
-              maxWidth: '100%',
+              whiteSpace: isMobile ? 'nowrap' : 'normal',
             }}>
-              <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle1}</span>{' '}
-              {pageContent.experienceTitle2}
+              <span style={{ fontFamily: isMobile ? "'Gilroy-SemiBoldItalic', sans-serif" : 'inherit', fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle1}</span>{' '}
+              <span style={{ fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : 'inherit' }}>{pageContent.experienceTitle2}</span>
             </h2>
             <h2 style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: isMobile ? '28px' : isTablet ? '36px' : '48px',
-              fontWeight: 500,
+              fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
+              fontSize: isMobile ? '24px' : isTablet ? '36px' : '48px',
+              fontWeight: isMobile ? 400 : 500,
               color: '#000',
-              lineHeight: isMobile ? 'normal' : 1.2,
+              lineHeight: isMobile ? 1.3 : 1.2,
               letterSpacing: isMobile ? '-0.5px' : '0',
               margin: 0,
-              width: isMobile ? '373px' : 'auto',
-              maxWidth: '100%',
+              whiteSpace: isMobile ? 'nowrap' : 'normal',
               display: isMobile ? 'block' : 'none',
             }}>
-              <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle3}</span>{' '}
-              {pageContent.experienceTitle4}
+              <span style={{ fontFamily: isMobile ? "'Gilroy-SemiBoldItalic', sans-serif" : 'inherit', fontStyle: 'italic', fontWeight: 600 }}>{pageContent.experienceTitle3}</span>{' '}
+              <span style={{ fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : 'inherit' }}>{pageContent.experienceTitle4}</span>
             </h2>
             {!isMobile && (
               <h2 style={{
@@ -947,6 +952,89 @@ const Home = () => {
               </h2>
             )}
           </div>
+
+          {/* Mobile: First project card inside experience section */}
+          {isMobile && works.length > 0 && (
+            <div style={{ padding: '0 25px' }}>
+              <div style={{
+                width: '100%',
+                maxWidth: '100%',
+                height: '365px',
+                margin: '0 auto 20px',
+                borderRadius: '0',
+                overflow: 'hidden',
+              }}>
+                {works[0]?.featuredImage || works[0]?.image ? (
+                  <img
+                    src={getImageUrl(works[0].featuredImage || works[0].image)}
+                    alt={works[0].title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#000',
+                  }}>
+                    Project Image
+                  </div>
+                )}
+              </div>
+              <p style={{
+                fontFamily: "'Gilroy-Medium', sans-serif",
+                fontSize: '26px',
+                color: '#000',
+                textAlign: 'center',
+                width: '315px',
+                maxWidth: '100%',
+                margin: '0 auto',
+              }}>
+                <span style={{ fontFamily: "'Gilroy-SemiBoldItalic', sans-serif", fontStyle: 'italic' }}>
+                  {works[0]?.title || 'Project Name'}
+                </span>
+                <span> , {works[0]?.homeDescription?.substring(0, 40) || works[0]?.description?.substring(0, 40) || 'and the description goes here'}</span>
+              </p>
+            </div>
+          )}
+
+          {/* Mobile: Placeholder if no works */}
+          {isMobile && works.length === 0 && (
+            <div style={{ padding: '0 25px' }}>
+              <div style={{
+                width: '100%',
+                maxWidth: '100%',
+                height: '365px',
+                margin: '0 auto 30px',
+                borderRadius: '0',
+                backgroundColor: 'rgba(255,255,255,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#000',
+              }}>
+                Project Image
+              </div>
+              <p style={{
+                fontFamily: "'Gilroy-Medium', sans-serif",
+                fontSize: '26px',
+                color: '#000',
+                textAlign: 'center',
+                width: '315px',
+                maxWidth: '100%',
+                margin: '0 auto',
+              }}>
+                <span style={{ fontFamily: "'Gilroy-SemiBoldItalic', sans-serif", fontStyle: 'italic' }}>
+                  Project Name
+                </span>
+                <span> , and the description goes here</span>
+              </p>
+            </div>
+          )}
+
           {!isMobile && (
             <p style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -971,7 +1059,8 @@ const Home = () => {
       <EditableSection sectionId="projects" label="Projects Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'projects'} isHidden={isSectionHidden('projects')}>
         <section style={{
           padding: isMobile ? '0 0 40px 0' : '0',
-          overflow: 'hidden',
+          overflow: 'visible',
+          marginTop: isMobile ? '-180px' : '0', // Pull up to overlap with Experience section
         }}>
           {(() => {
             const projectList = works.length > 0 ? works : [
@@ -981,7 +1070,7 @@ const Home = () => {
             ];
             const totalProjects = projectList.length;
             const currentWork = projectList[currentProjectIndex] || projectList[0];
-            const bgColor = '#D2F34C'; // Same green for all
+            const bgColor = isMobile ? '#E1FFA0' : '#D2F34C'; // Mobile: match Experience section, Desktop: lime green
             const nextBgColor = '#2558BF'; // Blue for right section
 
             const handleNextProject = () => {
@@ -993,54 +1082,61 @@ const Home = () => {
               }, 400);
             };
 
+            // Mobile: Skip first project (shown in Experience section), show remaining with different colors
+            const mobileProjectList = isMobile && projectList.length > 1 ? projectList.slice(1) : projectList;
+            // Different background colors for each mobile project card
+            const mobileProjectColors = ['#2558BF', '#E2775A']; // blue, coral (for 2nd and 3rd projects)
+
             return isMobile ? (
-              // Mobile Layout - Single card with swipe
-              <div style={{
-                backgroundColor: bgColor,
-                borderRadius: '0 0 300px 300px',
-                overflow: 'hidden',
-                paddingBottom: '100px',
-                position: 'relative',
-              }}>
-                <div style={{
-                  transform: projectSliding ? 'translateX(-100%)' : 'translateX(0)',
-                  opacity: projectSliding ? 0 : 1,
-                  transition: 'transform 0.4s ease, opacity 0.4s ease',
-                }}>
-                  {/* Text */}
-                  <div style={{ padding: '60px 25px 20px', textAlign: 'center' }}>
-                    <h3 style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: '26px',
-                      fontWeight: 500,
-                      color: '#000',
-                      width: '315px',
-                      maxWidth: '100%',
-                      margin: '0 auto',
+              // Mobile Layout - Stacked cards with different colors and border-radius, overlapping
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {mobileProjectList.slice(0, 2).map((project, idx) => {
+                  const cardBgColor = mobileProjectColors[idx] || '#F5F5F5';
+                  const textColor = '#FFF'; // White text on blue and coral backgrounds
+                  return (
+                    <div key={project._id || idx} style={{
+                      backgroundColor: cardBgColor,
+                      borderRadius: '0 0 300px 300px',
+                      overflow: 'hidden',
+                      paddingTop: '0',
+                      paddingBottom: '80px',
+                      position: 'relative',
+                      marginTop: idx === 0 ? '0' : '-180px', // First card no margin (section has it), others pull up more
+                      zIndex: 10 - idx, // First card higher z-index
                     }}>
-                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{currentWork.title || 'Project Name'}</span>
-                      <span style={{ fontWeight: 500 }}> , {currentWork.homeDescription?.substring(0, 50) || currentWork.description?.substring(0, 50) || 'and the description goes here'}</span>
-                    </h3>
-                  </div>
-                  {/* Image */}
-                  <div style={{ padding: '20px 25px', display: 'flex', justifyContent: 'center' }}>
-                    {(currentWork.featuredImage || currentWork.image) ? (
-                      <img src={getImageUrl(currentWork.featuredImage || currentWork.image)} alt={currentWork.title} style={{ width: '379px', maxWidth: '100%', height: '365px', objectFit: 'cover', borderRadius: '8px' }} />
-                    ) : (
-                      <div style={{ width: '379px', height: '365px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>Project Image</div>
-                    )}
-                  </div>
-                </div>
-                {/* Navigation dots */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
-                  {projectList.map((_, idx) => (
-                    <button key={idx} onClick={() => setCurrentProjectIndex(idx)} style={{
-                      width: '10px', height: '10px', borderRadius: '50%',
-                      backgroundColor: idx === currentProjectIndex ? '#000' : 'rgba(0,0,0,0.3)',
-                      border: 'none', cursor: 'pointer',
-                    }} />
-                  ))}
-                </div>
+                      {/* Image first (on top) - pushed down, same as Experience section */}
+                      <div style={{ padding: '220px 25px 0' }}>
+                        <div style={{
+                          width: '100%',
+                          maxWidth: '100%',
+                          height: '365px',
+                          margin: '0 auto 20px',
+                          borderRadius: '0',
+                          overflow: 'hidden',
+                        }}>
+                          {(project.featuredImage || project.image) ? (
+                            <img src={getImageUrl(project.featuredImage || project.image)} alt={project.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textColor }}>Project Image</div>
+                          )}
+                        </div>
+                        {/* Text below image */}
+                        <p style={{
+                          fontFamily: "'Gilroy-Medium', sans-serif",
+                          fontSize: '26px',
+                          color: textColor,
+                          textAlign: 'center',
+                          width: '315px',
+                          maxWidth: '100%',
+                          margin: '0 auto',
+                        }}>
+                          <span style={{ fontFamily: "'Gilroy-SemiBoldItalic', sans-serif", fontStyle: 'italic' }}>{project.title || 'Project Name'}</span>
+                          <span> , {project.homeDescription?.substring(0, 40) || project.description?.substring(0, 40) || 'and the description goes here'}</span>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               // Desktop Layout - Carousel with slide animation
@@ -1178,24 +1274,26 @@ const Home = () => {
           }}>
             {pageContent.wantMoreTitle}
           </h3>
-          <Link to="/case-studies" style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '64px',
-            padding: '12px 24px',
-            gap: '12px',
-            backgroundColor: '#2558BF',
-            color: '#fff',
-            borderRadius: '200px',
-            textDecoration: 'none',
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: '20px',
-            fontWeight: 400,
-            lineHeight: '24px',
-          }}>
-            {pageContent.wantMoreButtonText}
-          </Link>
+          {!isMobile && (
+            <Link to="/case-studies" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '64px',
+              padding: '12px 24px',
+              gap: '12px',
+              backgroundColor: '#2558BF',
+              color: '#fff',
+              borderRadius: '200px',
+              textDecoration: 'none',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: '20px',
+              fontWeight: 400,
+              lineHeight: '24px',
+            }}>
+              {pageContent.wantMoreButtonText}
+            </Link>
+          )}
         </section>
       </EditableSection>
       )}
@@ -1204,34 +1302,35 @@ const Home = () => {
       {shouldRenderSection('realNumbers') && (
       <EditableSection sectionId="realNumbers" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'realNumbers'} isHidden={isSectionHidden('realNumbers')}>
         <section style={{
-          padding: isMobile ? '64px 22px' : isTablet ? '60px 40px' : '50px 100px 80px',
-          textAlign: 'center',
+          padding: isMobile ? '0 23px' : isTablet ? '60px 40px' : '50px 100px 80px',
+          textAlign: isMobile ? 'center' : 'center',
         }}>
           <h2 style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
             fontSize: isMobile ? '28px' : isTablet ? '36px' : '42px',
-            fontWeight: 500,
+            fontWeight: isMobile ? 400 : 500,
             color: '#000',
             marginBottom: isMobile ? '74px' : '48px',
             letterSpacing: isMobile ? '-0.5px' : '0',
+            whiteSpace: isMobile ? 'nowrap' : 'normal',
           }}>
-            <span style={{ fontStyle: 'italic', fontWeight: 500 }}>{pageContent.realNumbersTitle}</span>{' '}
+            <span style={{ fontFamily: isMobile ? "'Gilroy-MediumItalic', sans-serif" : 'inherit', fontStyle: 'italic', fontWeight: isMobile ? 400 : 500 }}>{pageContent.realNumbersTitle}</span>{' '}
             {pageContent.realNumbersTitleNormal}
           </h2>
 
           {/* Stats Grid */}
           <div style={{
-            display: 'flex',
+            display: isMobile ? 'grid' : 'flex',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'none',
             justifyContent: 'center',
-            gap: isMobile ? '12px' : '24px',
-            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            gap: '12px',
             maxWidth: isMobile ? '386px' : '1240px',
             margin: '0 auto',
             marginBottom: isMobile ? '12px' : '32px',
           }}>
             {/* Stat 1 */}
             <div style={{
-              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              width: isMobile ? '100%' : '293px',
               height: isMobile ? 'auto' : '198px',
               padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
@@ -1242,23 +1341,23 @@ const Home = () => {
               justifyContent: 'center',
               alignItems: 'center',
               textAlign: 'center',
+              gap: '10px',
             }}>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '32px' : '56px',
                 fontWeight: 400,
                 color: '#000',
-                marginBottom: '10px',
                 letterSpacing: '0.369px',
               }}>
                 {pageContent.stat1Value}
               </div>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '12px' : '18px',
                 fontWeight: 400,
                 color: '#1F1F1F',
-                lineHeight: '24px',
+                lineHeight: isMobile ? 'normal' : '24px',
                 letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat1Label}
@@ -1266,7 +1365,7 @@ const Home = () => {
             </div>
             {/* Stat 2 */}
             <div style={{
-              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              width: isMobile ? '100%' : '293px',
               height: isMobile ? 'auto' : '198px',
               padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
@@ -1277,23 +1376,23 @@ const Home = () => {
               justifyContent: 'center',
               alignItems: 'center',
               textAlign: 'center',
+              gap: '10px',
             }}>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '32px' : '56px',
                 fontWeight: 400,
                 color: '#000',
-                marginBottom: '10px',
                 letterSpacing: '0.369px',
               }}>
                 {pageContent.stat2Value}
               </div>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '12px' : '18px',
                 fontWeight: 400,
                 color: '#1F1F1F',
-                lineHeight: '24px',
+                lineHeight: isMobile ? 'normal' : '24px',
                 letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat2Label}
@@ -1301,7 +1400,7 @@ const Home = () => {
             </div>
             {/* Stat 3 */}
             <div style={{
-              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              width: isMobile ? '100%' : '293px',
               height: isMobile ? 'auto' : '198px',
               padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
@@ -1312,23 +1411,23 @@ const Home = () => {
               justifyContent: 'center',
               alignItems: 'center',
               textAlign: 'center',
+              gap: '10px',
             }}>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '32px' : '56px',
                 fontWeight: 400,
                 color: '#000',
-                marginBottom: '10px',
                 letterSpacing: '0.369px',
               }}>
                 {pageContent.stat3Value}
               </div>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '12px' : '18px',
                 fontWeight: 400,
                 color: '#1F1F1F',
-                lineHeight: '24px',
+                lineHeight: isMobile ? 'normal' : '24px',
                 letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat3Label}
@@ -1336,7 +1435,7 @@ const Home = () => {
             </div>
             {/* Stat 4 */}
             <div style={{
-              width: isMobile ? 'calc(50% - 6px)' : '293px',
+              width: isMobile ? '100%' : '293px',
               height: isMobile ? 'auto' : '198px',
               padding: isMobile ? '24px 17px' : '24px',
               border: isMobile ? '1.5px solid rgba(0,0,0,0.05)' : '1px solid #E5E5E5',
@@ -1347,23 +1446,23 @@ const Home = () => {
               justifyContent: 'center',
               alignItems: 'center',
               textAlign: 'center',
+              gap: '10px',
             }}>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '32px' : '56px',
                 fontWeight: 400,
                 color: '#000',
-                marginBottom: '10px',
                 letterSpacing: '0.369px',
               }}>
                 {pageContent.stat4Value}
               </div>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '12px' : '18px',
                 fontWeight: 400,
                 color: '#1F1F1F',
-                lineHeight: '24px',
+                lineHeight: isMobile ? 'normal' : '24px',
                 letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat4Label}
@@ -1379,14 +1478,14 @@ const Home = () => {
             gap: '16px',
           }}>
             {pageContent.stat5Image ? (
-              <img src={getImageUrl(pageContent.stat5Image)} alt="" style={{ width: '222px', height: '153px', borderRadius: '8px', objectFit: 'cover' }} />
+              <img src={getImageUrl(pageContent.stat5Image)} alt="" style={{ width: isMobile ? '130px' : '222px', height: isMobile ? '89px' : '153px', borderRadius: '8px', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '222px', height: '153px', backgroundColor: '#E5E5E5', borderRadius: '8px' }} />
+              <div style={{ width: isMobile ? '130px' : '222px', height: isMobile ? '89px' : '153px', backgroundColor: '#E5E5E5', borderRadius: '8px' }} />
             )}
             <div style={{ textAlign: 'left' }}>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: isMobile ? '24px' : '56px',
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
+                fontSize: isMobile ? '32px' : '56px',
                 fontWeight: 400,
                 color: '#000',
                 letterSpacing: '0.369px',
@@ -1394,11 +1493,11 @@ const Home = () => {
                 {pageContent.stat5Value}
               </div>
               <div style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
                 fontSize: isMobile ? '12px' : '18px',
                 fontWeight: 400,
                 color: '#1F1F1F',
-                lineHeight: '24px',
+                lineHeight: isMobile ? 'normal' : '24px',
                 letterSpacing: '-0.15px',
               }}>
                 {pageContent.stat5Label}
@@ -2332,25 +2431,67 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Decorative Squares */}
+            {/* Decorative Squares - Mobile (4 boxes, 2 center visible, 2 outer cut off) */}
+            {isMobile && (
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100vw',
+                  left: '57%',
+                  transform: 'translateX(-50%)',
+                  marginTop: '40px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '11px',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: '125px',
+                        height: '85px',
+                        borderRadius: '3px',
+                        backgroundColor: '#F0F0F0',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Decorative Squares - Desktop/Tablet (right side, vertical columns) */}
             {!isMobile && (
-              <div style={{
-                position: 'absolute',
-                right: '60px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '12px',
-              }}>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} style={{
-                    width: '100px',
-                    height: '70px',
-                    backgroundColor: 'rgba(255,255,255,0.2)',
-                    borderRadius: '4px',
-                  }} />
-                ))}
+              <div
+                style={{
+                  position: 'absolute',
+                  right: isTablet ? '30px' : '60px',
+                  top: '-30px',
+                  transform: 'rotate(12deg)',
+                  display: 'flex',
+                  gap: '12px',
+                }}
+              >
+                {/* Column 1 (left) - pushed down so only 3 visible */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '265px' }}>
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                </div>
+                {/* Column 2 (right) - at top */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '5px', marginLeft: '2px' }}>
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                  <div style={{ width: isTablet ? '150px' : '206px', height: '125px', borderRadius: '7px', backgroundColor: '#F0F0F0' }} />
+                </div>
               </div>
             )}
           </div>
@@ -2365,62 +2506,94 @@ const Home = () => {
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
           marginTop: isMobile ? '150px' : '0',
         }}>
+          {/* FAQ Title */}
           <h2 style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontFamily: "'Gilroy-Medium', sans-serif",
             fontSize: isMobile ? '28px' : isTablet ? '36px' : '42px',
             fontWeight: 400,
             color: '#000',
             textAlign: 'center',
             marginBottom: isMobile ? '32px' : '48px',
+            lineHeight: 'normal',
           }}>
-            <span style={{ fontStyle: 'italic' }}>{pageContent.faqTitle}</span>{' '}
+            <span style={{ fontFamily: "'Gilroy-MediumItalic', sans-serif", fontStyle: 'italic' }}>{pageContent.faqTitle}</span>{' '}
             {pageContent.faqTitleNormal}
           </h2>
 
           {/* FAQ Items */}
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{
+            maxWidth: '1000px',
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobile ? '16px' : '23px',
+          }}>
             {faqItems.map((item, index) => (
               <div key={index} style={{
-                borderTop: '1px solid #E5E5E5',
-                borderBottom: index === faqItems.length - 1 ? '1px solid #E5E5E5' : 'none',
+                borderBottom: '1px solid rgba(0,0,0,0.35)',
               }}>
                 <button
                   onClick={() => setExpandedFaq(expandedFaq === index ? null : index)}
                   style={{
                     width: '100%',
+                    minHeight: isMobile ? '80px' : '100px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    padding: '20px 0',
+                    padding: isMobile ? '16px' : '20px 32px 20px 24px',
                     backgroundColor: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
                   }}
                 >
                   <span style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontSize: isMobile ? '14px' : '16px',
+                    fontFamily: "'Gilroy-Medium', sans-serif",
+                    fontSize: isMobile ? '16px' : '22px',
                     fontWeight: 400,
                     color: '#000',
                     textAlign: 'left',
+                    lineHeight: '26px',
+                    letterSpacing: '0.22px',
                   }}>
                     {item.question}
                   </span>
-                  <span style={{
-                    fontSize: '20px',
-                    color: '#000',
+                  {/* Plus Icon */}
+                  <div style={{
+                    width: isMobile ? '24px' : '32px',
+                    height: isMobile ? '24px' : '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                     marginLeft: '16px',
                   }}>
-                    {expandedFaq === index ? '−' : '+'}
-                  </span>
+                    <svg
+                      width={isMobile ? '20' : '24'}
+                      height={isMobile ? '20' : '24'}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style={{
+                        transform: expandedFaq === index ? 'rotate(45deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                      }}
+                    >
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="#000"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
                 </button>
                 {expandedFaq === index && (
                   <div style={{
-                    padding: '0 0 20px 0',
+                    padding: isMobile ? '0 16px 20px 16px' : '0 32px 20px 24px',
                   }}>
                     <p style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: '14px',
+                      fontFamily: "'Gilroy-Medium', sans-serif",
+                      fontSize: isMobile ? '14px' : '16px',
                       fontWeight: 400,
                       color: '#666',
                       lineHeight: 1.6,
@@ -2435,18 +2608,22 @@ const Home = () => {
 
           {/* Contact Link */}
           <p style={{
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: '14px',
+            fontFamily: "'Gilroy-Medium', sans-serif",
+            fontSize: isMobile ? '16px' : '20px',
             fontWeight: 400,
-            color: '#666',
+            color: '#000',
             textAlign: 'center',
-            marginTop: '32px',
+            marginTop: isMobile ? '32px' : '48px',
+            lineHeight: '24px',
           }}>
-            {pageContent.faqContactText}{' '}
+            <span style={{ fontFamily: "'Gilroy-MediumItalic', sans-serif", fontStyle: 'italic' }}>
+              {pageContent.faqContactText}
+            </span>{' '}
             <Link to="/contact" style={{
               color: '#000',
               textDecoration: 'underline',
               fontWeight: 500,
+              fontFamily: "'Gilroy-Medium', sans-serif",
             }}>
               {pageContent.faqContactLink}
             </Link>

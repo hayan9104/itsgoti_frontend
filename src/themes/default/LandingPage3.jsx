@@ -7,6 +7,7 @@ import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
 import TickMark from '@/assets/Tick mark.png';
+import VectorIcon from '@/assets/Vector.png';
 
 // SVG Icons as components
 const CheckmarkIcon = () => (
@@ -144,6 +145,8 @@ const LandingPage3 = () => {
   const [displayPosition, setDisplayPosition] = useState(0); // Smoothly animated position
   const caseStudyStickyRef = useRef(null);
   const animationRef = useRef(null);
+  const footerRef = useRef(null);
+  const stickyCtaRef = useRef(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalFormSubmitted, setModalFormSubmitted] = useState(false);
   const [modalFormLoading, setModalFormLoading] = useState(false);
@@ -508,7 +511,7 @@ const LandingPage3 = () => {
       { icon: 'copywriting', text: 'Copywriting' },
     ],
 
-    // Features Groups (auto-rotating)
+    // Features Groups (auto-rotating) - matches services icons order
     featureGroups: [
       {
         title: 'DESIGN:',
@@ -529,6 +532,36 @@ const LandingPage3 = () => {
           'Mobile-first responsive design',
         ],
         highlightPoint: 'Money Saved: 30K INR + Time Saved: 40Hrs',
+      },
+      {
+        title: 'SUPPORT:',
+        points: [
+          '24/7 technical assistance',
+          'Bug fixes and troubleshooting',
+          'Regular maintenance updates',
+          'Priority response for critical issues',
+        ],
+        highlightPoint: 'Response Time: Under 2 Hours',
+      },
+      {
+        title: 'THIRD-PARTY APPS:',
+        points: [
+          'Expert app recommendations',
+          'Seamless integration setup',
+          'Custom app configurations',
+          'Performance monitoring',
+        ],
+        highlightPoint: 'Apps Integrated: 50+ Popular Shopify Apps',
+      },
+      {
+        title: 'COPYWRITING:',
+        points: [
+          'Conversion-focused product descriptions',
+          'SEO-optimized content',
+          'Brand voice development',
+          'Email marketing templates',
+        ],
+        highlightPoint: 'Conversion Boost: +35% Average',
       },
     ],
     featureRotationSpeed: 3, // seconds
@@ -623,6 +656,108 @@ const LandingPage3 = () => {
 
     return () => clearInterval(timer);
   }, [content.featureGroups, content.featureRotationSpeed]);
+
+  // Premium scroll reveal animations using Intersection Observer
+  useEffect(() => {
+    const revealElements = document.querySelectorAll('.scroll-reveal, .scroll-reveal-scale, .scroll-reveal-left, .scroll-reveal-right, .image-reveal, .text-reveal');
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px 0px -100px 0px',
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          // Optional: unobserve after reveal for performance
+          // observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    revealElements.forEach((el) => observer.observe(el));
+
+    return () => {
+      revealElements.forEach((el) => observer.unobserve(el));
+    };
+  }, [loading]); // Re-run when loading changes to catch dynamically loaded content
+
+  // Sticky CTA scroll detection - smooth stop before footer using direct DOM manipulation
+  useEffect(() => {
+    let ticking = false;
+
+    const updateCtaPosition = () => {
+      if (!footerRef.current || !stickyCtaRef.current) return;
+
+      const footerRect = footerRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+
+      // Calculate how much the footer is visible
+      const footerVisibleAmount = windowHeight - footerRect.top;
+
+      if (footerVisibleAmount > 0) {
+        // Footer is visible, push CTA up smoothly
+        stickyCtaRef.current.style.transform = `translateY(-${footerVisibleAmount}px)`;
+      } else {
+        // Footer not visible, CTA at bottom
+        stickyCtaRef.current.style.transform = 'translateY(0)';
+      }
+
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateCtaPosition);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    updateCtaPosition(); // Check initial state
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Premium parallax effect for depth perception
+  useEffect(() => {
+    let ticking = false;
+
+    const updateParallax = () => {
+      const scrollY = window.scrollY;
+      const parallaxElements = document.querySelectorAll('.parallax-slow, .parallax-medium, .parallax-fast');
+
+      parallaxElements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const elementTop = rect.top + scrollY;
+        const scrollProgress = (scrollY - elementTop + window.innerHeight) / (window.innerHeight + rect.height);
+
+        if (scrollProgress > 0 && scrollProgress < 1.5) {
+          let speed = 0.05;
+          if (el.classList.contains('parallax-medium')) speed = 0.1;
+          if (el.classList.contains('parallax-fast')) speed = 0.15;
+
+          const yOffset = (scrollProgress - 0.5) * 100 * speed;
+          el.style.transform = `translateY(${yOffset}px)`;
+        }
+      });
+
+      ticking = false;
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(updateParallax);
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Helper to check if section is visible
   const isSectionVisible = (sectionId) => {
@@ -729,22 +864,221 @@ const LandingPage3 = () => {
   const stickyCtaColors = getColors('stickyCta');
   const footerColors = getColors('footer');
 
+  // Get mobile background color from global colors
+  const mobileBackgroundColor = themeColors?.globalColors?.mobileBackgroundColor;
+
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: heroColors.backgroundColor || '#fffdf8',
+      backgroundColor: isMobile && mobileBackgroundColor ? mobileBackgroundColor : (heroColors.backgroundColor || '#fffdf8'),
       fontFamily: "'Barlow', 'Inter', sans-serif",
       overflowX: 'hidden',
+      scrollBehavior: 'smooth',
     }}>
       {/* Google Fonts */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Caveat:wght@400;500;600;700&family=Gabarito:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-        @font-face {
-          font-family: 'BRITH BRUSH';
-          src: url('/fonts/BRITH-BRUSH.ttf') format('truetype');
-          font-weight: 400;
-          font-style: normal;
+        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Caveat:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+        /* ========== PREMIUM SCROLL ANIMATIONS ========== */
+        html {
+          scroll-behavior: smooth;
         }
+
+        /* Reveal animation keyframes */
+        @keyframes revealUp {
+          0% {
+            opacity: 0;
+            transform: translateY(80px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes revealScale {
+          0% {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes revealLeft {
+          0% {
+            opacity: 0;
+            transform: translateX(-60px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes revealRight {
+          0% {
+            opacity: 0;
+            transform: translateX(60px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes revealFade {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+        }
+
+        /* Scroll reveal base styles */
+        .scroll-reveal {
+          opacity: 0;
+          transform: translateY(60px);
+          transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: opacity, transform;
+        }
+
+        .scroll-reveal.revealed {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        .scroll-reveal-scale {
+          opacity: 0;
+          transform: scale(0.92);
+          transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: opacity, transform;
+        }
+
+        .scroll-reveal-scale.revealed {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .scroll-reveal-left {
+          opacity: 0;
+          transform: translateX(-50px);
+          transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: opacity, transform;
+        }
+
+        .scroll-reveal-left.revealed {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        .scroll-reveal-right {
+          opacity: 0;
+          transform: translateX(50px);
+          transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: opacity, transform;
+        }
+
+        .scroll-reveal-right.revealed {
+          opacity: 1;
+          transform: translateX(0);
+        }
+
+        /* Stagger delays for child elements */
+        .scroll-reveal-stagger > *:nth-child(1) { transition-delay: 0s; }
+        .scroll-reveal-stagger > *:nth-child(2) { transition-delay: 0.1s; }
+        .scroll-reveal-stagger > *:nth-child(3) { transition-delay: 0.2s; }
+        .scroll-reveal-stagger > *:nth-child(4) { transition-delay: 0.3s; }
+        .scroll-reveal-stagger > *:nth-child(5) { transition-delay: 0.4s; }
+        .scroll-reveal-stagger > *:nth-child(6) { transition-delay: 0.5s; }
+
+        /* Parallax-like depth effect */
+        .parallax-section {
+          transform-style: preserve-3d;
+          perspective: 1000px;
+        }
+
+        /* Section divider effect */
+        .section-lift {
+          position: relative;
+          z-index: 1;
+          box-shadow: 0 -20px 60px -20px rgba(0,0,0,0.15);
+        }
+
+        /* Smooth image reveal */
+        .image-reveal {
+          overflow: hidden;
+        }
+
+        .image-reveal img {
+          transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .image-reveal.revealed img {
+          transform: scale(1.05);
+        }
+
+        /* Text reveal with mask */
+        .text-reveal {
+          overflow: hidden;
+        }
+
+        .text-reveal-inner {
+          transform: translateY(100%);
+          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .text-reveal.revealed .text-reveal-inner {
+          transform: translateY(0);
+        }
+
+        /* Hover lift effect for cards */
+        .card-hover {
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                      box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .card-hover:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px -15px rgba(0,0,0,0.2);
+        }
+
+        /* Magnetic button effect */
+        .magnetic-btn {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Background grain texture for premium feel */
+        .grain-overlay::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+          opacity: 0.03;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* ========== END PREMIUM SCROLL ANIMATIONS ========== */
 
         @keyframes marquee {
           0% { transform: translateX(0); }
@@ -1346,6 +1680,7 @@ const LandingPage3 = () => {
 
       {/* Phone Carousel Section */}
       {shouldRenderSection('phoneCarousel') && (
+        <div className="scroll-reveal-scale">
         <EditableSection
           sectionId="phoneCarousel"
           label="Phone Carousel"
@@ -1593,10 +1928,12 @@ const LandingPage3 = () => {
             </button>
           </div>
         </EditableSection>
+        </div>
       )}
 
       {/* Problem Section */}
       {shouldRenderSection('problem') && (
+        <div className="scroll-reveal">
         <EditableSection
           sectionId="problem"
           label="Problem Section"
@@ -1704,192 +2041,200 @@ const LandingPage3 = () => {
             </span> 👇
           </p>
         </EditableSection>
+        </div>
       )}
 
-      {/* Solution Section */}
-      {shouldRenderSection('solution') && (
-        <EditableSection
-          sectionId="solution"
-          label="Solution Section"
-          isEditorMode={isEditorMode}
-          isSelected={selectedSection === 'solution'}
-          isHidden={isSectionHidden('solution')}
-          style={{
-            padding: isMobile ? '60px 20px 40px' : '60px 120px',
-            textAlign: 'center',
-            backgroundColor: solutionColors.backgroundColor || 'transparent',
-          }}
-        >
-          <h2 style={{
-            fontFamily: "'Gabarito', sans-serif",
-            fontSize: isMobile ? '22px' : '32px',
-            fontStyle: 'normal',
-            fontWeight: 600,
-            lineHeight: '120%',
-            color: '#000',
-            textAlign: 'center',
-            marginBottom: isMobile ? '32px' : '48px',
-            maxWidth: isMobile ? '358px' : 'none',
-            margin: isMobile ? '0 auto 32px' : '0 auto 48px',
-          }}>
-            {content.solutionTitle}
-          </h2>
-          {/* Services Grid */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: isMobile ? '24px 32px' : '40px 64px',
-            maxWidth: '900px',
-            margin: '0 auto',
-          }}>
-            {ensureArray(content.services, defaultContent.services).map((service, index) => {
-              const IconComponent = service.icon ? (serviceIcons[service.icon] || null) : null;
-              return (
-                <div
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '12px',
-                    minWidth: isMobile ? '80px' : '100px',
-                  }}
-                >
-                  {service.iconImage ? (
-                    <img
-                      src={service.iconImage}
-                      alt={service.text}
-                      style={{
-                        width: isMobile ? '28px' : '34.971px',
-                        height: isMobile ? '28px' : '34.971px',
-                        objectFit: 'contain',
-                      }}
-                    />
-                  ) : IconComponent ? (
-                    <div style={{ width: isMobile ? '28px' : '34.971px', height: isMobile ? '28px' : '34.971px' }}>
-                      <IconComponent />
-                    </div>
-                  ) : (
-                    <div style={{
-                      width: isMobile ? '28px' : '34.971px',
-                      height: isMobile ? '28px' : '34.971px',
-                      backgroundColor: '#e5e7eb',
-                      borderRadius: '8px',
-                    }} />
-                  )}
-                  <span style={{
-                    fontFamily: "'Barlow', sans-serif",
-                    fontSize: isMobile ? '14px' : '18px',
-                    fontStyle: 'normal',
-                    fontWeight: 500,
-                    lineHeight: 'normal',
-                    color: '#000',
-                    textAlign: 'center',
-                  }}>
-                    {service.text}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </EditableSection>
-      )}
-
-      {/* Features Section - Auto-rotating groups */}
-      {shouldRenderSection('features') && (() => {
+      {/* Solution Section - Combined with Features (auto-rotating) */}
+      {shouldRenderSection('solution') && (() => {
         const featureGroups = content.featureGroups || defaultContent.featureGroups || [];
         const currentGroup = featureGroups[currentFeatureGroup] || featureGroups[0];
-
-        if (!currentGroup) return null;
+        const services = ensureArray(content.services, defaultContent.services);
 
         return (
+          <div className="scroll-reveal-scale">
           <EditableSection
-            sectionId="features"
-            label="Features Section"
+            sectionId="solution"
+            label="Solution Section"
             isEditorMode={isEditorMode}
-            isSelected={selectedSection === 'features'}
-            isHidden={isSectionHidden('features')}
+            isSelected={selectedSection === 'solution'}
+            isHidden={isSectionHidden('solution')}
             style={{
-              backgroundColor: 'rgba(242, 240, 235, 0.80)',
-              padding: isMobile ? '30px 20px' : '50px 120px',
-              minHeight: isMobile ? 'auto' : '257px',
+              backgroundColor: solutionColors.backgroundColor || 'transparent',
             }}
           >
+            {/* Title and Icons - White background */}
             <div style={{
-              maxWidth: isMobile ? '100%' : '959px',
-              width: '100%',
-              margin: '0 auto',
-              paddingLeft: isMobile ? '0' : '0',
+              padding: isMobile ? '60px 20px 40px' : '60px 120px',
+              textAlign: 'center',
             }}>
-              {/* Group Title */}
-              <h3 style={{
-                fontFamily: "'Barlow', sans-serif",
-                fontSize: isMobile ? '18px' : '22px',
-                fontWeight: 700,
-                lineHeight: '150%',
+              <h2 style={{
+                fontFamily: "'Gabarito', sans-serif",
+                fontSize: isMobile ? '22px' : '32px',
+                fontStyle: 'normal',
+                fontWeight: 600,
+                lineHeight: '120%',
                 color: '#000',
-                marginBottom: isMobile ? '16px' : '20px',
+                textAlign: 'center',
+                marginBottom: isMobile ? '32px' : '48px',
+                maxWidth: isMobile ? '358px' : 'none',
+                margin: isMobile ? '0 auto 32px' : '0 auto 48px',
               }}>
-                {currentGroup.title}
-              </h3>
-
-              {/* Points List */}
+                {content.solutionTitle}
+              </h2>
+              {/* Services Grid - Icons with active state */}
               <div style={{
                 display: 'flex',
-                flexDirection: 'column',
-                gap: isMobile ? '8px' : '12px',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: isMobile ? '24px 32px' : '40px 64px',
+                maxWidth: '900px',
+                margin: '0 auto',
               }}>
-                {(currentGroup.points || []).map((point, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '10px',
-                    }}
-                  >
-                    <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
-                    <span style={{
-                      fontFamily: "'Barlow', sans-serif",
-                      fontSize: isMobile ? '16px' : '20px',
-                      fontWeight: 500,
-                      lineHeight: '150%',
-                      color: '#000',
-                    }}>
-                      {point}
-                    </span>
-                  </div>
-                ))}
+                {services.map((service, index) => {
+                  const IconComponent = service.icon ? (serviceIcons[service.icon] || null) : null;
+                  const isActive = index === currentFeatureGroup;
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => setCurrentFeatureGroup(index)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '12px',
+                        minWidth: isMobile ? '80px' : '100px',
+                        cursor: 'pointer',
+                        opacity: isActive ? 1 : 0.4,
+                        transition: 'opacity 0.3s ease',
+                      }}
+                    >
+                      {service.iconImage ? (
+                        <img
+                          src={service.iconImage}
+                          alt={service.text}
+                          style={{
+                            width: isMobile ? '28px' : '34.971px',
+                            height: isMobile ? '28px' : '34.971px',
+                            objectFit: 'contain',
+                            filter: isActive ? 'none' : 'grayscale(100%)',
+                          }}
+                        />
+                      ) : IconComponent ? (
+                        <div style={{
+                          width: isMobile ? '28px' : '34.971px',
+                          height: isMobile ? '28px' : '34.971px',
+                          opacity: isActive ? 1 : 0.5,
+                        }}>
+                          <IconComponent />
+                        </div>
+                      ) : (
+                        <div style={{
+                          width: isMobile ? '28px' : '34.971px',
+                          height: isMobile ? '28px' : '34.971px',
+                          backgroundColor: isActive ? '#000' : '#e5e7eb',
+                          borderRadius: '8px',
+                        }} />
+                      )}
+                      <span style={{
+                        fontFamily: "'Barlow', sans-serif",
+                        fontSize: isMobile ? '14px' : '18px',
+                        fontStyle: 'normal',
+                        fontWeight: isActive ? 600 : 500,
+                        lineHeight: 'normal',
+                        color: '#000',
+                        textAlign: 'center',
+                      }}>
+                        {service.text}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-                {/* Highlight Point (last point, bold) */}
-                {currentGroup.highlightPoint && (
+            {/* Features Content - Gray background */}
+            {currentGroup && (
+              <div style={{
+                backgroundColor: 'rgba(242, 240, 235, 0.80)',
+                padding: isMobile ? '30px 20px' : '50px 120px',
+                minHeight: isMobile ? 'auto' : '257px',
+              }}>
+                <div style={{
+                  maxWidth: isMobile ? '100%' : '959px',
+                  width: '100%',
+                  margin: '0 auto',
+                }}>
+                  {/* Group Title */}
+                  <h3 style={{
+                    fontFamily: "'Barlow', sans-serif",
+                    fontSize: isMobile ? '18px' : '22px',
+                    fontWeight: 700,
+                    lineHeight: '150%',
+                    color: '#000',
+                    marginBottom: isMobile ? '16px' : '20px',
+                  }}>
+                    {currentGroup.title}
+                  </h3>
+
+                  {/* Points List */}
                   <div style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '10px',
+                    flexDirection: 'column',
+                    gap: isMobile ? '8px' : '12px',
                   }}>
-                    <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
-                    <span style={{
-                      fontFamily: "'Barlow', sans-serif",
-                      fontSize: isMobile ? '16px' : '20px',
-                      fontWeight: 700,
-                      lineHeight: '150%',
-                      color: '#311900',
-                    }}>
-                      {currentGroup.highlightPoint}
-                    </span>
-                  </div>
-                )}
-              </div>
+                    {(currentGroup.points || []).map((point, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '10px',
+                        }}
+                      >
+                        <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
+                        <span style={{
+                          fontFamily: "'Barlow', sans-serif",
+                          fontSize: isMobile ? '16px' : '20px',
+                          fontWeight: 500,
+                          lineHeight: '150%',
+                          color: '#000',
+                        }}>
+                          {point}
+                        </span>
+                      </div>
+                    ))}
 
-            </div>
+                    {/* Highlight Point (last point, bold) */}
+                    {currentGroup.highlightPoint && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                      }}>
+                        <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
+                        <span style={{
+                          fontFamily: "'Barlow', sans-serif",
+                          fontSize: isMobile ? '16px' : '20px',
+                          fontWeight: 700,
+                          lineHeight: '150%',
+                          color: '#311900',
+                        }}>
+                          {currentGroup.highlightPoint}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </EditableSection>
+          </div>
         );
       })()}
 
       {/* Case Studies Section - Sticky Scroll Animation */}
       {shouldRenderSection('caseStudies') && (
+        <div className="scroll-reveal">
         <EditableSection
           sectionId="caseStudies"
           label="Case Studies"
@@ -2363,6 +2708,7 @@ const LandingPage3 = () => {
             </div>
           )}
         </EditableSection>
+        </div>
       )}
 
       {/* Clients Marquee Section - Fetches logos from Landing Page 2 */}
@@ -2375,6 +2721,7 @@ const LandingPage3 = () => {
         const defaultClientNames = ['Tomattic', 'Wealthsimple', 'SpaceX', 'Gusto', 'Attentive', 'Square', 'Dribbble', 'Drips', 'Dropbox', 'Sonic'];
 
         return (
+          <div className="scroll-reveal">
           <EditableSection
             sectionId="clients"
             label="Clients Section (Data from Landing Page 2)"
@@ -2488,11 +2835,13 @@ const LandingPage3 = () => {
               </div>
             )}
           </EditableSection>
+          </div>
         );
       })()}
 
       {/* Pricing Section */}
       {shouldRenderSection('pricing') && (
+        <div className="scroll-reveal-scale">
         <EditableSection
           sectionId="pricing"
           label="Pricing Section"
@@ -2583,33 +2932,66 @@ const LandingPage3 = () => {
               zIndex: 2,
               marginTop: '80px',
             }}>
-              {/* "Most Popular" Label with Arrow - positioned above white card */}
+              {/* "Most Popular" Label with Arrow - Desktop - Points to white card */}
               {!isMobile && (
                 <div style={{
                   position: 'absolute',
                   top: '-75px',
-                  right: '-340px',
+                  right: '-290px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'flex-start',
                   zIndex: 10,
                 }}>
-                  {/* Arrow pointing to green card */}
+                  {/* Arrow pointing to white card */}
                   <svg xmlns="http://www.w3.org/2000/svg" width="128" height="36" viewBox="0 0 128 36" fill="none" style={{ marginBottom: '5px', marginLeft: '-20px' }}>
                     <path d="M1.80713 35.38C0.978872 35.397 0.293694 34.7393 0.276735 33.9111L0.00033106 20.4139C-0.0166279 19.5856 0.641056 18.9005 1.46931 18.8835C2.29757 18.8665 2.98274 19.5242 2.9997 20.3525L3.24539 32.35L15.2429 32.1043C16.0711 32.0873 16.7563 32.745 16.7733 33.5733C16.7902 34.4015 16.1326 35.0867 15.3043 35.1036L1.80713 35.38ZM124.277 24.8796L122.944 24.191C125.124 19.9732 125.366 16.6276 124.39 13.9901C123.404 11.3277 121.055 9.05631 117.364 7.26279C109.937 3.65439 97.7715 2.32921 83.655 3.31639C69.5975 4.29944 53.8299 7.55945 39.3392 12.9135C24.8321 18.2736 11.7162 25.6911 2.85857 34.9191L1.77642 33.8804L0.694267 32.8416C9.98032 23.1673 23.5542 15.5475 38.2995 10.0994C53.0612 4.64527 69.1087 1.3263 83.4457 0.323699C97.7236 -0.674772 110.532 0.607713 118.675 4.56445C122.769 6.55351 125.854 9.30402 127.203 12.9485C128.562 16.6178 128.04 20.8639 125.609 25.5683L124.277 24.8796Z" fill="black"/>
                   </svg>
-                  {/* Text - MOST POPULAR on one line, FOR GROWING STORES on another */}
+                  {/* Text - Two rows: MOST POPULAR / FOR GROWING STORES */}
                   <div style={{
-                    fontFamily: "'BRITH BRUSH', cursive",
-                    fontSize: '28px',
-                    fontWeight: 700,
+                    transform: 'rotate(-0.464deg)',
                     color: '#000',
-                    lineHeight: 'normal',
-                    letterSpacing: '-2px',
+                    fontFamily: '"Caveat Brush", cursive',
+                    fontSize: '32px',
+                    fontStyle: 'normal',
+                    fontWeight: 400,
+                    lineHeight: '1.1',
                     marginLeft: '50px',
                   }}>
-                    <p style={{ margin: 0 }}>MOST POPULAR</p>
-                    <p style={{ margin: 0 }}>FOR GROWING STORES</p>
+                    <div>MOST POPULAR</div>
+                    <div>FOR GROWING STORES</div>
+                  </div>
+                </div>
+              )}
+
+              {/* "Most Popular" Label with Arrow - Mobile */}
+              {isMobile && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-80px',
+                  right: '0px',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'flex-end',
+                  zIndex: 10,
+                }}>
+                  {/* Arrow pointing to card - Mobile version */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="70" height="45" viewBox="0 0 97 60" fill="none" style={{ marginRight: '5px', position: 'relative', top: '-10px', left: '25px' }}>
+                    <path d="M9.02364 59.1962C8.30694 59.6117 7.38911 59.3676 6.97361 58.6509L0.202585 46.9717C-0.212913 46.255 0.0312489 45.3372 0.747942 44.9217C1.46463 44.5062 2.38246 44.7503 2.79796 45.467L8.81664 55.8485L19.1981 49.8298C19.9148 49.4143 20.8327 49.6585 21.2482 50.3752C21.6637 51.0919 21.4195 52.0097 20.7028 52.4252L9.02364 59.1962ZM95.1663 11.9872L93.6717 12.1135C93.389 8.76808 92.1187 6.56303 90.2237 5.15956C88.2794 3.71963 85.4842 2.98079 81.9196 3.00038C74.7705 3.03969 65.1561 6.12856 55.1496 11.3706C45.1793 16.5937 34.9813 23.8698 26.6846 32.0989C18.369 40.3468 12.0729 49.4426 9.72088 58.2842L8.2713 57.8985L6.82171 57.5129C9.36595 47.9489 16.0674 38.4041 24.572 29.9689C33.0955 21.5149 43.5405 14.0655 53.7574 8.71321C63.9381 3.37992 74.0551 0.0435748 81.9031 0.000429219C85.8371 -0.0211982 89.3568 0.784423 92.0092 2.74873C94.7107 4.74949 96.3186 7.80845 96.661 11.8609L95.1663 11.9872Z" fill="black"/>
+                  </svg>
+                  {/* Text - Two rows: MOST POPULAR / FOR GROWING STORES - Mobile */}
+                  <div style={{
+                    transform: 'rotate(-0.464deg)',
+                    color: '#000',
+                    fontFamily: '"Caveat Brush", cursive',
+                    fontSize: '18px',
+                    fontStyle: 'normal',
+                    fontWeight: 400,
+                    lineHeight: '1.1',
+                    marginTop: '25px',
+                  }}>
+                    <div>MOST POPULAR</div>
+                    <div>FOR GROWING STORES</div>
                   </div>
                 </div>
               )}
@@ -2942,10 +3324,12 @@ const LandingPage3 = () => {
             </div>
           </div>
         </EditableSection>
+        </div>
       )}
 
       {/* Contact Form Section */}
       {shouldRenderSection('contact') && (
+        <div className="scroll-reveal">
         <EditableSection
           sectionId="contact"
           label="Contact Form"
@@ -2954,8 +3338,10 @@ const LandingPage3 = () => {
           isHidden={isSectionHidden('contact')}
           id="contact-section"
           style={{
-            padding: isMobile ? '40px 20px' : '100px 120px',
-            backgroundColor: contactColors.backgroundColor || 'transparent',
+            padding: isMobile ? '40px 20px 100px' : '100px 120px',
+            backgroundColor: isMobile
+              ? (contactColors.mobileBackgroundColor || '#EFEBE2')
+              : (contactColors.backgroundColor || 'transparent'),
           }}
         >
           <div style={{
@@ -3274,11 +3660,19 @@ const LandingPage3 = () => {
                     gap: isMobile ? '6px' : '12px',
                     marginTop: '12px',
                     textDecoration: 'none',
+                    transform: isMobile ? 'translateX(-2px)' : 'none',
                   }}
                 >
-                  <div style={{ width: isMobile ? '16px' : '28px', height: isMobile ? '16px' : '28px', flexShrink: 0 }}>
-                    <ZapIcon />
-                  </div>
+                  <img
+                    src={VectorIcon}
+                    alt="icon"
+                    style={{
+                      width: isMobile ? '16px' : '28px',
+                      height: isMobile ? '16px' : '28px',
+                      flexShrink: 0,
+                      filter: 'brightness(0)',
+                    }}
+                  />
                   <p style={{
                     fontFamily: "'Barlow', sans-serif",
                     fontSize: isMobile ? '13px' : '20px',
@@ -3295,10 +3689,22 @@ const LandingPage3 = () => {
             </div>
           </div>
         </EditableSection>
+        </div>
       )}
 
       {/* Sticky CTA Bar */}
       {shouldRenderSection('stickyCta') && (
+        <div
+          ref={stickyCtaRef}
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            willChange: 'transform',
+          }}
+        >
         <EditableSection
           sectionId="stickyCta"
           label="Sticky CTA"
@@ -3308,15 +3714,15 @@ const LandingPage3 = () => {
           style={{
             backgroundColor: stickyCtaColors.backgroundColor || '#fff',
             borderTop: '1px solid #000',
-            padding: isMobile ? '20px' : '20px 80px',
+            padding: isMobile ? '20px' : '15px 80px',
           }}
         >
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: isMobile ? 'column' : 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: isMobile ? '20px' : '20px',
+            gap: isMobile ? '20px' : '30px',
             maxWidth: isMobile ? '386px' : 'none',
             margin: '0 auto',
           }}>
@@ -3406,10 +3812,17 @@ const LandingPage3 = () => {
             </a>
           </div>
         </EditableSection>
+        </div>
+      )}
+
+      {/* Spacer for sticky CTA */}
+      {shouldRenderSection('stickyCta') && (
+        <div style={{ height: isMobile ? '120px' : '100px' }} />
       )}
 
       {/* Footer */}
       {shouldRenderSection('footer') && (
+        <div ref={footerRef}>
         <EditableSection
           sectionId="footer"
           label="Footer"
@@ -3452,6 +3865,7 @@ const LandingPage3 = () => {
             </a>
           </p>
         </EditableSection>
+        </div>
       )}
     </div>
   );

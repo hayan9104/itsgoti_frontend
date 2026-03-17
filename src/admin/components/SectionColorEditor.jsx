@@ -4,6 +4,7 @@ import ColorPicker from './ColorPicker';
 // Color property definitions with labels and descriptions
 const colorProperties = [
   { key: 'backgroundColor', label: 'Background Color', description: 'Main background color of the section' },
+  { key: 'mobileBackgroundColor', label: 'Mobile Background Color', description: 'Background color on mobile devices (overrides main background)' },
   { key: 'containerBackground', label: 'Container Background', description: 'Background color of content containers' },
   { key: 'headingColor', label: 'Heading Color', description: 'Color for main headings (H1, H2)' },
   { key: 'subheadingColor', label: 'Subheading Color', description: 'Color for subheadings (H3, H4)' },
@@ -32,7 +33,7 @@ const sectionColorMapping = {
   caseStudies: ['backgroundColor', 'headingColor', 'textColor', 'cardBackground', 'cardBorderColor'],
   clients: ['backgroundColor', 'headingColor', 'textColor'],
   pricing: ['backgroundColor', 'headingColor', 'textColor', 'cardBackground', 'cardBorderColor', 'buttonBackground', 'buttonText', 'accentColor'],
-  contact: ['backgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText', 'borderColor', 'accentColor'],
+  contact: ['backgroundColor', 'mobileBackgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText', 'borderColor', 'accentColor'],
   contactForm: ['backgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText', 'borderColor'],
   stickyCta: ['backgroundColor', 'headingColor', 'textColor', 'buttonBackground', 'buttonText'],
   footer: ['backgroundColor', 'headingColor', 'textColor', 'linkColor', 'iconColor'],

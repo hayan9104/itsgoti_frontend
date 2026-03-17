@@ -409,6 +409,12 @@ const ThemeStyleEditor = () => {
               onChange={(value) => handleGlobalColorChange('backgroundColor', value)}
             />
             <ColorPicker
+              label="Mobile Background Color"
+              description="Background color for mobile devices"
+              value={themeData?.globalColors?.mobileBackgroundColor || ''}
+              onChange={(value) => handleGlobalColorChange('mobileBackgroundColor', value)}
+            />
+            <ColorPicker
               label="Primary Text Color"
               description="Default text color"
               value={themeData?.globalColors?.textColor || '#000000'}
