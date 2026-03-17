@@ -140,7 +140,7 @@ const LandingPage3 = () => {
   useScrollAnimations(!isMobile);
   const [pageContent, setPageContent] = useState({});
   const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for clients
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Show content immediately
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -390,7 +390,7 @@ const LandingPage3 = () => {
 
   const fetchPageContent = async () => {
     try {
-      // Fetch both LP3 and LP2 content
+      // Fetch both LP3 and LP2 content in background
       const [lp3Response, lp2Response] = await Promise.all([
         pagesAPI.getOne('landing-page-3'),
         pagesAPI.getOne('landing-page-2'),
@@ -403,9 +403,7 @@ const LandingPage3 = () => {
         setLp2Content(lp2Response.data.data.content);
       }
     } catch {
-      console.log('Using default content');
-    } finally {
-      setLoading(false);
+      // Silent fail - using default content
     }
   };
 
