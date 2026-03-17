@@ -250,9 +250,8 @@ const SiteSettings = () => {
           paddingBottom: '32px',
           borderBottom: '1px solid #e5e7eb',
           backgroundColor: favicon ? '#f3f4f6' : 'transparent',
-          borderRadius: favicon ? '8px' : '0',
-          padding: favicon ? '16px' : '0',
-          paddingBottom: '32px',
+          borderRadius: '8px',
+          padding: '16px',
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
             <div style={{ flex: '0 0 200px' }}>
@@ -271,38 +270,43 @@ const SiteSettings = () => {
                 fontWeight: 500,
               }}>
                 {uploadingField === 'favicon' ? 'Uploading...' : 'Upload'}
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'favicon')} style={{ display: 'none' }} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, 'favicon')}
+                  style={{ display: 'none' }}
+                  key={favicon || 'favicon-input'}
+                />
               </label>
             </div>
 
             {favicon && (
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  width: '120px',
-                  height: '80px',
-                  borderRadius: '8px',
-                  border: '1px solid #e5e7eb',
-                  background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
-                  display: 'flex',
-                  alignItems: 'flex-end',
-                  padding: '8px',
-                }}>
-                  <img src={favicon} alt="Favicon" style={{ width: '24px', height: '24px' }} />
-                </div>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <img
+                  src={favicon}
+                  alt="Favicon"
+                  style={{
+                    maxWidth: '200px',
+                    width: '100%',
+                    height: 'auto',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                  }}
+                />
                 <button
                   onClick={() => removeImage('favicon')}
                   style={{
                     position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    width: '20px',
-                    height: '20px',
+                    top: '8px',
+                    right: '8px',
+                    width: '24px',
+                    height: '24px',
                     borderRadius: '50%',
-                    backgroundColor: '#ef4444',
+                    backgroundColor: 'rgba(0,0,0,0.6)',
                     color: '#fff',
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: '12px',
+                    fontSize: '16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -338,7 +342,13 @@ const SiteSettings = () => {
                 fontWeight: 500,
               }}>
                 {uploadingField === 'socialPreview' ? 'Uploading...' : 'Upload'}
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'socialPreview')} style={{ display: 'none' }} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e, 'socialPreview')}
+                  style={{ display: 'none' }}
+                  key={socialPreview || 'social-input'}
+                />
               </label>
             </div>
 

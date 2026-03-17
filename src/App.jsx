@@ -8,6 +8,7 @@ import { getThemeComponent } from './themes/themeRegistry';
 import AdminLogin from './admin/Login';
 import AdminDashboard from './admin/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import useSEO from './hooks/useSEO';
 
 // Context for landing page slugs
 const LandingSlugsContext = createContext({
@@ -132,6 +133,9 @@ function DynamicLandingRouter({ themeCode }) {
 
 function App() {
   const { themeCode, loading } = useThemeCode();
+
+  // Apply SEO settings (title, description, favicon, social preview)
+  useSEO();
 
   if (loading) {
     return (
