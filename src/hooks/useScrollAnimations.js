@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Register ScrollTrigger plugin
-gsap.registerPlugin(ScrollTrigger);
+// Note: ScrollTrigger is registered once in main.jsx
 
 /**
  * Hook to apply scroll-triggered animations to elements

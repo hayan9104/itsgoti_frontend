@@ -9,8 +9,7 @@ import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
 
-// Register ScrollTrigger
-gsap.registerPlugin(ScrollTrigger);
+// Note: ScrollTrigger is registered once in main.jsx
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
 import TickMark from '@/assets/Tick mark.png';

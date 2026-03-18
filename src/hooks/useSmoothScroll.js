@@ -3,8 +3,7 @@ import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Register ScrollTrigger plugin
-gsap.registerPlugin(ScrollTrigger);
+// Note: ScrollTrigger is registered once in main.jsx
 
 /**
  * Hook to initialize Lenis smooth scrolling and GSAP ScrollTrigger

@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import rightArrow from '../../assets/right arrow.png';
-import rightArrowWhite from '../../assets/right arrow.png'; // Use white version if available
-import threeDots from '../../assets/three dots.png';
 import useWindowSize from '../../hooks/useWindowSize';
 import usePageVisibility from '../../hooks/usePageVisibility';
+
+// Inline SVG components for better performance
+const RightArrowIcon = ({ size = 16, color = '#000' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 13L13 3M13 3H5M13 3V11" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const ThreeDotsIcon = ({ size = 24, color = '#000' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="5" r="2" fill={color}/>
+    <circle cx="12" cy="12" r="2" fill={color}/>
+    <circle cx="12" cy="19" r="2" fill={color}/>
+  </svg>
+);
 
 const Navbar = ({ dark = false, blue = false }) => {
   const { isMobile, isTablet } = useWindowSize();
@@ -134,14 +146,9 @@ const Navbar = ({ dark = false, blue = false }) => {
                 >
                   Get in Touch
                 </span>
-                <img
-                  src={rightArrow}
-                  alt=""
-                  style={{
-                    width: isMobile ? '14px' : '16px',
-                    height: isMobile ? '14px' : '16px',
-                    filter: invertIcons ? 'invert(1)' : 'none',
-                  }}
+                <RightArrowIcon
+                  size={isMobile ? 14 : 16}
+                  color={invertIcons ? '#fff' : '#000'}
                 />
               </Link>
             )}
@@ -154,15 +161,11 @@ const Navbar = ({ dark = false, blue = false }) => {
                 cursor: 'pointer',
                 padding: '8px',
               }}
+              aria-label="Menu"
             >
-              <img
-                src={threeDots}
-                alt="menu"
-                style={{
-                  width: isMobile ? '20px' : '24px',
-                  height: 'auto',
-                  filter: invertIcons ? 'invert(1)' : 'none',
-                }}
+              <ThreeDotsIcon
+                size={isMobile ? 20 : 24}
+                color={invertIcons ? '#fff' : '#000'}
               />
             </button>
           </div>
@@ -290,15 +293,7 @@ const Navbar = ({ dark = false, blue = false }) => {
                 }}
               >
                 Get in Touch
-                <img
-                  src={rightArrow}
-                  alt=""
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    filter: 'invert(1)',
-                  }}
-                />
+                <RightArrowIcon size={16} color="#fff" />
               </Link>
             </div>
           )}
