@@ -1,5 +1,11 @@
 # REVERT BACKUP - March 18, 2026
 
+## QUICK REVERT (if lazy loading breaks site):
+```bash
+git checkout HEAD~1 -- src/App.jsx src/themes/themeRegistry.js
+npm run build
+```
+
 ## If performance fix breaks something, revert these files:
 
 ---
