@@ -867,10 +867,8 @@ const LandingPage3 = () => {
       overflowX: 'hidden',
       scrollBehavior: 'smooth',
     }}>
-      {/* Google Fonts */}
+      {/* Scroll Animations CSS */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Caveat:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-
         /* ========== PREMIUM SCROLL ANIMATIONS ========== */
         html {
           scroll-behavior: smooth;
@@ -1763,6 +1761,9 @@ const LandingPage3 = () => {
                         <img
                           src={img}
                           alt={`Portfolio ${index + 1}`}
+                          width={180}
+                          height={390}
+                          loading={index === 0 ? 'eager' : 'lazy'}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : null}
@@ -1828,6 +1829,9 @@ const LandingPage3 = () => {
                         <img
                           src={img}
                           alt={`Portfolio ${index + 1}`}
+                          width={300}
+                          height={629}
+                          loading={Math.abs(index - currentSlide) <= 1 ? 'eager' : 'lazy'}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : null}
@@ -2466,6 +2470,9 @@ const LandingPage3 = () => {
                             <img
                               src={study.image}
                               alt={study.brand}
+                              width={350}
+                              height={280}
+                              loading="lazy"
                               style={{
                                 width: '100%',
                                 height: '100%',
@@ -2641,6 +2648,9 @@ const LandingPage3 = () => {
                             <img
                               src={study.image}
                               alt={study.brand}
+                              width={350}
+                              height={280}
+                              loading="lazy"
                               style={{
                                 width: '100%',
                                 height: '100%',
@@ -2802,6 +2812,9 @@ const LandingPage3 = () => {
                           <img
                             src={item.startsWith('http') ? item : `${import.meta.env.VITE_API_URL || ''}${item}`}
                             alt={`Client ${index + 1}`}
+                            width={100}
+                            height={55}
+                            loading="lazy"
                             style={{
                               height: isMobile ? '35px' : '55px',
                               width: 'auto',
@@ -2814,6 +2827,9 @@ const LandingPage3 = () => {
                           <img
                             src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || ''}${item.url}`}
                             alt={item.name || `Client ${index + 1}`}
+                            width={100}
+                            height={55}
+                            loading="lazy"
                             style={{
                               height: isMobile ? '35px' : '55px',
                               width: 'auto',
