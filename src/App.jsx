@@ -31,7 +31,6 @@ function LandingSlugsProvider({ children }) {
   const [defaultLandingPage, setDefaultLandingPage] = useState('landing-page-3');
 
   useEffect(() => {
-    // Fetch in background, don't block rendering
     const fetchSlugs = async () => {
       try {
         const response = await fetch('/api/themes/landing-slugs');
@@ -44,7 +43,9 @@ function LandingSlugsProvider({ children }) {
         // Silent fail - use defaults
       }
     };
-    fetchSlugs();
+    // Defer - page renders with defaults first
+    const timer = setTimeout(fetchSlugs, 250);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

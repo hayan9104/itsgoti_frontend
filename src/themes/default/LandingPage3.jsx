@@ -285,7 +285,11 @@ const LandingPage3 = () => {
   };
 
   useEffect(() => {
-    fetchPageContent();
+    // Defer API calls - let page render first with defaults
+    const timer = setTimeout(() => {
+      fetchPageContent();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Editor mode: Listen for updates from parent

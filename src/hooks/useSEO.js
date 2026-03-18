@@ -10,7 +10,6 @@ const useSEO = () => {
   useEffect(() => {
     const fetchSiteSettings = async () => {
       try {
-        // Fetch the live theme's site settings
         const response = await fetch('/api/themes/site-settings');
         const data = await response.json();
 
@@ -18,14 +17,16 @@ const useSEO = () => {
           setSiteSettings(data.data);
           applySEO(data.data);
         }
-      } catch (error) {
-        console.error('Error fetching site settings:', error);
+      } catch {
+        // Silent fail
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSiteSettings();
+    // Defer - SEO meta tags can load after page renders
+    const timer = setTimeout(fetchSiteSettings, 200);
+    return () => clearTimeout(timer);
   }, []);
 
   const applySEO = (settings) => {

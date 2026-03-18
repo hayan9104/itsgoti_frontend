@@ -15,11 +15,14 @@ export const ThemeCodeProvider = ({ children }) => {
       return;
     }
 
-    // Fetch live theme code in background
-    fetch('/api/themes/live-code')
-      .then(res => res.json())
-      .then(data => setThemeCode(data.data?.themeCode || 'default'))
-      .catch(() => {}); // Silent fail - use default
+    // Defer API call - render with default first
+    const timer = setTimeout(() => {
+      fetch('/api/themes/live-code')
+        .then(res => res.json())
+        .then(data => setThemeCode(data.data?.themeCode || 'default'))
+        .catch(() => {});
+    }, 50);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

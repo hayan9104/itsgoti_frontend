@@ -11,7 +11,7 @@ export const useThemeColors = (pageName) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch theme colors
+  // Fetch theme colors - deferred to not block initial render
   useEffect(() => {
     if (!pageName) {
       setLoading(false);
@@ -20,19 +20,20 @@ export const useThemeColors = (pageName) => {
 
     const fetchColors = async () => {
       try {
-        setLoading(true);
         const response = await themeColorsAPI.getByPage(pageName);
         setThemeColors(response.data.data);
         setError(null);
       } catch (err) {
-        console.error('Error fetching theme colors:', err);
+        // Silent fail - use defaults
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchColors();
+    // Defer API call - render page first
+    const timer = setTimeout(fetchColors, 150);
+    return () => clearTimeout(timer);
   }, [pageName]);
 
   /**
