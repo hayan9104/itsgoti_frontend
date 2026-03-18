@@ -103,3 +103,14 @@ If compressed version looks bad, restore from git:
 ```bash
 git checkout HEAD -- client/src/assets/Image.png
 ```
+
+---
+
+## 5. LandingPage3.jsx - CSS Extraction
+
+CSS was extracted from inline `<style>` tag to `LandingPage3.css`.
+
+To revert (put CSS back inline):
+1. Delete `src/themes/default/LandingPage3.css`
+2. Remove `import './LandingPage3.css';` from LandingPage3.jsx
+3. Re-add the inline style block after line 872 (before the modal)
