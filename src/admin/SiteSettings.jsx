@@ -97,8 +97,11 @@ const SiteSettings = () => {
       setFavicon(settings.favicon);
       setSocialPreview(settings.socialPreview);
 
-      // Load page slugs (merge with defaults)
-      const loadedSlugs = { ...defaultPageSlugs };
+      // Load page slugs (merge with defaults) - deep copy to avoid reference issues
+      const loadedSlugs = {};
+      Object.keys(defaultPageSlugs).forEach(key => {
+        loadedSlugs[key] = { ...defaultPageSlugs[key] };
+      });
       if (theme.landingPageSlugs) {
         Object.keys(theme.landingPageSlugs).forEach(key => {
           if (loadedSlugs[key]) {
@@ -114,7 +117,8 @@ const SiteSettings = () => {
         });
       }
       setPageSlugs(loadedSlugs);
-      setOriginalSlugs(loadedSlugs);
+      // Deep copy for originalSlugs to prevent reference sharing
+      setOriginalSlugs(JSON.parse(JSON.stringify(loadedSlugs)));
 
       // Store original values
       setOriginalSettings(settings);
@@ -258,13 +262,15 @@ const SiteSettings = () => {
         landingPageSlugs: landingSlugs,
         pageSlugs: otherSlugs,
       });
-      setOriginalSlugs({ ...pageSlugs });
+      // Deep copy to prevent reference sharing
+      setOriginalSlugs(JSON.parse(JSON.stringify(pageSlugs)));
       setSuccessMessage('URL settings saved successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
 
       // If admin URL was changed, redirect to new admin URL
       if (adminSlugChanged && forceConfirm) {
-        const newAdminPath = `/${pageSlugs.admin.slug}`;
+        // Build the new path based on current location
+        const newAdminPath = `/${pageSlugs.admin.slug}/themes/${themeId}/settings`;
         window.location.href = newAdminPath;
       }
     } catch (err) {

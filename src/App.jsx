@@ -134,7 +134,7 @@ function DefaultLandingRouter() {
 
 // Dynamic page router - matches any slug to the correct page
 function DynamicPageRouter() {
-  const { slug } = useParams();
+  const { slug, '*': rest } = useParams();
   const { landingSlugs, pageSlugs, loaded } = usePageSlugs();
 
   // Wait for slugs to load before matching
@@ -166,9 +166,15 @@ function DynamicPageRouter() {
   // Check main pages
   for (const [pageKey, slugData] of Object.entries(pageSlugs)) {
     if (slugData.slug === slug) {
-      // Handle admin redirect
+      // Handle admin - render admin panel directly
       if (pageKey === 'admin') {
-        return <Navigate to="/admin" replace />;
+        return (
+          <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          </Suspense>
+        );
       }
       return (
         <Suspense fallback={<PageLoader />}>
@@ -186,6 +192,51 @@ function DynamicPageRouter() {
   }
 
   // Slug not found - redirect to home
+  return <Navigate to="/" replace />;
+}
+
+// Dynamic admin router - handles custom admin slug with subroutes
+function DynamicAdminRouter() {
+  const { adminSlug, '*': rest } = useParams();
+  const { pageSlugs, loaded } = usePageSlugs();
+
+  // Wait for slugs to load
+  if (!loaded) {
+    return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>;
+  }
+
+  // Check if this slug matches the admin slug
+  if (pageSlugs.admin?.slug === adminSlug) {
+    return (
+      <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Suspense>
+    );
+  }
+
+  // Not admin slug, redirect to home
+  return <Navigate to="/" replace />;
+}
+
+// Dynamic admin login router
+function DynamicAdminLoginRouter() {
+  const { adminSlug } = useParams();
+  const { pageSlugs, loaded } = usePageSlugs();
+
+  if (!loaded) {
+    return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>;
+  }
+
+  if (pageSlugs.admin?.slug === adminSlug) {
+    return (
+      <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+        <AdminLogin />
+      </Suspense>
+    );
+  }
+
   return <Navigate to="/" replace />;
 }
 
@@ -216,7 +267,7 @@ function App() {
           {/* Footer Preview Route (for visual editor) */}
           <Route path="/footer-preview" element={<Suspense fallback={<PageLoader />}><FooterPreview /></Suspense>} />
 
-          {/* Admin Routes - Lazy loaded */}
+          {/* Admin Routes - Lazy loaded (default /admin path) */}
           <Route path="/admin/login" element={<Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}><AdminLogin /></Suspense>} />
           <Route
             path="/admin/*"
@@ -228,6 +279,10 @@ function App() {
               </Suspense>
             }
           />
+
+          {/* Dynamic Admin Routes - for custom admin slugs with subroutes */}
+          <Route path="/:adminSlug/login" element={<DynamicAdminLoginRouter />} />
+          <Route path="/:adminSlug/*" element={<DynamicAdminRouter />} />
 
           {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
           <Route path="/:slug" element={<DynamicPageRouter />} />
