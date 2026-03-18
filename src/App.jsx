@@ -100,6 +100,17 @@ function PageSlugsProvider({ children }) {
 function DefaultLandingRouter() {
   const { defaultLandingPage } = useLandingSlugs();
 
+  // Home page
+  if (defaultLandingPage === 'home') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <PageVisibilityWrapper pageName="home" fallbackPath="/">
+          <Layout><Home /></Layout>
+        </PageVisibilityWrapper>
+      </Suspense>
+    );
+  }
+
   // LandingPage3 is loaded eagerly, others are lazy
   if (defaultLandingPage === 'landing-page-3') {
     return (

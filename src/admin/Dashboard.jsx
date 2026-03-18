@@ -493,8 +493,9 @@ const ThemePagesWrapper = () => {
     });
   };
 
-  // Landing page options for the dropdown (using custom labels)
+  // Default first page options for the dropdown (using custom labels)
   const landingPageOptions = [
+    { value: 'home', label: 'Home Page' },
     { value: 'landing', label: landingPageSlugs['landing']?.label || 'Landing Page 1' },
     { value: 'landing-page-2', label: landingPageSlugs['landing-page-2']?.label || 'Landing Page 2' },
     { value: 'landing-page-3', label: landingPageSlugs['landing-page-3']?.label || 'Landing Page 3' },
