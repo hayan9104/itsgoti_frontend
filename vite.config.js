@@ -18,6 +18,8 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-gsap': ['gsap'],
           'vendor-lenis': ['lenis'],
+          'vendor-axios': ['axios'],
+          'vendor-forms': ['react-hook-form'],
         },
       },
     },

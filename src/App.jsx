@@ -1,14 +1,16 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import PageVisibilityWrapper from './components/PageVisibilityWrapper';
 import { useThemeCode } from './context/ThemeCodeContext';
 import { getThemeComponent } from './themes/themeRegistry';
-import AdminLogin from './admin/Login';
-import AdminDashboard from './admin/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import useSEO from './hooks/useSEO';
+
+// Lazy load admin components (not needed on landing page)
+const AdminLogin = lazy(() => import('./admin/Login'));
+const AdminDashboard = lazy(() => import('./admin/Dashboard'));
 
 // Context for landing page slugs - with defaults to avoid loading
 const defaultSlugs = {
@@ -217,14 +219,16 @@ function App() {
           {/* Footer Preview Route (for visual editor) */}
           <Route path="/footer-preview" element={FooterPreview ? <FooterPreview /> : null} />
 
-          {/* Admin Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+          {/* Admin Routes - Lazy loaded */}
+          <Route path="/admin/login" element={<Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}><AdminLogin /></Suspense>} />
           <Route
             path="/admin/*"
             element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
+              <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              </Suspense>
             }
           />
         </Routes>

@@ -4,6 +4,29 @@
 
 ---
 
+## 0. App.jsx - FULL OLD VERSION (before lazy loading)
+
+```javascript
+import { useState, useEffect, createContext, useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
+import { Layout } from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
+import PageVisibilityWrapper from './components/PageVisibilityWrapper';
+import { useThemeCode } from './context/ThemeCodeContext';
+import { getThemeComponent } from './themes/themeRegistry';
+import AdminLogin from './admin/Login';
+import AdminDashboard from './admin/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import useSEO from './hooks/useSEO';
+```
+
+To revert App.jsx completely:
+```bash
+git checkout HEAD~1 -- src/App.jsx
+```
+
+---
+
 ## 1. LandingPage3.jsx - fetchPageContent (lines 390-407)
 
 ```javascript
