@@ -33,34 +33,51 @@ const PageLoader = () => (
   </div>
 );
 
-// Context for landing page slugs - with defaults to avoid loading
-const defaultSlugs = {
+// Context for all page slugs - with defaults to avoid loading
+const defaultLandingSlugs = {
   'landing': { slug: 'landing_page1', label: 'Landing Page 1' },
   'landing-page-2': { slug: 'landing_page2', label: 'Landing Page 2' },
   'landing-page-3': { slug: 'landing_page3', label: 'Landing Page 3' },
 };
 
-const LandingSlugsContext = createContext({
-  slugs: defaultSlugs,
+const defaultPageSlugs = {
+  'home': { slug: 'home', label: 'Home' },
+  'about': { slug: 'about', label: 'About Us' },
+  'approach': { slug: 'approach', label: 'Our Approach' },
+  'work': { slug: 'work', label: 'Our Work' },
+  'case-studies': { slug: 'case-studies', label: 'Case Studies' },
+  'contact': { slug: 'contact', label: 'Contact' },
+};
+
+const PageSlugsContext = createContext({
+  landingSlugs: defaultLandingSlugs,
+  pageSlugs: defaultPageSlugs,
   defaultLandingPage: 'landing-page-3',
   loaded: false,
 });
 
-export const useLandingSlugs = () => useContext(LandingSlugsContext);
+export const useLandingSlugs = () => {
+  const ctx = useContext(PageSlugsContext);
+  return { slugs: ctx.landingSlugs, defaultLandingPage: ctx.defaultLandingPage, loaded: ctx.loaded };
+};
 
-// Provider component for landing page slugs
-function LandingSlugsProvider({ children }) {
-  const [slugs, setSlugs] = useState(defaultSlugs);
+export const usePageSlugs = () => useContext(PageSlugsContext);
+
+// Provider component for all page slugs
+function PageSlugsProvider({ children }) {
+  const [landingSlugs, setLandingSlugs] = useState(defaultLandingSlugs);
+  const [pageSlugs, setPageSlugs] = useState(defaultPageSlugs);
   const [defaultLandingPage, setDefaultLandingPage] = useState('landing-page-3');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchSlugs = async () => {
       try {
-        const response = await fetch('/api/themes/landing-slugs');
+        const response = await fetch('/api/themes/all-slugs');
         const data = await response.json();
         if (data.success && data.data) {
-          setSlugs(data.data.slugs);
+          setLandingSlugs(data.data.landingSlugs || defaultLandingSlugs);
+          setPageSlugs(data.data.pageSlugs || defaultPageSlugs);
           setDefaultLandingPage(data.data.defaultLandingPage || 'landing-page-3');
         }
       } catch {
@@ -73,9 +90,9 @@ function LandingSlugsProvider({ children }) {
   }, []);
 
   return (
-    <LandingSlugsContext.Provider value={{ slugs, defaultLandingPage, loaded }}>
+    <PageSlugsContext.Provider value={{ landingSlugs, pageSlugs, defaultLandingPage, loaded }}>
       {children}
-    </LandingSlugsContext.Provider>
+    </PageSlugsContext.Provider>
   );
 }
 
@@ -103,18 +120,18 @@ function DefaultLandingRouter() {
   );
 }
 
-// Dynamic landing page router - matches any slug to the correct landing page
-function DynamicLandingRouter() {
+// Dynamic page router - matches any slug to the correct page
+function DynamicPageRouter() {
   const { slug } = useParams();
-  const { slugs, loaded } = useLandingSlugs();
+  const { landingSlugs, pageSlugs, loaded } = usePageSlugs();
 
   // Wait for slugs to load before matching
   if (!loaded) {
     return <PageLoader />;
   }
 
-  // Find which landing page this slug belongs to
-  for (const [pageKey, slugData] of Object.entries(slugs)) {
+  // Check landing pages first
+  for (const [pageKey, slugData] of Object.entries(landingSlugs)) {
     if (slugData.slug === slug) {
       if (pageKey === 'landing-page-3') {
         return (
@@ -123,7 +140,6 @@ function DynamicLandingRouter() {
           </PageVisibilityWrapper>
         );
       }
-      // Other landing pages are lazy loaded
       return (
         <Suspense fallback={<PageLoader />}>
           <PageVisibilityWrapper pageName={pageKey} fallbackPath="/home">
@@ -135,8 +151,26 @@ function DynamicLandingRouter() {
     }
   }
 
+  // Check main pages
+  for (const [pageKey, slugData] of Object.entries(pageSlugs)) {
+    if (slugData.slug === slug) {
+      return (
+        <Suspense fallback={<PageLoader />}>
+          <PageVisibilityWrapper pageName={pageKey} fallbackPath="/">
+            {pageKey === 'home' && <Layout><Home /></Layout>}
+            {pageKey === 'about' && <Layout darkNav={true}><About /></Layout>}
+            {pageKey === 'approach' && <Layout><Approach /></Layout>}
+            {pageKey === 'work' && <Layout><Work /></Layout>}
+            {pageKey === 'case-studies' && <Layout><CaseStudies /></Layout>}
+            {pageKey === 'contact' && <Layout><Contact /></Layout>}
+          </PageVisibilityWrapper>
+        </Suspense>
+      );
+    }
+  }
+
   // Slug not found - redirect to home
-  return <Navigate to="/home" replace />;
+  return <Navigate to="/" replace />;
 }
 
 function App() {
@@ -145,81 +179,19 @@ function App() {
 
   return (
     <Router>
-      <LandingSlugsProvider>
+      <PageSlugsProvider>
         <ScrollToTop />
         <Routes>
           {/* Public Routes - LandingPage3 loads instantly */}
           <Route path="/" element={<DefaultLandingRouter />} />
 
-          {/* Dynamic Landing Page Route - matches any custom slug */}
-          <Route path="/:slug" element={<DynamicLandingRouter />} />
-
-          <Route
-            path="/home"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="home" fallbackPath="/">
-                  <Layout><Home /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
-          />
-          <Route
-            path="/work"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="work" fallbackPath="/home">
-                  <Layout><Work /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
-          />
-          <Route
-            path="/case-studies"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="case-study" fallbackPath="/home">
-                  <Layout><CaseStudies /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
-          />
+          {/* Case study detail - must be before /:slug */}
           <Route
             path="/case-studies/:slug"
             element={
               <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="case-study" fallbackPath="/home">
+                <PageVisibilityWrapper pageName="case-study" fallbackPath="/">
                   <Layout blueNav={true}><CaseStudyDetail /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
-          />
-          <Route
-            path="/approach"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="approach" fallbackPath="/home">
-                  <Layout><Approach /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
-          />
-          <Route
-            path="/about"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="about" fallbackPath="/home">
-                  <Layout darkNav={true}><About /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
-          />
-          <Route
-            path="/contact"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="contact" fallbackPath="/home">
-                  <Layout><Contact /></Layout>
                 </PageVisibilityWrapper>
               </Suspense>
             }
@@ -240,8 +212,11 @@ function App() {
               </Suspense>
             }
           />
+
+          {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
+          <Route path="/:slug" element={<DynamicPageRouter />} />
         </Routes>
-      </LandingSlugsProvider>
+      </PageSlugsProvider>
     </Router>
   );
 }
