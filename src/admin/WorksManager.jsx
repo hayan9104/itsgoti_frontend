@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { worksAPI, uploadAPI, pagesAPI } from '../services/api';
 
-const WorksList = ({ basePath = '/admin/works' }) => {
+const WorksList = ({ basePath = '/goti/admin/works' }) => {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -142,7 +142,7 @@ const WorksList = ({ basePath = '/admin/works' }) => {
   );
 };
 
-const WorkForm = ({ isEdit, basePath = '/admin/works' }) => {
+const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
@@ -630,7 +630,7 @@ const WorkForm = ({ isEdit, basePath = '/admin/works' }) => {
   );
 };
 
-const WorksManager = ({ basePath = '/admin/works' }) => {
+const WorksManager = ({ basePath = '/goti/admin/works' }) => {
   return (
     <Routes>
       <Route path="/" element={<WorksList basePath={basePath} />} />

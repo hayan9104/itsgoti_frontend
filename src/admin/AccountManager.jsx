@@ -90,7 +90,7 @@ const AccountManager = () => {
 
   const handleSuccessModalLogin = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/goti/admin/login');
   };
 
   const handleDeleteUser = async (userId) => {

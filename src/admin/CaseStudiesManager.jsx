@@ -1126,7 +1126,7 @@ const SectionHeader = ({ title }) => (
 );
 
 // Case Study Form Component
-const CaseStudyForm = ({ isEdit = false, basePath = '/admin/case-studies' }) => {
+const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }) => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
@@ -1572,7 +1572,7 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/admin/case-studies' }) => 
 };
 
 // Case Studies List Component
-const CaseStudiesList = ({ basePath = '/admin/case-studies' }) => {
+const CaseStudiesList = ({ basePath = '/goti/admin/case-studies' }) => {
   const [caseStudies, setCaseStudies] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1717,7 +1717,7 @@ const CaseStudiesList = ({ basePath = '/admin/case-studies' }) => {
 };
 
 // Main Manager Component
-const CaseStudiesManager = ({ basePath = '/admin/case-studies' }) => {
+const CaseStudiesManager = ({ basePath = '/goti/admin/case-studies' }) => {
   return (
     <Routes>
       <Route path="/" element={<CaseStudiesList basePath={basePath} />} />

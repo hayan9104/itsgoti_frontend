@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { pagesAPI, caseStudiesAPI } from '../services/api';
 
-const CaseStudyPageEditor = ({ onClose, onSave, caseStudiesPath = '/admin/case-studies' }) => {
+const CaseStudyPageEditor = ({ onClose, onSave, caseStudiesPath = '/goti/admin/case-studies' }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [caseStudies, setCaseStudies] = useState([]);
@@ -245,7 +245,7 @@ const CaseStudyPageEditor = ({ onClose, onSave, caseStudiesPath = '/admin/case-s
           Case studies are managed individually with full content editing.
         </p>
         <Link
-          to="/admin/case-studies"
+          to="/goti/admin/case-studies"
           onClick={onClose}
           style={{
             display: 'inline-block',

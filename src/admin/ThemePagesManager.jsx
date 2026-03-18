@@ -57,7 +57,7 @@ const ThemePagesManager = () => {
   };
 
   const handleEditPage = (pageName) => {
-    navigate(`/admin/themes/${themeId}/pages/${pageName}/edit`);
+    navigate(`/goti/admin/themes/${themeId}/pages/${pageName}/edit`);
   };
 
   if (loading) {
@@ -81,7 +81,7 @@ const ThemePagesManager = () => {
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
           <button
-            onClick={() => navigate('/admin/themes')}
+            onClick={() => navigate('/goti/admin/themes')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               padding: 4, display: 'flex', alignItems: 'center', color: '#6b7280',

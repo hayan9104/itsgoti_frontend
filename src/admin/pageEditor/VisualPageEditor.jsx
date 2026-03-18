@@ -22,9 +22,9 @@ const VisualPageEditor = () => {
 
   const handleBack = () => {
     if (themeId) {
-      navigate(`/admin/themes/${themeId}/pages`);
+      navigate(`/goti/admin/themes/${themeId}/pages`);
     } else {
-      navigate('/admin/pages');
+      navigate('/goti/admin/pages');
     }
   };
 

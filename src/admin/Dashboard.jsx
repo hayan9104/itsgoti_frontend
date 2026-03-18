@@ -164,15 +164,15 @@ const ThemeAdminPanel = () => {
 
   const navItems = [
     { to: `/goti/admin/themes/${themeId}`, label: 'Dashboard', exact: true, icon: DashboardIcon },
-    { to: `/admin/themes/${themeId}/pages`, label: 'Pages', icon: PagesIcon },
-    { to: `/admin/themes/${themeId}/works`, label: 'Works', icon: WorksIcon },
-    { to: `/admin/themes/${themeId}/case-studies`, label: 'Case Studies', icon: CaseStudyIcon },
-    { to: `/admin/themes/${themeId}/contacts`, label: 'Contacts', icon: ContactsIcon },
+    { to: `/goti/admin/themes/${themeId}/pages`, label: 'Pages', icon: PagesIcon },
+    { to: `/goti/admin/themes/${themeId}/works`, label: 'Works', icon: WorksIcon },
+    { to: `/goti/admin/themes/${themeId}/case-studies`, label: 'Case Studies', icon: CaseStudyIcon },
+    { to: `/goti/admin/themes/${themeId}/contacts`, label: 'Contacts', icon: ContactsIcon },
   ];
 
   const bottomNavItems = [
-    { to: `/admin/themes/${themeId}/settings`, label: 'Settings', icon: SettingsIcon },
-    { to: `/admin/themes/${themeId}/account`, label: 'Account', icon: AccountIcon },
+    { to: `/goti/admin/themes/${themeId}/settings`, label: 'Settings', icon: SettingsIcon },
+    { to: `/goti/admin/themes/${themeId}/account`, label: 'Account', icon: AccountIcon },
   ];
 
   return (
@@ -363,12 +363,12 @@ const ThemeDashboardHome = () => {
 // ─────────────────────────────────────────────────
 const ThemedWorksManager = () => {
   const { themeId } = useParams();
-  return <WorksManager basePath={`/admin/themes/${themeId}/works`} />;
+  return <WorksManager basePath={`/goti/admin/themes/${themeId}/works`} />;
 };
 
 const ThemedCaseStudiesManager = () => {
   const { themeId } = useParams();
-  return <CaseStudiesManager basePath={`/admin/themes/${themeId}/case-studies`} />;
+  return <CaseStudiesManager basePath={`/goti/admin/themes/${themeId}/case-studies`} />;
 };
 
 // ─────────────────────────────────────────────────
@@ -668,7 +668,7 @@ const ThemePagesWrapper = () => {
               <button
                 onClick={() => {
                   if (visualEditorPages.includes(page.name)) {
-                    navigate(`/admin/themes/${themeId}/pages/${page.name}/edit`);
+                    navigate(`/goti/admin/themes/${themeId}/pages/${page.name}/edit`);
                   } else if (modalEditorPages.includes(page.name)) {
                     setSelectedPage(page);
                   }
@@ -786,7 +786,7 @@ const ThemePagesWrapper = () => {
                 <CaseStudyPageEditor
                   onClose={() => { setSelectedPage(null); fetchTheme(); }}
                   onSave={fetchTheme}
-                  caseStudiesPath={`/admin/themes/${themeId}/case-studies`}
+                  caseStudiesPath={`/goti/admin/themes/${themeId}/case-studies`}
                 />
               )}
             </div>

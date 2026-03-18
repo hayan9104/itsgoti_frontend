@@ -432,7 +432,7 @@ const PagesManager = () => {
                 onClick={() => {
                   // Use visual editor for pages in visualEditorPages array
                   if (visualEditorPages.includes(page.name)) {
-                    navigate(`/admin/pages/${page.name}/edit`);
+                    navigate(`/goti/admin/pages/${page.name}/edit`);
                   } else {
                     setSelectedPage(page);
                   }

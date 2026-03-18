@@ -142,7 +142,7 @@ const ThemesManager = () => {
   };
 
   const handleEditTheme = (themeId) => {
-    navigate(`/admin/themes/${themeId}`);
+    navigate(`/goti/admin/themes/${themeId}`);
   };
 
   const handlePreview = (themeCode) => {
