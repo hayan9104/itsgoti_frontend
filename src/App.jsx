@@ -43,7 +43,7 @@ const defaultSlugs = {
 const LandingSlugsContext = createContext({
   slugs: defaultSlugs,
   defaultLandingPage: 'landing-page-3',
-  loading: false,
+  loaded: false,
 });
 
 export const useLandingSlugs = () => useContext(LandingSlugsContext);
@@ -52,6 +52,7 @@ export const useLandingSlugs = () => useContext(LandingSlugsContext);
 function LandingSlugsProvider({ children }) {
   const [slugs, setSlugs] = useState(defaultSlugs);
   const [defaultLandingPage, setDefaultLandingPage] = useState('landing-page-3');
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchSlugs = async () => {
@@ -64,15 +65,15 @@ function LandingSlugsProvider({ children }) {
         }
       } catch {
         // Silent fail - use defaults
+      } finally {
+        setLoaded(true);
       }
     };
-    // Defer - page renders with defaults first
-    const timer = setTimeout(fetchSlugs, 250);
-    return () => clearTimeout(timer);
+    fetchSlugs();
   }, []);
 
   return (
-    <LandingSlugsContext.Provider value={{ slugs, defaultLandingPage, loading: false }}>
+    <LandingSlugsContext.Provider value={{ slugs, defaultLandingPage, loaded }}>
       {children}
     </LandingSlugsContext.Provider>
   );
@@ -105,7 +106,12 @@ function DefaultLandingRouter() {
 // Dynamic landing page router - matches any slug to the correct landing page
 function DynamicLandingRouter() {
   const { slug } = useParams();
-  const { slugs } = useLandingSlugs();
+  const { slugs, loaded } = useLandingSlugs();
+
+  // Wait for slugs to load before matching
+  if (!loaded) {
+    return <PageLoader />;
+  }
 
   // Find which landing page this slug belongs to
   for (const [pageKey, slugData] of Object.entries(slugs)) {
