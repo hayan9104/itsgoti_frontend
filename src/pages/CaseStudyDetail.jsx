@@ -528,6 +528,11 @@ const CaseStudyDetail = () => {
   }, [isEditorMode]);
 
   const fetchCaseStudy = async () => {
+    // Don't fetch for preview/new case study - use default demo data
+    if (slug === 'preview') {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await caseStudiesAPI.getOne(slug);
       setCaseStudy(response.data.data);

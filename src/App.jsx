@@ -196,7 +196,7 @@ function DynamicPageRouter() {
           <PageVisibilityWrapper pageName={pageKey} fallbackPath="/">
             {pageKey === 'home' && <Layout><Home /></Layout>}
             {pageKey === 'about' && <Layout darkNav={true}><About /></Layout>}
-            {pageKey === 'approach' && <Layout><Approach /></Layout>}
+            {pageKey === 'approach' && <Layout orangeNav={true}><Approach /></Layout>}
             {pageKey === 'work' && <Layout><Work /></Layout>}
             {pageKey === 'case-studies' && <Layout><CaseStudies /></Layout>}
             {pageKey === 'contact' && <Layout><Contact /></Layout>}

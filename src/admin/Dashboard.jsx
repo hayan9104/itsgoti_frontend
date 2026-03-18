@@ -9,7 +9,6 @@ import PagesManager from './PagesManager';
 import AccountManager from './AccountManager';
 import SiteSettings from './SiteSettings';
 import ThemesManager from './ThemesManager';
-import CaseStudyPageEditor from './CaseStudyPageEditor';
 import VisualPageEditor from './pageEditor/VisualPageEditor';
 
 // Icon components
@@ -382,7 +381,6 @@ const ThemePagesWrapper = () => {
   const [togglingPage, setTogglingPage] = useState(null);
   const [showRedirectModal, setShowRedirectModal] = useState(false);
   const [pageToHide, setPageToHide] = useState(null);
-  const [selectedPage, setSelectedPage] = useState(null);
   const [defaultLandingPage, setDefaultLandingPage] = useState('landing');
   const [savingDefault, setSavingDefault] = useState(false);
   const [landingPageSlugs, setLandingPageSlugs] = useState({
@@ -400,7 +398,6 @@ const ThemePagesWrapper = () => {
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
     { name: 'work', label: 'Our Work' },
-    { name: 'case-study', label: 'Case Study' },
     { name: 'contact', label: 'Contact' },
     { name: 'footer', label: 'Footer' },
   ];
@@ -409,10 +406,8 @@ const ThemePagesWrapper = () => {
 
   // Pages that use the visual editor
   const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
-  // Pages that use modal editors
-  const modalEditorPages = ['case-study'];
   // All editable pages
-  const editablePages = [...visualEditorPages, ...modalEditorPages];
+  const editablePages = visualEditorPages;
 
   const fetchTheme = async () => {
     try {
@@ -669,8 +664,6 @@ const ThemePagesWrapper = () => {
                 onClick={() => {
                   if (visualEditorPages.includes(page.name)) {
                     navigate(`/goti/admin/themes/${themeId}/pages/${page.name}/edit`);
-                  } else if (modalEditorPages.includes(page.name)) {
-                    setSelectedPage(page);
                   }
                 }}
                 style={{
@@ -717,7 +710,6 @@ const ThemePagesWrapper = () => {
                 const routePath = page.name === 'landing' ? `/${landingPageSlugs['landing']?.slug || 'landing_page1'}`
                   : page.name === 'landing-page-2' ? `/${landingPageSlugs['landing-page-2']?.slug || 'landing_page2'}`
                   : page.name === 'landing-page-3' ? `/${landingPageSlugs['landing-page-3']?.slug || 'landing_page3'}`
-                  : page.name === 'case-study' ? '/case-studies'
                   : `/${page.name}`;
                 return (
                   <button
@@ -757,42 +749,6 @@ const ThemePagesWrapper = () => {
         </div>
       )}
 
-      {/* Case Study Page Editor Modal */}
-      {selectedPage && (
-        <div style={{
-          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-        }}>
-          <div style={{
-            backgroundColor: '#fff', borderRadius: 8,
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            maxWidth: 1000, width: '100%', maxHeight: '90vh', overflowY: 'auto', margin: 16,
-          }}>
-            <div style={{ padding: 24 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>
-                  Edit {selectedPage.label}
-                </h2>
-                <button
-                  onClick={() => setSelectedPage(null)}
-                  style={{ color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              {selectedPage.name === 'case-study' && (
-                <CaseStudyPageEditor
-                  onClose={() => { setSelectedPage(null); fetchTheme(); }}
-                  onSave={fetchTheme}
-                  caseStudiesPath={`/goti/admin/themes/${themeId}/case-studies`}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

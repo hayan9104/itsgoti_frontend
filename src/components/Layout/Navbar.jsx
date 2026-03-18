@@ -18,7 +18,7 @@ const ThreeDotsIcon = ({ size = 24, color = '#000' }) => (
   </svg>
 );
 
-const Navbar = ({ dark = false, blue = false }) => {
+const Navbar = ({ dark = false, blue = false, orange = false }) => {
   const { isMobile, isTablet } = useWindowSize();
   const { isPageVisible } = usePageVisibility();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,15 +56,15 @@ const Navbar = ({ dark = false, blue = false }) => {
   const navPadding = isMobile ? '0 16px' : isTablet ? '0 40px' : '0 100px';
   const navHeight = isMobile ? '64px' : '80px';
 
-  // Colors based on mode (blue takes precedence, then dark)
-  const bgColor = blue ? '#2558BF' : dark ? '#0F0F0F' : '#fff';
-  const textColor = (blue || dark) ? '#fff' : '#333';
-  const borderColor = (blue || dark) ? '#fff' : '#000';
-  const invertIcons = blue || dark;
+  // Colors based on mode (blue takes precedence, then orange, then dark)
+  const bgColor = blue ? '#2558BF' : orange ? '#E2775A' : dark ? '#0F0F0F' : '#fff';
+  const textColor = (blue || orange || dark) ? '#fff' : '#333';
+  const borderColor = (blue || orange || dark) ? '#fff' : '#000';
+  const invertIcons = blue || orange || dark;
 
   return (
-    <header style={{ backgroundColor: bgColor, position: 'sticky', top: 0, zIndex: 9999 }}>
-      <nav style={{ padding: navPadding }}>
+    <header style={{ backgroundColor: bgColor, position: 'fixed', top: 0, left: 0, right: 0, width: '100%', height: navHeight, zIndex: 9999 }}>
+      <nav style={{ padding: navPadding, height: '100%' }}>
         <div
           style={{
             maxWidth: '1320px',
