@@ -47,7 +47,6 @@ const defaultPageSlugs = {
   'work': { slug: 'work', label: 'Our Work' },
   'case-studies': { slug: 'case-studies', label: 'Case Studies' },
   'contact': { slug: 'contact', label: 'Contact' },
-  'admin': { slug: 'admin', label: 'Admin Panel' },
 };
 
 const PageSlugsContext = createContext({
@@ -134,7 +133,7 @@ function DefaultLandingRouter() {
 
 // Dynamic page router - matches any slug to the correct page
 function DynamicPageRouter() {
-  const { slug, '*': rest } = useParams();
+  const { slug } = useParams();
   const { landingSlugs, pageSlugs, loaded } = usePageSlugs();
 
   // Wait for slugs to load before matching
@@ -166,16 +165,6 @@ function DynamicPageRouter() {
   // Check main pages
   for (const [pageKey, slugData] of Object.entries(pageSlugs)) {
     if (slugData.slug === slug) {
-      // Handle admin - render admin panel directly
-      if (pageKey === 'admin') {
-        return (
-          <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          </Suspense>
-        );
-      }
       return (
         <Suspense fallback={<PageLoader />}>
           <PageVisibilityWrapper pageName={pageKey} fallbackPath="/">
@@ -192,44 +181,6 @@ function DynamicPageRouter() {
   }
 
   // Slug not found - redirect to home
-  return <Navigate to="/" replace />;
-}
-
-// Catch-all router - handles custom admin slugs with slashes (e.g., goti/admin)
-function CatchAllRouter() {
-  const { '*': fullPath } = useParams();
-  const { pageSlugs, loaded } = usePageSlugs();
-
-  if (!loaded) {
-    return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>;
-  }
-
-  const adminSlug = pageSlugs.admin?.slug || 'admin';
-
-  // Check if path starts with custom admin slug (handles multi-segment slugs like "goti/admin")
-  if (fullPath && adminSlug !== 'admin') {
-    // Check for admin login
-    if (fullPath === `${adminSlug}/login`) {
-      return (
-        <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
-          <AdminLogin />
-        </Suspense>
-      );
-    }
-
-    // Check if path starts with admin slug
-    if (fullPath === adminSlug || fullPath.startsWith(`${adminSlug}/`)) {
-      return (
-        <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        </Suspense>
-      );
-    }
-  }
-
-  // Not a valid path, redirect to home
   return <Navigate to="/" replace />;
 }
 
@@ -260,10 +211,10 @@ function App() {
           {/* Footer Preview Route (for visual editor) */}
           <Route path="/footer-preview" element={<Suspense fallback={<PageLoader />}><FooterPreview /></Suspense>} />
 
-          {/* Admin Routes - Lazy loaded (default /admin path) */}
-          <Route path="/admin/login" element={<Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}><AdminLogin /></Suspense>} />
+          {/* Admin Routes - /goti/admin */}
+          <Route path="/goti/admin/login" element={<Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}><AdminLogin /></Suspense>} />
           <Route
-            path="/admin/*"
+            path="/goti/admin/*"
             element={
               <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
                 <ProtectedRoute>
@@ -275,9 +226,6 @@ function App() {
 
           {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
           <Route path="/:slug" element={<DynamicPageRouter />} />
-
-          {/* Catch-all for multi-segment admin slugs like goti/admin */}
-          <Route path="/*" element={<CatchAllRouter />} />
         </Routes>
       </PageSlugsProvider>
     </Router>

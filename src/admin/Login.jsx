@@ -17,7 +17,7 @@ const Login = () => {
     try {
       setError('');
       await login(data.email, data.password);
-      navigate('/admin');
+      navigate('/goti/admin');
     } catch (err) {
       // Show user-friendly error message
       const serverMessage = err.response?.data?.message;

@@ -75,7 +75,7 @@ const Dashboard = () => {
   const location = useLocation();
 
   // Check if we're inside a theme (URL contains /themes/:id/)
-  const themeMatch = location.pathname.match(/\/admin\/themes\/([a-f0-9]{24})/);
+  const themeMatch = location.pathname.match(/\/goti\/admin\/themes\/([a-f0-9]{24})/);
   const isInsideTheme = !!themeMatch;
 
   if (isInsideTheme) {
@@ -94,7 +94,7 @@ const TopLevelAdmin = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/goti/admin/login');
   };
 
   return (
@@ -106,7 +106,7 @@ const TopLevelAdmin = () => {
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Link to="/admin" style={{ fontSize: 20, fontWeight: 700, color: '#111827', textDecoration: 'none' }}>
+          <Link to="/goti/admin" style={{ fontSize: 20, fontWeight: 700, color: '#111827', textDecoration: 'none' }}>
             Admin Panel
           </Link>
           <Link to="/" style={{ fontSize: 14, color: '#2563eb', textDecoration: 'none' }} target="_blank">
@@ -142,7 +142,7 @@ const ThemeAdminPanel = () => {
   const location = useLocation();
 
   // Extract themeId from URL
-  const themeMatch = location.pathname.match(/\/admin\/themes\/([a-f0-9]{24})/);
+  const themeMatch = location.pathname.match(/\/goti\/admin\/themes\/([a-f0-9]{24})/);
   const themeId = themeMatch ? themeMatch[1] : null;
 
   const [themeName, setThemeName] = useState('');
@@ -159,11 +159,11 @@ const ThemeAdminPanel = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login');
+    navigate('/goti/admin/login');
   };
 
   const navItems = [
-    { to: `/admin/themes/${themeId}`, label: 'Dashboard', exact: true, icon: DashboardIcon },
+    { to: `/goti/admin/themes/${themeId}`, label: 'Dashboard', exact: true, icon: DashboardIcon },
     { to: `/admin/themes/${themeId}/pages`, label: 'Pages', icon: PagesIcon },
     { to: `/admin/themes/${themeId}/works`, label: 'Works', icon: WorksIcon },
     { to: `/admin/themes/${themeId}/case-studies`, label: 'Case Studies', icon: CaseStudyIcon },
@@ -184,7 +184,7 @@ const ThemeAdminPanel = () => {
         position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <Link to="/admin" style={{ fontSize: 20, fontWeight: 700, color: '#111827', textDecoration: 'none' }}>
+          <Link to="/goti/admin" style={{ fontSize: 20, fontWeight: 700, color: '#111827', textDecoration: 'none' }}>
             Admin Panel
           </Link>
           <Link to="/" style={{ fontSize: 14, color: '#2563eb', textDecoration: 'none' }} target="_blank">
@@ -210,7 +210,7 @@ const ThemeAdminPanel = () => {
         }}>
           {/* Back to Themes */}
           <Link
-            to="/admin"
+            to="/goti/admin"
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 16px', borderRadius: 8, marginBottom: 8,
