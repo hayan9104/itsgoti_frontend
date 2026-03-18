@@ -20,6 +20,7 @@ const defaultPageSlugs = {
   'work': { slug: 'work', label: 'Our Work', category: 'main' },
   'case-studies': { slug: 'case-studies', label: 'Case Studies', category: 'main' },
   'contact': { slug: 'contact', label: 'Contact', category: 'main' },
+  'admin': { slug: 'admin', label: 'Admin Panel', category: 'admin' },
 };
 
 const SiteSettings = () => {
@@ -627,7 +628,7 @@ const SiteSettings = () => {
         </div>
 
         {/* Main Pages Section */}
-        <div>
+        <div style={{ marginBottom: '24px' }}>
           <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#6b7280', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Main Pages
           </h3>
@@ -658,6 +659,46 @@ const SiteSettings = () => {
                     }}
                   />
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Admin Section */}
+        <div>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#6b7280', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Admin
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            {Object.entries(pageSlugs).filter(([, data]) => data.category === 'admin').map(([pageKey, data]) => (
+              <div key={pageKey} style={{
+                padding: '16px', backgroundColor: '#fef3c7',
+                borderRadius: '8px', border: '1px solid #fcd34d',
+              }}>
+                <label style={{ fontSize: '13px', fontWeight: 500, color: '#374151', display: 'block', marginBottom: '8px' }}>
+                  {data.label}
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{
+                    padding: '10px 12px', backgroundColor: '#fde68a',
+                    border: '1px solid #fcd34d', borderRight: 'none',
+                    borderRadius: '6px 0 0 6px', fontSize: '14px', color: '#92400e',
+                  }}>/</span>
+                  <input
+                    type="text"
+                    value={data.slug}
+                    onChange={(e) => handleSlugChange(pageKey, e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    style={{
+                      flex: 1, padding: '10px 12px',
+                      fontSize: '14px', border: '1px solid #fcd34d',
+                      borderRadius: '0 6px 6px 0', backgroundColor: '#fff',
+                      fontFamily: 'monospace', minWidth: 0,
+                    }}
+                  />
+                </div>
+                <p style={{ fontSize: '11px', color: '#92400e', marginTop: '8px', margin: '8px 0 0 0' }}>
+                  ⚠️ Changing this will update the admin panel URL
+                </p>
               </div>
             ))}
           </div>

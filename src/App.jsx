@@ -47,6 +47,7 @@ const defaultPageSlugs = {
   'work': { slug: 'work', label: 'Our Work' },
   'case-studies': { slug: 'case-studies', label: 'Case Studies' },
   'contact': { slug: 'contact', label: 'Contact' },
+  'admin': { slug: 'admin', label: 'Admin Panel' },
 };
 
 const PageSlugsContext = createContext({
@@ -165,6 +166,10 @@ function DynamicPageRouter() {
   // Check main pages
   for (const [pageKey, slugData] of Object.entries(pageSlugs)) {
     if (slugData.slug === slug) {
+      // Handle admin redirect
+      if (pageKey === 'admin') {
+        return <Navigate to="/admin" replace />;
+      }
       return (
         <Suspense fallback={<PageLoader />}>
           <PageVisibilityWrapper pageName={pageKey} fallbackPath="/">
