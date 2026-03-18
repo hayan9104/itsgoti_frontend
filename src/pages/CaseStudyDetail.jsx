@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { caseStudiesAPI, pagesAPI } from '../services/api';
 import useWindowSize from '../hooks/useWindowSize';
+import EditableSection from '../components/EditableSection';
 import vectorIcon from '../assets/Vector.png';
 import sliderIcon from '../assets/Frame 1618874557.png';
 
@@ -315,8 +316,105 @@ const ImageComparisonSlider = ({ leftImage, rightImage, isMobile, isTablet, slid
 const CaseStudyDetail = () => {
   const { slug } = useParams();
   const { isMobile, isTablet } = useWindowSize();
-  const [caseStudy, setCaseStudy] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  // Editor mode - check URL params and slug
+  const [searchParams] = useSearchParams();
+  const isEditorMode = searchParams.get('editor') === 'true' || slug === 'preview';
+  const [selectedSection, setSelectedSection] = useState(null);
+  const isNewCaseStudy = slug === 'preview';
+
+  // Default case study data for editor preview (demo case study)
+  const getDefaultCaseStudy = () => ({
+    title: 'Flavor & Co. Brand Identity',
+    slug: slug || 'preview',
+    client: 'Flavor & Co.',
+    clientLogo: 'https://placehold.co/200x80/2558BF/FFFFFF?text=Flavor+%26+Co.',
+    clientLogoMobile: 'https://placehold.co/150x60/2558BF/FFFFFF?text=Flavor+%26+Co.',
+    industry: 'Food & Beverage',
+    platform: 'Web & Mobile',
+    duration: '4 months',
+    projectFocus: ['Brand Strategy', 'UX Design', 'Development'],
+    services: ['Branding', 'Web Design', 'Mobile App', 'E-commerce'],
+    heroImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1920&h=1080&fit=crop',
+    heroImageMobile: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=1200&fit=crop',
+    bannerImage: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1440&h=600&fit=crop',
+    bannerImageMobile: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=400&fit=crop',
+    collaborationTitle: 'The Collaboration',
+    collaborationText: 'Flavor & Co. approached us with a vision to revolutionize how people discover and order artisanal food products online. Their existing brand felt outdated and failed to capture the premium quality of their offerings. We partnered closely with their team to reimagine every touchpoint—from brand identity to digital experience—creating a cohesive ecosystem that celebrates culinary craftsmanship while delivering seamless e-commerce functionality.',
+    challenge: 'Flavor & Co. faced multiple challenges: an outdated visual identity that didn\'t reflect their premium positioning, a fragmented digital presence across web and mobile, poor conversion rates on their existing e-commerce platform, and difficulty standing out in a crowded market. They needed a complete brand transformation that would resonate with food enthusiasts while driving measurable business results.',
+    solution: 'We developed a comprehensive brand strategy centered on "culinary discovery." This included a fresh visual identity with warm, appetizing colors and custom typography, a responsive website with immersive product storytelling, a mobile app for seamless ordering and loyalty rewards, and an optimized checkout flow that reduced cart abandonment by 45%. Every element was designed to evoke the sensory experience of premium food.',
+    results: 'The rebrand exceeded all expectations. Within 6 months of launch, Flavor & Co. saw a 78% increase in online revenue, 156% growth in mobile app downloads, and a Net Promoter Score that jumped from 32 to 67. The new brand identity won a Gold Award at the Brand Impact Awards 2024.',
+    processSteps: [
+      { number: '01', title: 'Discovery & Research' },
+      { number: '02', title: 'Brand Strategy' },
+      { number: '03', title: 'Visual Identity Design' },
+      { number: '04', title: 'UX/UI Design' },
+      { number: '05', title: 'Development & QA' },
+      { number: '06', title: 'Launch & Optimization' },
+    ],
+    opportunities: [
+      { number: '01', title: 'Brand Differentiation', description: 'Create a distinctive visual language that sets Flavor & Co. apart from competitors and communicates premium quality at every touchpoint.' },
+      { number: '02', title: 'Digital Experience', description: 'Build an immersive, user-friendly platform that makes discovering and purchasing artisanal products a delightful journey.' },
+      { number: '03', title: 'Mobile-First Commerce', description: 'Develop a native mobile app that drives repeat purchases through personalized recommendations and loyalty rewards.' },
+      { number: '04', title: 'Conversion Optimization', description: 'Streamline the checkout process and implement data-driven improvements to maximize revenue per visitor.' },
+    ],
+    experienceTitle: 'The Experience We Created',
+    experienceImages: [
+      'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=1200&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=1200&h=800&fit=crop',
+    ],
+    experienceImagesMobile: [
+      'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=600&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=600&h=800&fit=crop',
+    ],
+    experienceQuote: 'The team didn\'t just redesign our brand—they transformed how we connect with our customers. Every detail reflects our passion for quality, and the results speak for themselves.',
+    colorPalette: [
+      { color: '#D4543C', name: 'Tomato Red' },
+      { color: '#F4A259', name: 'Warm Orange' },
+      { color: '#2D5A27', name: 'Fresh Green' },
+      { color: '#FDF6E3', name: 'Cream' },
+      { color: '#1A1A1A', name: 'Rich Black' },
+    ],
+    typography: {
+      fontFamily: 'Playfair Display + Inter',
+      fontImage: 'https://placehold.co/800x400/1A1A1A/FFFFFF?text=Aa+Bb+Cc+123',
+      fontImageMobile: 'https://placehold.co/400x300/1A1A1A/FFFFFF?text=Aa+Bb+Cc',
+      characterSet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789',
+    },
+    metrics: [
+      { value: '+78%', label: 'Online Revenue' },
+      { value: '+156%', label: 'App Downloads' },
+      { value: '-45%', label: 'Cart Abandonment' },
+      { value: '+109%', label: 'NPS Score' },
+    ],
+    images: [
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&h=800&fit=crop',
+    ],
+    imagesMobile: [
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=800&fit=crop',
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=800&fit=crop',
+    ],
+    testimonial: {
+      quote: 'Working with the team was an absolute pleasure. They understood our vision from day one and brought it to life in ways we never imagined. The new brand has completely transformed our business.',
+      author: 'Sarah Mitchell',
+      position: 'CEO, Flavor & Co.',
+      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+      imageMobile: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
+    },
+    technologies: ['React', 'Next.js', 'Node.js', 'Shopify', 'React Native', 'Figma'],
+    relatedWorks: [],
+    published: false,
+    order: 0,
+  });
+
+  const defaultCaseStudy = getDefaultCaseStudy();
+
+  // Initialize with default data only for 'preview' slug (new case study)
+  const [caseStudy, setCaseStudy] = useState(() => isNewCaseStudy ? getDefaultCaseStudy() : null);
+  const [loading, setLoading] = useState(!isNewCaseStudy);
   const [activeTab, setActiveTab] = useState('challenges');
   const [relatedProjects, setRelatedProjects] = useState([]);
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
@@ -350,10 +448,84 @@ const CaseStudyDetail = () => {
   ]);
 
   useEffect(() => {
-    fetchCaseStudy();
+    // For 'preview' slug in editor mode, don't fetch - we use default data
+    // For real slugs (existing case studies), fetch from API first
+    if (slug !== 'preview') {
+      fetchCaseStudy();
+    }
     fetchAboutContent();
     fetchTestimonialContent();
   }, [slug]);
+
+  // Editor mode: Listen for updates from parent
+  useEffect(() => {
+    if (!isEditorMode) return;
+
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'EDITOR_UPDATE' || event.data.type === 'EDITOR_INIT') {
+        const { section, data } = event.data.payload;
+        setSelectedSection(section);
+        // Always update case study data from editor in editor mode
+        if (data) {
+          setCaseStudy(prevData => {
+            // Start with defaults and previous data
+            const merged = { ...defaultCaseStudy, ...prevData };
+
+            // Only apply non-empty values from incoming data
+            // This keeps demo content until user actually fills in their own content
+            Object.keys(data).forEach(key => {
+              const value = data[key];
+              // Check if value is meaningful (not empty)
+              if (value === null || value === undefined) return;
+              if (typeof value === 'string' && value.trim() === '') return;
+              if (Array.isArray(value) && value.length === 0) return;
+              if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return;
+
+              // For nested objects like typography, merge non-empty fields
+              if (key === 'typography' && typeof value === 'object') {
+                merged.typography = { ...merged.typography };
+                Object.keys(value).forEach(tKey => {
+                  if (value[tKey] && value[tKey].trim && value[tKey].trim() !== '') {
+                    merged.typography[tKey] = value[tKey];
+                  } else if (value[tKey] && !value[tKey].trim) {
+                    merged.typography[tKey] = value[tKey];
+                  }
+                });
+                return;
+              }
+
+              // For testimonial object
+              if (key === 'testimonial' && typeof value === 'object') {
+                merged.testimonial = { ...merged.testimonial };
+                Object.keys(value).forEach(tKey => {
+                  if (value[tKey] && value[tKey].trim && value[tKey].trim() !== '') {
+                    merged.testimonial[tKey] = value[tKey];
+                  } else if (value[tKey] && !value[tKey].trim) {
+                    merged.testimonial[tKey] = value[tKey];
+                  }
+                });
+                return;
+              }
+
+              // Apply the value
+              merged[key] = value;
+            });
+
+            return merged;
+          });
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Notify parent that preview is ready
+    window.parent.postMessage({ type: 'PREVIEW_READY' }, window.location.origin);
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, [isEditorMode]);
 
   const fetchCaseStudy = async () => {
     try {
@@ -419,7 +591,8 @@ const CaseStudyDetail = () => {
     { value: currentTestimonial.stat3Value, label: currentTestimonial.stat3Label },
   ];
 
-  if (loading) {
+  // Don't show loading spinner for new case study preview (we have default data)
+  if (loading && !isNewCaseStudy) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         <div style={{
@@ -435,7 +608,8 @@ const CaseStudyDetail = () => {
     );
   }
 
-  if (!caseStudy) {
+  // Show not found only if not a new case study preview (which has default data)
+  if (!caseStudy && !isNewCaseStudy) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#111', marginBottom: '16px' }}>
@@ -465,13 +639,19 @@ const CaseStudyDetail = () => {
     <div style={{ backgroundColor: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden' }}>
 
       {/* ==================== HERO SECTION (Blue Part) ==================== */}
-      <section style={{
-        backgroundColor: '#2558BF',
-        position: 'relative',
-        overflow: 'hidden',
-        height: isMobile ? '184px' : isTablet ? '200px' : '220px',
-        width: '100%',
-      }}>
+      <EditableSection
+        sectionId="hero"
+        label="Hero Section"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'images'}
+        style={{
+          backgroundColor: '#2558BF',
+          position: 'relative',
+          overflow: 'hidden',
+          height: isMobile ? '184px' : isTablet ? '200px' : '220px',
+          width: '100%',
+        }}
+      >
         {/* Noise texture overlay with blue tint */}
         <div style={{
           position: 'absolute',
@@ -543,14 +723,20 @@ const CaseStudyDetail = () => {
             ))}
           </div>
         </div>
-      </section>
+      </EditableSection>
 
       {/* ==================== BANNER IMAGE SECTION ==================== */}
-      <section style={{
-        width: '100%',
-        height: isMobile ? '356px' : isTablet ? '400px' : '533px',
-        overflow: 'hidden',
-      }}>
+      <EditableSection
+        sectionId="banner"
+        label="Banner Image"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'images'}
+        style={{
+          width: '100%',
+          height: isMobile ? '356px' : isTablet ? '400px' : '533px',
+          overflow: 'hidden',
+        }}
+      >
         <img
           src={
             isMobile
@@ -564,14 +750,20 @@ const CaseStudyDetail = () => {
             objectFit: 'cover',
           }}
         />
-      </section>
+      </EditableSection>
 
       {/* ==================== THE COLLABORATION SECTION ==================== */}
-      <section style={{
-        padding: isMobile ? '56px 20px 0' : isTablet ? '60px 40px' : '60px 50px',
-        maxWidth: '1440px',
-        margin: '0 auto',
-      }}>
+      <EditableSection
+        sectionId="collaboration"
+        label="Collaboration"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'collaboration'}
+        style={{
+          padding: isMobile ? '56px 20px 0' : isTablet ? '60px 40px' : '60px 50px',
+          maxWidth: '1440px',
+          margin: '0 auto',
+        }}
+      >
         {isMobile ? (
           /* Mobile Layout - Vertical stacking */
           <div style={{
@@ -792,11 +984,17 @@ const CaseStudyDetail = () => {
             </div>
           </div>
         )}
-      </section>
+      </EditableSection>
 
       {/* ==================== PROBLEM DEFINITION SECTION ==================== */}
-      <div style={{ position: 'relative', overflow: 'hidden' }}>
-      <section style={{
+      <EditableSection
+        sectionId="problem"
+        label="Challenge & Solution"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'challenge'}
+        style={{ position: 'relative', overflow: 'hidden' }}
+      >
+      <div style={{
         padding: isMobile ? '50px 20px 60px' : isTablet ? '40px 40px 80px' : '50px 50px 100px',
         maxWidth: '1440px',
         margin: '0 auto',
@@ -893,6 +1091,7 @@ const CaseStudyDetail = () => {
         }} />
       )}
       </div>
+      </EditableSection>
 
       {/* ==================== APP SCREENSHOTS SECTION - Image Comparison Slider ==================== */}
       {(caseStudy.images?.length > 0 || caseStudy.imagesMobile?.length > 0) && (
@@ -1192,9 +1391,15 @@ const CaseStudyDetail = () => {
       }} />
 
       {/* ==================== THE EXPERIENCE SECTION ==================== */}
-      <section style={{
-        padding: isMobile ? '60px 0' : isTablet ? '80px 0' : '80px 0',
-      }}>
+      <EditableSection
+        sectionId="experience"
+        label="Experience"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'experience'}
+        style={{
+          padding: isMobile ? '60px 0' : isTablet ? '80px 0' : '80px 0',
+        }}
+      >
         <h2 style={{
           fontSize: isMobile ? '26px' : isTablet ? '42px' : '50px',
           color: '#000',
@@ -1353,10 +1558,16 @@ const CaseStudyDetail = () => {
             </p>
           </div>
         )}
-      </section>
+      </EditableSection>
 
       {/* ==================== COLOR PALETTE SECTION ==================== */}
-      <section style={{ position: 'relative' }}>
+      <EditableSection
+        sectionId="colorPalette"
+        label="Color Palette"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'design'}
+        style={{ position: 'relative' }}
+      >
         {colorPalette.map((color, index) => (
           <div
             key={index}
@@ -1400,16 +1611,22 @@ const CaseStudyDetail = () => {
             Palatte
           </p>
         </div>
-      </section>
+      </EditableSection>
 
       {/* ==================== TYPOGRAPHY SECTION ==================== */}
       {(caseStudy.typography?.fontImage || caseStudy.typography?.fontImageMobile) && (
-        <section style={{
-          width: '100%',
-          height: isMobile ? '664px' : isTablet ? '450px' : '603px',
-          overflow: 'hidden',
-          position: 'relative',
-        }}>
+        <EditableSection
+          sectionId="typography"
+          label="Typography"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'design'}
+          style={{
+            width: '100%',
+            height: isMobile ? '664px' : isTablet ? '450px' : '603px',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
           <img
             src={isMobile
               ? (caseStudy.typography?.fontImageMobile || caseStudy.typography?.fontImage)
@@ -1422,11 +1639,16 @@ const CaseStudyDetail = () => {
               objectFit: 'cover',
             }}
           />
-        </section>
+        </EditableSection>
       )}
 
       {/* ==================== CTA SECTION ==================== */}
-      <section style={{
+      <EditableSection
+        sectionId="cta"
+        label="CTA Section"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'settings'}
+        style={{
         paddingTop: isMobile ? '80px' : '100px',
         marginTop: '0',
         paddingBottom: isMobile ? '0px' : isTablet ? '0px' : '0px',
@@ -1646,7 +1868,7 @@ const CaseStudyDetail = () => {
             </div>
           )}
         </div>
-      </section>
+      </EditableSection>
 
       {/* ==================== TESTIMONIAL SECTION ==================== */}
       {currentTestimonial.quote1 && (
@@ -2046,9 +2268,15 @@ const CaseStudyDetail = () => {
 
       {/* ==================== RELATED PROJECTS SECTION ==================== */}
       {caseStudy.relatedWorks && caseStudy.relatedWorks.length > 0 && (
-        <section style={{
-          padding: isMobile ? '48px 0 100px' : isTablet ? '40px 0 200px' : '40px 0 200px',
-        }}>
+        <EditableSection
+          sectionId="related"
+          label="Related Projects"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'related'}
+          style={{
+            padding: isMobile ? '48px 0 100px' : isTablet ? '40px 0 200px' : '40px 0 200px',
+          }}
+        >
           {/* Title */}
           <h2 style={{
             fontSize: isMobile ? '26px' : isTablet ? '42px' : '50px',
@@ -2191,7 +2419,7 @@ const CaseStudyDetail = () => {
               </Link>
             ))}
           </div>
-        </section>
+        </EditableSection>
       )}
     </div>
   );

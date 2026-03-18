@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import { caseStudiesAPI, uploadAPI, worksAPI } from '../services/api';
 
@@ -1125,7 +1125,189 @@ const SectionHeader = ({ title }) => (
   </h3>
 );
 
-// Case Study Form Component
+// Section Card Component (for grouping fields in section editor)
+const SectionCard = ({ title, children }) => (
+  <div style={{
+    backgroundColor: '#fff',
+    border: '1px solid #e5e7eb',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '16px',
+  }}>
+    {title && (
+      <h3 style={{
+        fontSize: '15px',
+        fontWeight: 600,
+        color: '#111827',
+        marginBottom: '16px',
+        paddingBottom: '12px',
+        borderBottom: '1px solid #f3f4f6',
+      }}>
+        {title}
+      </h3>
+    )}
+    {children}
+  </div>
+);
+
+// Responsive Image Upload (wrapper for DualImageUpload with simpler API)
+const ResponsiveImageUpload = ({ label, desktopName, mobileName, desktopValue, mobileValue, onUpload }) => {
+  const [uploadingDesktop, setUploadingDesktop] = useState(false);
+  const [uploadingMobile, setUploadingMobile] = useState(false);
+
+  const handleFileChange = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const setUploading = type === 'desktop' ? setUploadingDesktop : setUploadingMobile;
+    const fieldName = type === 'desktop' ? desktopName : mobileName;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const response = await uploadAPI.uploadImage(formData);
+      const imageUrl = response.data.url || response.data.data?.path || response.data.path;
+      if (imageUrl) {
+        onUpload(fieldName, imageUrl);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#374151', marginBottom: '12px' }}>
+        {label}
+      </label>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        {/* Desktop */}
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', color: '#3b82f6', marginBottom: '6px' }}>Desktop</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              value={desktopValue || ''}
+              readOnly
+              placeholder="Desktop image URL"
+              style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f9fafb' }}
+            />
+            <label style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
+              {uploadingDesktop ? '...' : 'Upload'}
+              <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'desktop')} style={{ display: 'none' }} />
+            </label>
+          </div>
+          {desktopValue && <img src={desktopValue} alt="Desktop preview" style={{ marginTop: '8px', maxHeight: '60px', borderRadius: '4px' }} />}
+        </div>
+        {/* Mobile */}
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', color: '#10b981', marginBottom: '6px' }}>Mobile</label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              value={mobileValue || ''}
+              readOnly
+              placeholder="Mobile image URL"
+              style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f9fafb' }}
+            />
+            <label style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
+              {uploadingMobile ? '...' : 'Upload'}
+              <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'mobile')} style={{ display: 'none' }} />
+            </label>
+          </div>
+          {mobileValue && <img src={mobileValue} alt="Mobile preview" style={{ marginTop: '8px', maxHeight: '60px', borderRadius: '4px' }} />}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Multiple Image Upload (for arrays like experienceImages)
+const MultipleImageUpload = ({ label, desktopName, mobileName, desktopValues = [], mobileValues = [], onUpload }) => {
+  const [uploadingIndex, setUploadingIndex] = useState({ desktop: null, mobile: null });
+
+  const handleAdd = (type) => {
+    const name = type === 'desktop' ? desktopName : mobileName;
+    const values = type === 'desktop' ? desktopValues : mobileValues;
+    onUpload(name, [...values, '']);
+  };
+
+  const handleRemove = (type, index) => {
+    const name = type === 'desktop' ? desktopName : mobileName;
+    const values = type === 'desktop' ? [...desktopValues] : [...mobileValues];
+    values.splice(index, 1);
+    onUpload(name, values);
+  };
+
+  const handleFileUpload = async (type, index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingIndex(prev => ({ ...prev, [type]: index }));
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const response = await uploadAPI.uploadImage(formData);
+      const imageUrl = response.data.url || response.data.data?.path || response.data.path;
+      if (imageUrl) {
+        const name = type === 'desktop' ? desktopName : mobileName;
+        const values = type === 'desktop' ? [...desktopValues] : [...mobileValues];
+        values[index] = imageUrl;
+        onUpload(name, values);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      setUploadingIndex(prev => ({ ...prev, [type]: null }));
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#374151', marginBottom: '12px' }}>
+        {label}
+      </label>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        {/* Desktop Images */}
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', color: '#3b82f6', marginBottom: '8px' }}>Desktop Images</label>
+          {desktopValues.map((url, index) => (
+            <div key={index} style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center' }}>
+              {url && <img src={url} alt="" style={{ width: '40px', height: '30px', objectFit: 'cover', borderRadius: '4px' }} />}
+              <label style={{ padding: '6px 10px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                {uploadingIndex.desktop === index ? '...' : url ? 'Change' : 'Upload'}
+                <input type="file" accept="image/*" onChange={(e) => handleFileUpload('desktop', index, e)} style={{ display: 'none' }} />
+              </label>
+              <button type="button" onClick={() => handleRemove('desktop', index)} style={{ padding: '6px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>×</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => handleAdd('desktop')} style={{ padding: '6px 12px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', color: '#3b82f6' }}>+ Add Desktop</button>
+        </div>
+        {/* Mobile Images */}
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', color: '#10b981', marginBottom: '8px' }}>Mobile Images</label>
+          {mobileValues.map((url, index) => (
+            <div key={index} style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center' }}>
+              {url && <img src={url} alt="" style={{ width: '40px', height: '30px', objectFit: 'cover', borderRadius: '4px' }} />}
+              <label style={{ padding: '6px 10px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                {uploadingIndex.mobile === index ? '...' : url ? 'Change' : 'Upload'}
+                <input type="file" accept="image/*" onChange={(e) => handleFileUpload('mobile', index, e)} style={{ display: 'none' }} />
+              </label>
+              <button type="button" onClick={() => handleRemove('mobile', index)} style={{ padding: '6px 8px', backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>×</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => handleAdd('mobile')} style={{ padding: '6px 12px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', color: '#10b981' }}>+ Add Mobile</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Case Study Form Component - Split Screen Editor
 const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }) => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -1134,6 +1316,24 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
   const [allWorks, setAllWorks] = useState([]);
   const [editingSlug, setEditingSlug] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [selectedSection, setSelectedSection] = useState(null);
+  const iframeRef = useRef(null);
+  const [iframeSlug, setIframeSlug] = useState(null); // Track slug for iframe URL separately
+
+  // Sections for navigation (no emojis)
+  const sections = [
+    { id: 'basic', label: 'Basic Information' },
+    { id: 'images', label: 'Hero & Banner Images' },
+    { id: 'collaboration', label: 'Collaboration' },
+    { id: 'challenge', label: 'Challenge & Solution' },
+    { id: 'process', label: 'Process & Opportunities' },
+    { id: 'experience', label: 'Experience' },
+    { id: 'design', label: 'Colors & Typography' },
+    { id: 'metrics', label: 'Metrics & Results' },
+    { id: 'related', label: 'Related Works' },
+    { id: 'settings', label: 'Settings' },
+  ];
+
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -1178,6 +1378,81 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
     }
   }, [isEdit, id]);
 
+  // Send updates to iframe when form data or section changes
+  useEffect(() => {
+    const sendUpdate = () => {
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({
+          type: 'EDITOR_UPDATE',
+          payload: {
+            section: selectedSection,
+            data: formData,
+          }
+        }, window.location.origin);
+      }
+    };
+    // Send immediately for responsiveness
+    const timeoutId = setTimeout(sendUpdate, 50);
+    return () => clearTimeout(timeoutId);
+  }, [formData, selectedSection]);
+
+  // Listen for messages from iframe
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'SECTION_CLICKED') {
+        // Map iframe section IDs to our section IDs
+        const sectionMap = {
+          'hero': 'images',
+          'banner': 'images',
+          'collaboration': 'collaboration',
+          'problem': 'challenge',
+          'screenshots': 'images',
+          'process': 'process',
+          'opportunities': 'process',
+          'experience': 'experience',
+          'colorPalette': 'design',
+          'typography': 'design',
+          'cta': 'settings',
+          'testimonial': 'settings',
+          'related': 'related',
+        };
+        const mappedSection = sectionMap[event.data.sectionId] || event.data.sectionId;
+        setSelectedSection(mappedSection);
+      } else if (event.data.type === 'PREVIEW_READY') {
+        // Send initial data when iframe is ready
+        if (iframeRef.current?.contentWindow) {
+          iframeRef.current.contentWindow.postMessage({
+            type: 'EDITOR_INIT',
+            payload: {
+              section: selectedSection,
+              data: formData,
+            }
+          }, window.location.origin);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [selectedSection, formData]);
+
+  // Handle iframe load
+  const handleIframeLoad = () => {
+    setTimeout(() => {
+      if (iframeRef.current?.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({
+          type: 'EDITOR_INIT',
+          payload: {
+            section: selectedSection,
+            data: formData,
+          }
+        }, window.location.origin);
+      }
+    }, 100);
+  };
+
   const fetchAllWorks = async () => {
     try {
       const response = await worksAPI.getAll();
@@ -1191,7 +1466,12 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
     setLoading(true);
     try {
       const response = await caseStudiesAPI.getOne(id);
-      setFormData(response.data.data);
+      const data = response.data.data;
+      setFormData(data);
+      // Set iframe slug once and don't change it (prevents iframe reload)
+      if (data.slug && !iframeSlug) {
+        setIframeSlug(data.slug);
+      }
     } catch (error) {
       console.error('Error fetching case study:', error);
       alert('Failed to load case study');
@@ -1266,10 +1546,16 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
     try {
       if (isEdit) {
         await caseStudiesAPI.update(id, formData);
+        // Refresh iframe to show updated content
+        if (iframeRef.current) {
+          iframeRef.current.src = iframeRef.current.src;
+        }
       } else {
-        await caseStudiesAPI.create(formData);
+        // For new case study, create and redirect to edit page
+        const response = await caseStudiesAPI.create(formData);
+        const newId = response.data.data._id;
+        navigate(`${basePath}/edit/${newId}`);
       }
-      navigate(basePath);
     } catch (error) {
       console.error('Error saving case study:', error);
       alert('Failed to save case study');
@@ -1279,408 +1565,422 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
   };
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>;
+    return (
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6', zIndex: 9999 }}>
+        <div style={{ textAlign: 'center', color: '#6b7280' }}>Loading...</div>
+      </div>
+    );
   }
 
-  return (
-    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>
-          {isEdit ? 'Edit Case Study' : 'New Case Study'}
-        </h1>
-        <Link
-          to={basePath}
-          style={{ color: '#6b7280', textDecoration: 'none', fontSize: '14px' }}
-        >
-          &larr; Back to List
-        </Link>
-      </div>
+  // Handle multiple image upload for arrays
+  const handleMultipleImageUpload = (name, values) => {
+    setFormData(prev => ({ ...prev, [name]: values }));
+  };
 
-      <form onSubmit={handleSubmit}>
-        {/* Case Study URL Section */}
-        <div style={{
-          backgroundColor: '#f0fdf4', borderRadius: '8px', padding: '16px 20px',
-          marginBottom: '16px', border: '1px solid #bbf7d0',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: '#166534', marginBottom: '4px', display: 'block' }}>
-                Case Study URL
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#6b7280', fontSize: '14px' }}>/case-studies/</span>
-                {editingSlug ? (
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={handleSlugChange}
-                    onBlur={() => setEditingSlug(false)}
-                    autoFocus
-                    style={{
-                      padding: '6px 10px', fontSize: '14px', fontFamily: 'monospace',
-                      border: '1px solid #22c55e', borderRadius: '4px', backgroundColor: '#fff',
-                      minWidth: '200px',
-                    }}
-                  />
-                ) : (
-                  <span style={{
-                    fontFamily: 'monospace', fontSize: '14px', color: '#111827',
-                    backgroundColor: '#dcfce7', padding: '6px 10px', borderRadius: '4px',
-                  }}>
-                    {formData.slug || 'auto-generated-from-title'}
-                  </span>
-                )}
+  // Render section content based on selected section
+  const renderSectionContent = () => {
+    switch (selectedSection) {
+      case 'basic':
+        return (
+          <>
+            <SectionCard title="Basic Information">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <FormInput label="Title" name="title" value={formData.title} onChange={handleChange} placeholder="Case Study Title" required />
+                <FormInput label="Client" name="client" value={formData.client} onChange={handleChange} placeholder="Client Name" required />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <FormInput label="Industry" name="industry" value={formData.industry} onChange={handleChange} placeholder="e.g. Automotive" />
+                <FormInput label="Platform" name="platform" value={formData.platform} onChange={handleChange} placeholder="e.g. Mobile App" />
+                <FormInput label="Duration" name="duration" value={formData.duration} onChange={handleChange} placeholder="e.g. 6 months" />
+              </div>
+            </SectionCard>
+            <SectionCard title="Tags & Services">
+              <ArrayInput label="Project Focus" name="projectFocus" values={formData.projectFocus} onChange={handleArrayChange} placeholder="e.g. UX Design" />
+              <ArrayInput label="Services" name="services" values={formData.services} onChange={handleArrayChange} placeholder="e.g. Branding" />
+              <ArrayInput label="Technologies" name="technologies" values={formData.technologies} onChange={handleArrayChange} placeholder="e.g. React" />
+            </SectionCard>
+          </>
+        );
+      case 'images':
+        return (
+          <>
+            <SectionCard title="Client Logo">
+              <ResponsiveImageUpload label="Client Logo" desktopName="clientLogo" mobileName="clientLogoMobile" desktopValue={formData.clientLogo} mobileValue={formData.clientLogoMobile} onUpload={handleImageUpload} />
+            </SectionCard>
+            <SectionCard title="Hero Image">
+              <ResponsiveImageUpload label="Hero Image" desktopName="heroImage" mobileName="heroImageMobile" desktopValue={formData.heroImage} mobileValue={formData.heroImageMobile} onUpload={handleImageUpload} />
+            </SectionCard>
+            <SectionCard title="Banner Image">
+              <ResponsiveImageUpload label="Banner Image" desktopName="bannerImage" mobileName="bannerImageMobile" desktopValue={formData.bannerImage} mobileValue={formData.bannerImageMobile} onUpload={handleImageUpload} />
+            </SectionCard>
+            <SectionCard title="Gallery Images">
+              <MultipleImageUpload label="Gallery Images" desktopName="images" mobileName="imagesMobile" desktopValues={formData.images} mobileValues={formData.imagesMobile} onUpload={handleMultipleImageUpload} />
+            </SectionCard>
+          </>
+        );
+      case 'collaboration':
+        return (
+          <SectionCard title="Collaboration">
+            <FormInput label="Collaboration Text" name="collaborationText" value={formData.collaborationText} onChange={handleChange} multiline rows={4} placeholder="Describe the collaboration..." />
+          </SectionCard>
+        );
+      case 'challenge':
+        return (
+          <>
+            <SectionCard title="Challenge">
+              <FormInput label="Challenge" name="challenge" value={formData.challenge} onChange={handleChange} multiline rows={4} placeholder="Describe the challenge..." required />
+            </SectionCard>
+            <SectionCard title="Solution">
+              <FormInput label="Solution" name="solution" value={formData.solution} onChange={handleChange} multiline rows={4} placeholder="Describe the solution..." required />
+            </SectionCard>
+            <SectionCard title="Results">
+              <FormInput label="Results" name="results" value={formData.results} onChange={handleChange} multiline rows={4} placeholder="Describe the results..." />
+            </SectionCard>
+          </>
+        );
+      case 'process':
+        return (
+          <>
+            <SectionCard title="Process Steps">
+              <ProcessStepsInput steps={formData.processSteps} onChange={(steps) => setFormData(prev => ({ ...prev, processSteps: steps }))} />
+            </SectionCard>
+            <SectionCard title="Opportunities">
+              <OpportunitiesInput opportunities={formData.opportunities} onChange={(opps) => setFormData(prev => ({ ...prev, opportunities: opps }))} />
+            </SectionCard>
+          </>
+        );
+      case 'experience':
+        return (
+          <>
+            <SectionCard title="Experience Images">
+              <MultipleImageUpload label="Experience Images" desktopName="experienceImages" mobileName="experienceImagesMobile" desktopValues={formData.experienceImages} mobileValues={formData.experienceImagesMobile} onUpload={handleMultipleImageUpload} />
+            </SectionCard>
+            <SectionCard title="Experience Quote">
+              <FormInput label="Quote" name="experienceQuote" value={formData.experienceQuote} onChange={handleChange} multiline rows={3} placeholder="Add an inspiring quote..." />
+            </SectionCard>
+          </>
+        );
+      case 'design':
+        return (
+          <>
+            <SectionCard title="Color Palette">
+              <ColorPaletteInput colors={formData.colorPalette} onChange={(colors) => setFormData(prev => ({ ...prev, colorPalette: colors }))} />
+            </SectionCard>
+            <SectionCard title="Typography">
+              <FormInput label="Font Family" name="typography.fontFamily" value={formData.typography?.fontFamily || ''} onChange={(e) => setFormData(prev => ({ ...prev, typography: { ...prev.typography, fontFamily: e.target.value }}))} placeholder="e.g. Plus Jakarta Sans" />
+              <ResponsiveImageUpload label="Font Preview Image" desktopName="typography.fontImage" mobileName="typography.fontImageMobile" desktopValue={formData.typography?.fontImage || ''} mobileValue={formData.typography?.fontImageMobile || ''} onUpload={(name, url) => {
+                const key = name.split('.')[1];
+                setFormData(prev => ({ ...prev, typography: { ...prev.typography, [key]: url }}));
+              }} />
+            </SectionCard>
+          </>
+        );
+      case 'metrics':
+        return (
+          <SectionCard title="Metrics">
+            <MetricsInput metrics={formData.metrics} onChange={(metrics) => setFormData(prev => ({ ...prev, metrics: metrics }))} />
+          </SectionCard>
+        );
+      case 'related':
+        return (
+          <SectionCard title="Related Works">
+            <RelatedWorksSelector allWorks={allWorks} selectedWorks={formData.relatedWorks || []} onChange={(works) => setFormData(prev => ({ ...prev, relatedWorks: works }))} />
+          </SectionCard>
+        );
+      case 'settings':
+        return (
+          <SectionCard title="Publishing Settings">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <input type="checkbox" id="published" checked={formData.published} onChange={(e) => setFormData(prev => ({ ...prev, published: e.target.checked }))} style={{ width: '18px', height: '18px' }} />
+              <label htmlFor="published" style={{ fontSize: '14px', cursor: 'pointer' }}>Published</label>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => setEditingSlug(!editingSlug)}
-                style={{
-                  padding: '8px 12px', fontSize: '13px', fontWeight: 500,
-                  border: '1px solid #d1d5db', borderRadius: '6px',
-                  backgroundColor: '#fff', color: '#374151', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                }}
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={copyUrl}
-                disabled={!formData.slug}
-                style={{
-                  padding: '8px 12px', fontSize: '13px', fontWeight: 500,
-                  border: 'none', borderRadius: '6px',
-                  backgroundColor: copied ? '#22c55e' : '#2563eb',
-                  color: '#fff', cursor: formData.slug ? 'pointer' : 'not-allowed',
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  opacity: formData.slug ? 1 : 0.5,
-                }}
-              >
-                {copied ? (
-                  <>
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Copy URL
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+            <FormInput label="Display Order" name="order" type="number" value={formData.order} onChange={handleChange} placeholder="0" />
+          </SectionCard>
+        );
+      default:
+        return null;
+    }
+  };
 
-        <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          {/* Basic Information */}
-          <SectionHeader title="Basic Information" />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <FormInput
-              label="Title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              placeholder="Project Title"
-            />
-            <FormInput
-              label="Client"
-              name="client"
-              value={formData.client}
-              onChange={handleChange}
-              required
-              placeholder="Client Name"
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-            <FormInput
-              label="Industry"
-              name="industry"
-              value={formData.industry}
-              onChange={handleChange}
-              placeholder="e.g. Automotive & Mobility"
-            />
-            <FormInput
-              label="Platform"
-              name="platform"
-              value={formData.platform}
-              onChange={handleChange}
-              placeholder="e.g. Mobile App"
-            />
-            <FormInput
-              label="Duration"
-              name="duration"
-              value={formData.duration}
-              onChange={handleChange}
-              placeholder="e.g. 6 months"
-            />
-          </div>
-
-          <ArrayInput
-            label="Project Focus"
-            name="projectFocus"
-            values={formData.projectFocus}
-            onChange={handleArrayChange}
-            placeholder="e.g. Mobile App + Community"
-          />
-
-          <ArrayInput
-            label="Services"
-            name="services"
-            values={formData.services}
-            onChange={handleArrayChange}
-            placeholder="e.g. User Research"
-          />
-
-          <ArrayInput
-            label="Technologies"
-            name="technologies"
-            values={formData.technologies}
-            onChange={handleArrayChange}
-            placeholder="e.g. React Native"
-          />
-
-          {/* Images */}
-          <SectionHeader title="Images" />
-
-          <DualImageUpload
-            label="Client Logo"
-            desktopName="clientLogo"
-            mobileName="clientLogoMobile"
-            desktopValue={formData.clientLogo}
-            mobileValue={formData.clientLogoMobile}
-            onChange={handleChange}
-            onUpload={handleImageUpload}
-          />
-
-          <DualImageUpload
-            label="Hero Image"
-            desktopName="heroImage"
-            mobileName="heroImageMobile"
-            desktopValue={formData.heroImage}
-            mobileValue={formData.heroImageMobile}
-            onChange={handleChange}
-            onUpload={handleImageUpload}
-          />
-
-          <DualImageUpload
-            label="Banner Image"
-            desktopName="bannerImage"
-            mobileName="bannerImageMobile"
-            desktopValue={formData.bannerImage}
-            mobileValue={formData.bannerImageMobile}
-            onChange={handleChange}
-            onUpload={handleImageUpload}
-          />
-
-          <DualImageArrayInput
-            label="Gallery Images"
-            desktopName="images"
-            mobileName="imagesMobile"
-            desktopValues={formData.images}
-            mobileValues={formData.imagesMobile}
-            onChange={handleArrayChange}
-          />
-
-          {/* Content */}
-          <SectionHeader title="Content" />
-
-          <FormInput
-            label="Collaboration Text"
-            name="collaborationText"
-            value={formData.collaborationText}
-            onChange={handleChange}
-            multiline
-            rows={4}
-            placeholder="Describe the collaboration..."
-          />
-
-          <FormInput
-            label="Challenge"
-            name="challenge"
-            value={formData.challenge}
-            onChange={handleChange}
-            required
-            multiline
-            rows={4}
-            placeholder="Describe the challenge..."
-          />
-
-          <FormInput
-            label="Solution"
-            name="solution"
-            value={formData.solution}
-            onChange={handleChange}
-            required
-            multiline
-            rows={4}
-            placeholder="Describe the solution..."
-          />
-
-          <FormInput
-            label="Results"
-            name="results"
-            value={formData.results}
-            onChange={handleChange}
-            multiline
-            rows={4}
-            placeholder="Describe the results..."
-          />
-
-          {/* Process Steps */}
-          <SectionHeader title="Process Steps" />
-          <ProcessStepsInput
-            steps={formData.processSteps}
-            onChange={(steps) => handleArrayChange('processSteps', steps)}
-          />
-
-          {/* Opportunities */}
-          <SectionHeader title="Opportunities" />
-          <OpportunitiesInput
-            opportunities={formData.opportunities}
-            onChange={(opps) => handleArrayChange('opportunities', opps)}
-          />
-
-          {/* Experience Section */}
-          <SectionHeader title="Experience Section" />
-
-          <DualImageArrayInput
-            label="Experience Images"
-            desktopName="experienceImages"
-            mobileName="experienceImagesMobile"
-            desktopValues={formData.experienceImages}
-            mobileValues={formData.experienceImagesMobile}
-            onChange={handleArrayChange}
-          />
-
-          <FormInput
-            label="Experience Quote"
-            name="experienceQuote"
-            value={formData.experienceQuote}
-            onChange={handleChange}
-            multiline
-            rows={3}
-            placeholder="A quote about the experience..."
-          />
-
-          {/* Color Palette */}
-          <SectionHeader title="Color Palette" />
-          <ColorPaletteInput
-            colors={formData.colorPalette}
-            onChange={(colors) => handleArrayChange('colorPalette', colors)}
-          />
-
-          {/* Typography */}
-          <SectionHeader title="Typography" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <FormInput
-              label="Font Family"
-              name="fontFamily"
-              value={formData.typography?.fontFamily || ''}
-              onChange={(e) => handleNestedChange('typography', 'fontFamily', e.target.value)}
-              placeholder="e.g. Ubuntu"
-            />
-            <DualImageUpload
-              label="Typography Image"
-              desktopName="fontImage"
-              mobileName="fontImageMobile"
-              desktopValue={formData.typography?.fontImage || ''}
-              mobileValue={formData.typography?.fontImageMobile || ''}
-              onChange={(e) => handleNestedChange('typography', e.target.name, e.target.value)}
-              onUpload={(name, url) => handleNestedChange('typography', name, url)}
-            />
-          </div>
-
-          {/* Metrics */}
-          <SectionHeader title="Metrics" />
-          <MetricsInput
-            metrics={formData.metrics}
-            onChange={(metrics) => handleArrayChange('metrics', metrics)}
-          />
-
-          {/* Related Projects */}
-          <SectionHeader title="Related Projects" />
-          <RelatedWorksSelector
-            selectedWorks={formData.relatedWorks || []}
-            allWorks={allWorks}
-            onChange={(works) => handleArrayChange('relatedWorks', works)}
-          />
-
-          {/* Settings */}
-          <SectionHeader title="Settings" />
-
-          <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                name="published"
-                checked={formData.published}
-                onChange={handleChange}
-                style={{ width: '18px', height: '18px' }}
-              />
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#374151' }}>Published</span>
-            </label>
-
-            <FormInput
-              label="Display Order"
-              name="order"
-              type="number"
-              value={formData.order}
-              onChange={handleChange}
-              placeholder="0"
-            />
-          </div>
-
-          {/* Submit Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
+  return (
+    <div style={{ position: 'fixed', inset: 0, display: 'flex', backgroundColor: '#f3f4f6', zIndex: 9999 }}>
+      {/* Left Panel - Editor */}
+      <div style={{
+        width: '50%',
+        borderRight: '1px solid #e5e7eb',
+        backgroundColor: '#fff',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        overflowX: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#fff',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              type="submit"
+              type="button"
+              onClick={() => selectedSection ? setSelectedSection(null) : navigate(basePath)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center' }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>
+              {selectedSection ? sections.find(s => s.id === selectedSection)?.label : (isEdit ? 'Edit Case Study' : 'New Case Study')}
+            </h1>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleSubmit}
               disabled={saving}
               style={{
-                padding: '12px 24px',
+                padding: '8px 16px',
                 backgroundColor: '#2563eb',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: saving ? 'not-allowed' : 'pointer',
                 opacity: saving ? 0.7 : 1,
               }}
             >
-              {saving ? 'Saving...' : (isEdit ? 'Update Case Study' : 'Create Case Study')}
+              {saving ? 'Saving...' : 'Save'}
             </button>
-            <Link
-              to={basePath}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#f3f4f6',
-                color: '#374151',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-                textDecoration: 'none',
-                display: 'inline-block',
-              }}
-            >
-              Cancel
-            </Link>
           </div>
         </div>
-      </form>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+          {!selectedSection ? (
+            /* Section Navigator */
+            <div style={{ padding: '20px' }}>
+              {/* URL Section */}
+              <div style={{
+                backgroundColor: '#f0fdf4', borderRadius: '8px', padding: '14px 16px',
+                marginBottom: '20px', border: '1px solid #bbf7d0',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#166534', marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>
+                      Case Study URL
+                    </label>
+                    {editingSlug ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ color: '#6b7280', fontSize: '13px' }}>/case-studies/</span>
+                        <input
+                          type="text"
+                          value={formData.slug}
+                          onChange={handleSlugChange}
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '13px',
+                            color: '#111827',
+                            backgroundColor: '#fff',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #22c55e',
+                            outline: 'none',
+                            width: '200px',
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditingSlug(false)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#22c55e',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Done
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ color: '#6b7280', fontSize: '13px' }}>/case-studies/</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#111827', backgroundColor: '#dcfce7', padding: '4px 8px', borderRadius: '4px' }}>
+                          {formData.slug || 'auto-generated'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSlug(true)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: 'transparent',
+                            color: '#166534',
+                            border: '1px solid #166534',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            marginLeft: '4px',
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyUrl}
+                    disabled={!formData.slug}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: formData.slug ? '#22c55e' : '#e5e7eb',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: formData.slug ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {copied ? 'Copied' : 'Copy URL'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Section List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {sections.map((section, index) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setSelectedSection(section.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '14px 16px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f9fafb'; e.currentTarget.style.borderColor = '#2563eb'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                  >
+                    <span style={{
+                      width: '24px',
+                      height: '24px',
+                      backgroundColor: '#f3f4f6',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#6b7280',
+                    }}>
+                      {index + 1}
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#111827' }}>{section.label}</span>
+                    <svg style={{ marginLeft: 'auto', color: '#9ca3af' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Section Fields */
+            <div style={{ padding: '20px' }}>
+              {renderSectionContent()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Panel - Preview */}
+      <div style={{
+        width: '50%',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        backgroundColor: '#1a1a2e',
+      }}>
+        {/* Preview Header - minimal */}
+        <div style={{
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          backgroundColor: '#1a1a2e',
+          flexShrink: 0,
+        }}>
+          <a
+            href={formData.slug ? `/case-studies/${formData.slug}` : '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#333',
+              color: '#fff',
+              borderRadius: '4px',
+              fontSize: '12px',
+              textDecoration: 'none',
+              opacity: formData.slug ? 1 : 0.5,
+              pointerEvents: formData.slug ? 'auto' : 'none',
+            }}
+          >
+            Open in New Tab ↗
+          </a>
+        </div>
+
+        {/* Preview Iframe - Full size with scrolling */}
+        <div style={{ flex: 1, overflow: 'auto', backgroundColor: '#e5e7eb', padding: '20px' }}>
+          {/* Show iframe when: new case study (!isEdit) OR when editing and slug is loaded (iframeSlug) */}
+          {(!isEdit || iframeSlug) ? (
+            <div style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              width: '1440px',
+              minWidth: '1440px',
+              height: 'calc(100vh - 120px)',
+            }}>
+              <iframe
+                ref={iframeRef}
+                src={`/case-studies/${iframeSlug || 'preview'}?editor=true`}
+                onLoad={handleIframeLoad}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                }}
+                title="Case Study Preview"
+              />
+            </div>
+          ) : (
+            <div style={{
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#6b7280',
+            }}>
+              Loading preview...
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

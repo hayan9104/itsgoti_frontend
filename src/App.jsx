@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useParams, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useParams, Navigate, useSearchParams } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import PageVisibilityWrapper from './components/PageVisibilityWrapper';
 import { useThemeCode } from './context/ThemeCodeContext';
@@ -32,6 +32,32 @@ const PageLoader = () => (
     <div style={{fontSize:'16px',color:'#666'}}>Loading...</div>
   </div>
 );
+
+// Wrapper for case study to hide navbar in preview/editor mode
+const CaseStudyWrapper = () => {
+  const [searchParams] = useSearchParams();
+  const { slug } = useParams();
+  const isPreview = searchParams.get('preview') === 'true';
+  const isEditor = searchParams.get('editor') === 'true';
+
+  // Handle editor mode (including 'preview' slug for new case studies)
+  if (isPreview || isEditor || slug === 'preview') {
+    // No navbar/footer in preview or editor mode
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <CaseStudyDetail />
+      </Suspense>
+    );
+  }
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <PageVisibilityWrapper pageName="case-study" fallbackPath="/">
+        <Layout blueNav={true}><CaseStudyDetail /></Layout>
+      </PageVisibilityWrapper>
+    </Suspense>
+  );
+};
 
 // Context for all page slugs - with defaults to avoid loading
 const defaultLandingSlugs = {
@@ -199,13 +225,7 @@ function App() {
           {/* Case study detail - must be before /:slug */}
           <Route
             path="/case-studies/:slug"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <PageVisibilityWrapper pageName="case-study" fallbackPath="/">
-                  <Layout blueNav={true}><CaseStudyDetail /></Layout>
-                </PageVisibilityWrapper>
-              </Suspense>
-            }
+            element={<CaseStudyWrapper />}
           />
 
           {/* Footer Preview Route (for visual editor) */}

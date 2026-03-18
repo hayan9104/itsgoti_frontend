@@ -4,7 +4,6 @@ import { pagesAPI, themesAPI } from '../services/api';
 import WorkPageEditor from './WorkPageEditor';
 import AboutPageEditor from './AboutPageEditor';
 import ContactPageEditor from './ContactPageEditor';
-import CaseStudyPageEditor from './CaseStudyPageEditor';
 import HomePageEditor from './HomePageEditor';
 
 const PagesManager = () => {
@@ -30,7 +29,6 @@ const PagesManager = () => {
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
     { name: 'work', label: 'Our Work' },
-    { name: 'case-study', label: 'Case Study' },
     { name: 'contact', label: 'Contact' },
     { name: 'footer', label: 'Footer' },
   ];
@@ -177,8 +175,6 @@ const PagesManager = () => {
         return <AboutPageEditor onClose={handleClose} onSave={fetchPages} />;
       case 'contact':
         return <ContactPageEditor onClose={handleClose} onSave={fetchPages} />;
-      case 'case-study':
-        return <CaseStudyPageEditor onClose={handleClose} onSave={fetchPages} />;
       case 'home':
         return <HomePageEditor onClose={handleClose} onSave={fetchPages} />;
       default:
@@ -304,7 +300,7 @@ const PagesManager = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
         {defaultPages.map((page) => {
           const pageData = getPageData(page.name);
-          const hasEditor = ['work', 'about', 'contact', 'case-study', 'home', 'approach', 'footer', 'landing', 'landing-page-2', 'landing-page-3'].includes(page.name);
+          const hasEditor = ['work', 'about', 'contact', 'home', 'approach', 'footer', 'landing', 'landing-page-2', 'landing-page-3'].includes(page.name);
           const isPublished = pageData?.published !== false; // Default to true if not set
           const isToggling = togglingPage === page.name;
 
@@ -516,7 +512,6 @@ const PagesManager = () => {
                 const routePath = page.name === 'landing' ? '/'
                   : page.name === 'landing-page-2' ? '/landing_page2'
                   : page.name === 'landing-page-3' ? '/landing_page3'
-                  : page.name === 'case-study' ? '/case-studies'
                   : `/${page.name}`;
 
                 return (
@@ -605,7 +600,7 @@ const PagesManager = () => {
             backgroundColor: '#fff',
             borderRadius: '8px',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            maxWidth: ['about', 'contact', 'case-study', 'home'].includes(selectedPage.name) ? '1000px' : '672px',
+            maxWidth: ['about', 'contact', 'home'].includes(selectedPage.name) ? '1000px' : '672px',
             width: '100%',
             maxHeight: '90vh',
             overflowY: 'auto',
