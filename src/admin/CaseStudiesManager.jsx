@@ -1132,8 +1132,11 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allWorks, setAllWorks] = useState([]);
+  const [editingSlug, setEditingSlug] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     client: '',
     clientLogo: '',
     clientLogoMobile: '',
@@ -1197,12 +1200,39 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
     }
   };
 
+  // Generate slug from title
+  const generateSlug = (title) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    const newValue = type === 'checkbox' ? checked : value;
+
+    setFormData(prev => {
+      const updated = { ...prev, [name]: newValue };
+      // Auto-generate slug from title if not editing and slug is empty or was auto-generated
+      if (name === 'title' && !editingSlug && !isEdit) {
+        updated.slug = generateSlug(newValue);
+      }
+      return updated;
+    });
+  };
+
+  const handleSlugChange = (e) => {
+    const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setFormData(prev => ({ ...prev, slug: value }));
+  };
+
+  const copyUrl = () => {
+    const url = `${window.location.origin}/case-studies/${formData.slug}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleArrayChange = (name, value) => {
@@ -1267,6 +1297,90 @@ const CaseStudyForm = ({ isEdit = false, basePath = '/goti/admin/case-studies' }
       </div>
 
       <form onSubmit={handleSubmit}>
+        {/* Case Study URL Section */}
+        <div style={{
+          backgroundColor: '#f0fdf4', borderRadius: '8px', padding: '16px 20px',
+          marginBottom: '16px', border: '1px solid #bbf7d0',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#166534', marginBottom: '4px', display: 'block' }}>
+                Case Study URL
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#6b7280', fontSize: '14px' }}>/case-studies/</span>
+                {editingSlug ? (
+                  <input
+                    type="text"
+                    value={formData.slug}
+                    onChange={handleSlugChange}
+                    onBlur={() => setEditingSlug(false)}
+                    autoFocus
+                    style={{
+                      padding: '6px 10px', fontSize: '14px', fontFamily: 'monospace',
+                      border: '1px solid #22c55e', borderRadius: '4px', backgroundColor: '#fff',
+                      minWidth: '200px',
+                    }}
+                  />
+                ) : (
+                  <span style={{
+                    fontFamily: 'monospace', fontSize: '14px', color: '#111827',
+                    backgroundColor: '#dcfce7', padding: '6px 10px', borderRadius: '4px',
+                  }}>
+                    {formData.slug || 'auto-generated-from-title'}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setEditingSlug(!editingSlug)}
+                style={{
+                  padding: '8px 12px', fontSize: '13px', fontWeight: 500,
+                  border: '1px solid #d1d5db', borderRadius: '6px',
+                  backgroundColor: '#fff', color: '#374151', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                }}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={copyUrl}
+                disabled={!formData.slug}
+                style={{
+                  padding: '8px 12px', fontSize: '13px', fontWeight: 500,
+                  border: 'none', borderRadius: '6px',
+                  backgroundColor: copied ? '#22c55e' : '#2563eb',
+                  color: '#fff', cursor: formData.slug ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  opacity: formData.slug ? 1 : 0.5,
+                }}
+              >
+                {copied ? (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy URL
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           {/* Basic Information */}
           <SectionHeader title="Basic Information" />

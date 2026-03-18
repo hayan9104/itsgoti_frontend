@@ -522,8 +522,9 @@ const ProjectCard = ({ work, isFullWidth = false, isMobile = false, isTablet = f
   const tagHeight = '35px';
   const tagPadding = '8px 14px';
 
-  return (
-    <div style={{ margin: 0, padding: 0, paddingBottom: isMobile ? '0' : '0' }}>
+  // Card content that will be wrapped in Link if case study exists
+  const CardContent = (
+    <div style={{ cursor: work.caseStudySlug ? 'pointer' : 'default' }}>
       {/* Image Container */}
       <div
         style={{
@@ -695,25 +696,42 @@ const ProjectCard = ({ work, isFullWidth = false, isMobile = false, isTablet = f
         {work.description}
       </p>
 
-      {/* READ MORE Link */}
-      <Link
-        to={`/work/${work._id}`}
-        style={{
-          fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-          fontSize: isMobile ? '14px' : '16px',
-          fontWeight: 400,
-          fontStyle: 'normal',
-          color: '#0F0F0F',
-          lineHeight: '22px',
-          letterSpacing: '2px',
-          textDecoration: 'underline',
-          textDecorationStyle: 'solid',
-          textDecorationThickness: 'auto',
-          textUnderlineOffset: 'auto',
-        }}
-      >
-        READ MORE
-      </Link>
+      {/* VIEW PROJECT Link - Only shown when no case study linked but has external link */}
+      {!work.caseStudySlug && work.link && (
+        <a
+          href={work.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+            fontSize: isMobile ? '14px' : '16px',
+            fontWeight: 400,
+            fontStyle: 'normal',
+            color: '#0F0F0F',
+            lineHeight: '22px',
+            letterSpacing: '2px',
+            textDecoration: 'underline',
+            textDecorationStyle: 'solid',
+            textDecorationThickness: 'auto',
+            textUnderlineOffset: 'auto',
+          }}
+        >
+          VIEW PROJECT
+        </a>
+      )}
+    </div>
+  );
+
+  // Wrap in Link if case study exists, otherwise return as-is
+  return (
+    <div style={{ margin: 0, padding: 0, paddingBottom: isMobile ? '0' : '0' }}>
+      {work.caseStudySlug ? (
+        <Link to={`/case-studies/${work.caseStudySlug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          {CardContent}
+        </Link>
+      ) : (
+        CardContent
+      )}
     </div>
   );
 };

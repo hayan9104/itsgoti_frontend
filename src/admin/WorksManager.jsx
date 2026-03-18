@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { worksAPI, uploadAPI, pagesAPI } from '../services/api';
+import { worksAPI, uploadAPI, pagesAPI, caseStudiesAPI } from '../services/api';
 
 const WorksList = ({ basePath = '/goti/admin/works' }) => {
   const [works, setWorks] = useState([]);
@@ -153,6 +153,10 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [caseStudies, setCaseStudies] = useState([]);
+  const [caseStudySearch, setCaseStudySearch] = useState('');
+  const [caseStudyDropdownOpen, setCaseStudyDropdownOpen] = useState(false);
+  const caseStudyDropdownRef = useRef(null);
 
   const {
     register,
@@ -160,6 +164,8 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
     setValue,
     watch,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -170,6 +176,7 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
       category: '',
       client: '',
       link: '',
+      caseStudySlug: '',
       serviceTypes: [],
       published: true,
       featured: false,
@@ -179,7 +186,28 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
   // Fetch categories from page content
   useEffect(() => {
     fetchCategories();
+    fetchCaseStudies();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (caseStudyDropdownRef.current && !caseStudyDropdownRef.current.contains(event.target)) {
+        setCaseStudyDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const fetchCaseStudies = async () => {
+    try {
+      const response = await caseStudiesAPI.getAll();
+      setCaseStudies(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching case studies:', error);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -252,6 +280,14 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
   };
 
   const onSubmit = async (data) => {
+    // Validate tags
+    const parsedTags = tagsInput.split(',').map((t) => t.trim()).filter((t) => t);
+    if (parsedTags.length === 0) {
+      setError('tags', { type: 'manual', message: 'Please fill this field' });
+      return;
+    }
+    clearErrors('tags');
+
     try {
       setLoading(true);
 
@@ -290,7 +326,7 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
       formData.append('image', file);
       try {
         const response = await uploadAPI.single(formData);
-        const imagePath = response.data.data.path;
+        const imagePath = response.data.path || response.data.url;
         setValue('image', imagePath);
         setImagePreview(imagePath);
       } catch (error) {
@@ -325,6 +361,14 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
     marginBottom: '6px',
   };
 
+  // Preview card data from form
+  const previewData = {
+    title: watch('title') || 'Project Title',
+    description: watch('description') || 'Project description will appear here. Start typing to see the preview update in real-time.',
+    image: imagePreview || '/placeholder.jpg',
+    tags: tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(t => t) : ['Tag 1', 'Tag 2'],
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
@@ -349,18 +393,21 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
         </h1>
       </div>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '32px', maxWidth: '768px' }}
-      >
+      {/* Two column layout: Form + Preview */}
+      <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+        {/* Left: Form */}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '32px', flex: '1', maxWidth: '600px' }}
+        >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Title */}
           <div>
-            <label style={labelStyle}>Project Title *</label>
+            <label style={labelStyle}>Project Title <span style={{ color: '#dc2626' }}>*</span></label>
             <input
               type="text"
-              {...register('title', { required: 'Title is required' })}
-              style={inputStyle}
+              {...register('title', { required: 'Please fill this field' })}
+              style={{ ...inputStyle, borderColor: errors.title ? '#dc2626' : '#d1d5db' }}
               placeholder="e.g., Rumble"
             />
             {errors.title && (
@@ -370,11 +417,11 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
 
           {/* Description */}
           <div>
-            <label style={labelStyle}>Description *</label>
+            <label style={labelStyle}>Description <span style={{ color: '#dc2626' }}>*</span></label>
             <textarea
               rows={4}
-              {...register('description', { required: 'Description is required' })}
-              style={{ ...inputStyle, resize: 'vertical' }}
+              {...register('description', { required: 'Please fill this field' })}
+              style={{ ...inputStyle, resize: 'vertical', borderColor: errors.description ? '#dc2626' : '#d1d5db' }}
               placeholder="Lorem ipsum dolor sit amet consectetur..."
             ></textarea>
             {errors.description && (
@@ -384,16 +431,19 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
 
           {/* Image Upload */}
           <div>
-            <label style={labelStyle}>Project Image</label>
+            <label style={labelStyle}>Project Image <span style={{ color: '#dc2626' }}>*</span></label>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
               <div style={{ flex: 1 }}>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
-                  style={{ ...inputStyle, padding: '8px 12px' }}
+                  style={{ ...inputStyle, padding: '8px 12px', borderColor: errors.image ? '#dc2626' : '#d1d5db' }}
                 />
-                <input type="hidden" {...register('image')} />
+                <input type="hidden" {...register('image', { required: 'Please upload an image' })} />
+                {errors.image && (
+                  <p style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>{errors.image.message}</p>
+                )}
               </div>
               {imagePreview && (
                 <img
@@ -407,14 +457,20 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
 
           {/* Tags */}
           <div>
-            <label style={labelStyle}>Tags (shown on card)</label>
+            <label style={labelStyle}>Tags (shown on card) <span style={{ color: '#dc2626' }}>*</span></label>
             <input
               type="text"
               value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              style={inputStyle}
+              onChange={(e) => {
+                setTagsInput(e.target.value);
+                if (e.target.value.trim()) clearErrors('tags');
+              }}
+              style={{ ...inputStyle, borderColor: errors.tags ? '#dc2626' : '#d1d5db' }}
               placeholder="Lifestyle, Fashion (comma separated)"
             />
+            {errors.tags && (
+              <p style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>{errors.tags.message}</p>
+            )}
             <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>
               These tags appear on the project card image
             </p>
@@ -422,11 +478,11 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
 
           {/* Category */}
           <div>
-            <label style={labelStyle}>Category (for filtering)</label>
+            <label style={labelStyle}>Category (for filtering) <span style={{ color: '#dc2626' }}>*</span></label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
               <select
-                {...register('category')}
-                style={{ ...inputStyle, cursor: 'pointer', flex: 1 }}
+                {...register('category', { required: 'Please select a category' })}
+                style={{ ...inputStyle, cursor: 'pointer', flex: 1, borderColor: errors.category ? '#dc2626' : '#d1d5db' }}
               >
                 <option value="">Select Category</option>
                 {categories.map((cat) => (
@@ -534,6 +590,9 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
                 </div>
               </div>
             )}
+            {errors.category && (
+              <p style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>{errors.category.message}</p>
+            )}
           </div>
 
           {/* Service Types */}
@@ -568,6 +627,140 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
               style={inputStyle}
               placeholder="https://example.com"
             />
+          </div>
+
+          {/* Case Study Link */}
+          <div style={{ position: 'relative' }} ref={caseStudyDropdownRef}>
+            <label style={labelStyle}>
+              Link to Case Study <span style={{ color: '#dc2626' }}>*</span>
+              <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 400, marginLeft: '8px' }}>
+                (When clicked, opens this case study)
+              </span>
+            </label>
+            <input type="hidden" {...register('caseStudySlug', { required: 'Please select a case study' })} />
+            <div
+              onClick={() => setCaseStudyDropdownOpen(!caseStudyDropdownOpen)}
+              style={{
+                ...inputStyle,
+                backgroundColor: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderColor: errors.caseStudySlug ? '#dc2626' : '#d1d5db',
+              }}
+            >
+              <span style={{ color: watch('caseStudySlug') ? '#111827' : '#9ca3af' }}>
+                {watch('caseStudySlug')
+                  ? caseStudies.find(cs => cs.slug === watch('caseStudySlug'))?.title || watch('caseStudySlug')
+                  : 'No case study linked'}
+              </span>
+              <span style={{ color: '#6b7280', fontSize: '12px' }}>▼</span>
+            </div>
+
+            {caseStudyDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#fff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                  zIndex: 50,
+                  marginTop: '4px',
+                  maxHeight: '280px',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Search Input */}
+                <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                  <input
+                    type="text"
+                    placeholder="Search case studies..."
+                    value={caseStudySearch}
+                    onChange={(e) => setCaseStudySearch(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      ...inputStyle,
+                      marginBottom: 0,
+                      padding: '8px 12px',
+                      fontSize: '13px',
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                {/* Options */}
+                <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+                  <div
+                    onClick={() => {
+                      setValue('caseStudySlug', '');
+                      setCaseStudyDropdownOpen(false);
+                      setCaseStudySearch('');
+                    }}
+                    style={{
+                      padding: '10px 12px',
+                      cursor: 'pointer',
+                      backgroundColor: !watch('caseStudySlug') ? '#eff6ff' : 'transparent',
+                      borderLeft: !watch('caseStudySlug') ? '3px solid #2563eb' : '3px solid transparent',
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = !watch('caseStudySlug') ? '#eff6ff' : 'transparent'}
+                  >
+                    <span style={{ color: '#6b7280' }}>No case study linked</span>
+                  </div>
+
+                  {caseStudies
+                    .filter(cs =>
+                      cs.title.toLowerCase().includes(caseStudySearch.toLowerCase()) ||
+                      cs.slug.toLowerCase().includes(caseStudySearch.toLowerCase())
+                    )
+                    .map((cs) => (
+                      <div
+                        key={cs._id}
+                        onClick={() => {
+                          setValue('caseStudySlug', cs.slug);
+                          setCaseStudyDropdownOpen(false);
+                          setCaseStudySearch('');
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          backgroundColor: watch('caseStudySlug') === cs.slug ? '#eff6ff' : 'transparent',
+                          borderLeft: watch('caseStudySlug') === cs.slug ? '3px solid #2563eb' : '3px solid transparent',
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = watch('caseStudySlug') === cs.slug ? '#eff6ff' : 'transparent'}
+                      >
+                        <div style={{ fontWeight: 500, color: '#111827' }}>{cs.title}</div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>/case-studies/{cs.slug}</div>
+                      </div>
+                    ))
+                  }
+
+                  {caseStudies.filter(cs =>
+                    cs.title.toLowerCase().includes(caseStudySearch.toLowerCase()) ||
+                    cs.slug.toLowerCase().includes(caseStudySearch.toLowerCase())
+                  ).length === 0 && caseStudySearch && (
+                    <div style={{ padding: '12px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>
+                      No case studies found
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {watch('caseStudySlug') && (
+              <p style={{ fontSize: '12px', color: '#059669', marginTop: '6px' }}>
+                ✓ Project will open: /case-studies/{watch('caseStudySlug')}
+              </p>
+            )}
+            {errors.caseStudySlug && (
+              <p style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>{errors.caseStudySlug.message}</p>
+            )}
           </div>
 
           {/* Checkboxes */}
@@ -626,6 +819,143 @@ const WorkForm = ({ isEdit, basePath = '/goti/admin/works' }) => {
           </div>
         </div>
       </form>
+
+        {/* Right: Live Preview */}
+        <div style={{
+          width: '400px',
+          flexShrink: 0,
+          position: 'sticky',
+          top: '100px',
+          alignSelf: 'flex-start',
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            padding: '20px',
+          }}>
+            <h3 style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#6b7280',
+              marginBottom: '16px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              Live Preview
+            </h3>
+
+            {/* Preview Card */}
+            <div style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              backgroundColor: '#fafafa',
+            }}>
+              {/* Image */}
+              <div style={{
+                position: 'relative',
+                height: '200px',
+                backgroundColor: '#e5e7eb',
+                overflow: 'hidden',
+              }}>
+                {previewData.image && previewData.image !== '/placeholder.jpg' ? (
+                  <img
+                    src={previewData.image}
+                    alt="Preview"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#9ca3af',
+                    fontSize: '14px',
+                  }}>
+                    Upload image to preview
+                  </div>
+                )}
+
+                {/* Tags on Image */}
+                {previewData.tags.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    display: 'flex',
+                    gap: '6px',
+                    flexWrap: 'wrap',
+                    justifyContent: 'flex-end',
+                  }}>
+                    {previewData.tags.slice(0, 2).map((tag, index) => (
+                      <span
+                        key={index}
+                        style={{
+                          padding: '4px 10px',
+                          backgroundColor: '#fff',
+                          borderRadius: '100px',
+                          fontSize: '12px',
+                          fontWeight: 400,
+                          color: '#000',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '16px' }}>
+                {/* Title */}
+                <h4 style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '20px',
+                  fontWeight: 400,
+                  color: '#0F0F0F',
+                  marginBottom: '8px',
+                  lineHeight: '1.3',
+                }}>
+                  {previewData.title}
+                </h4>
+
+                {/* Description */}
+                <p style={{
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontSize: '13px',
+                  fontWeight: 400,
+                  color: '#0F0F0F',
+                  lineHeight: '1.5',
+                  marginBottom: '0',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}>
+                  {previewData.description}
+                </p>
+              </div>
+            </div>
+
+            <p style={{
+              fontSize: '12px',
+              color: '#9ca3af',
+              marginTop: '12px',
+              textAlign: 'center',
+            }}>
+              This is how your project card will appear
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
