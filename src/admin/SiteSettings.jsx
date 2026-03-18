@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { themesAPI, uploadAPI } from '../services/api';
 
 // Link Icon for URL Settings
@@ -25,10 +25,15 @@ const defaultPageSlugs = {
 
 const SiteSettings = () => {
   const { themeId } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState(null);
+
+  // Admin URL confirm dialog
+  const [showAdminConfirm, setShowAdminConfirm] = useState(false);
+  const [pendingAdminSlug, setPendingAdminSlug] = useState(null);
 
   // Site Settings
   const [siteTitle, setSiteTitle] = useState('');
@@ -190,21 +195,23 @@ const SiteSettings = () => {
 
   // URL Slug handlers
   const validateSlug = (slug) => {
-    return /^[a-z0-9_-]+$/.test(slug) && slug.length > 0 && slug.length <= 50;
+    return /^[a-z0-9_/-]+$/.test(slug) && slug.length > 0 && slug.length <= 50;
   };
 
   const handleSlugChange = (pageKey, value) => {
+    // Allow letters, numbers, hyphens, underscores, and forward slashes
+    const cleanValue = value.toLowerCase().replace(/[^a-z0-9_/-]/g, '');
     setPageSlugs(prev => ({
       ...prev,
       [pageKey]: {
         ...prev[pageKey],
-        slug: value,
+        slug: cleanValue,
       },
     }));
     setSlugError('');
   };
 
-  const saveSlugs = async () => {
+  const saveSlugs = async (forceConfirm = false) => {
     // Validate all slugs
     const slugValues = Object.values(pageSlugs).map(s => s.slug);
 
@@ -214,7 +221,7 @@ const SiteSettings = () => {
         return;
       }
       if (!validateSlug(data.slug)) {
-        setSlugError(`Invalid URL "${data.slug}". Use only lowercase letters, numbers, hyphens, and underscores.`);
+        setSlugError(`Invalid URL "${data.slug}". Use only lowercase letters, numbers, hyphens, underscores, and forward slashes.`);
         return;
       }
     }
@@ -223,6 +230,14 @@ const SiteSettings = () => {
     const uniqueSlugs = new Set(slugValues);
     if (uniqueSlugs.size !== slugValues.length) {
       setSlugError('Each page must have a unique URL path');
+      return;
+    }
+
+    // Check if admin URL changed - show confirm dialog
+    const adminSlugChanged = originalSlugs && pageSlugs.admin?.slug !== originalSlugs.admin?.slug;
+    if (adminSlugChanged && !forceConfirm) {
+      setPendingAdminSlug(pageSlugs.admin.slug);
+      setShowAdminConfirm(true);
       return;
     }
 
@@ -246,10 +261,35 @@ const SiteSettings = () => {
       setOriginalSlugs({ ...pageSlugs });
       setSuccessMessage('URL settings saved successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
+
+      // If admin URL was changed, redirect to new admin URL
+      if (adminSlugChanged && forceConfirm) {
+        const newAdminPath = `/${pageSlugs.admin.slug}`;
+        window.location.href = newAdminPath;
+      }
     } catch (err) {
       setSlugError('Failed to save URL settings. Please try again.');
     } finally {
       setSavingSlugs(false);
+    }
+  };
+
+  // Handle admin URL confirm
+  const handleAdminConfirm = () => {
+    setShowAdminConfirm(false);
+    saveSlugs(true);
+  };
+
+  // Handle admin URL cancel
+  const handleAdminCancel = () => {
+    setShowAdminConfirm(false);
+    setPendingAdminSlug(null);
+    // Reset admin slug to original
+    if (originalSlugs) {
+      setPageSlugs(prev => ({
+        ...prev,
+        admin: { ...prev.admin, slug: originalSlugs.admin?.slug || 'admin' },
+      }));
     }
   };
 
@@ -613,7 +653,7 @@ const SiteSettings = () => {
                   <input
                     type="text"
                     value={data.slug}
-                    onChange={(e) => handleSlugChange(pageKey, e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    onChange={(e) => handleSlugChange(pageKey, e.target.value)}
                     style={{
                       flex: 1, padding: '10px 12px',
                       fontSize: '14px', border: '1px solid #d1d5db',
@@ -650,7 +690,7 @@ const SiteSettings = () => {
                   <input
                     type="text"
                     value={data.slug}
-                    onChange={(e) => handleSlugChange(pageKey, e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    onChange={(e) => handleSlugChange(pageKey, e.target.value)}
                     style={{
                       flex: 1, padding: '10px 12px',
                       fontSize: '14px', border: '1px solid #d1d5db',
@@ -687,7 +727,7 @@ const SiteSettings = () => {
                   <input
                     type="text"
                     value={data.slug}
-                    onChange={(e) => handleSlugChange(pageKey, e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                    onChange={(e) => handleSlugChange(pageKey, e.target.value)}
                     style={{
                       flex: 1, padding: '10px 12px',
                       fontSize: '14px', border: '1px solid #fcd34d',
@@ -704,6 +744,67 @@ const SiteSettings = () => {
           </div>
         </div>
       </div>
+
+      {/* Admin URL Confirm Dialog */}
+      {showAdminConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#fff', borderRadius: 12, padding: 24,
+            maxWidth: 400, width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%', backgroundColor: '#fef3c7',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="20" height="20" fill="none" stroke="#d97706" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>
+                Change Admin URL?
+              </h3>
+            </div>
+            <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 8, lineHeight: 1.5 }}>
+              You are about to change the admin panel URL to:
+            </p>
+            <p style={{
+              fontSize: 14, fontFamily: 'monospace', backgroundColor: '#f3f4f6',
+              padding: '8px 12px', borderRadius: 6, marginBottom: 16, color: '#111827',
+            }}>
+              /{pendingAdminSlug}
+            </p>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20, lineHeight: 1.5 }}>
+              After saving, you will be redirected to the new admin URL. Make sure to update your bookmarks.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleAdminCancel}
+                style={{
+                  padding: '10px 20px', borderRadius: 8, border: '1px solid #d1d5db',
+                  backgroundColor: '#fff', color: '#374151', fontSize: 14, fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAdminConfirm}
+                style={{
+                  padding: '10px 20px', borderRadius: 8, border: 'none',
+                  backgroundColor: '#d97706', color: '#fff', fontSize: 14, fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Confirm & Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

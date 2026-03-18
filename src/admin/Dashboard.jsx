@@ -103,6 +103,7 @@ const TopLevelAdmin = () => {
       <header style={{
         backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link to="/admin" style={{ fontSize: 20, fontWeight: 700, color: '#111827', textDecoration: 'none' }}>
@@ -180,6 +181,7 @@ const ThemeAdminPanel = () => {
       <header style={{
         backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link to="/admin" style={{ fontSize: 20, fontWeight: 700, color: '#111827', textDecoration: 'none' }}>
