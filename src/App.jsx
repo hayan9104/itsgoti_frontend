@@ -195,48 +195,41 @@ function DynamicPageRouter() {
   return <Navigate to="/" replace />;
 }
 
-// Dynamic admin router - handles custom admin slug with subroutes
-function DynamicAdminRouter() {
-  const { adminSlug, '*': rest } = useParams();
-  const { pageSlugs, loaded } = usePageSlugs();
-
-  // Wait for slugs to load
-  if (!loaded) {
-    return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>;
-  }
-
-  // Check if this slug matches the admin slug
-  if (pageSlugs.admin?.slug === adminSlug) {
-    return (
-      <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
-        <ProtectedRoute>
-          <AdminDashboard />
-        </ProtectedRoute>
-      </Suspense>
-    );
-  }
-
-  // Not admin slug, redirect to home
-  return <Navigate to="/" replace />;
-}
-
-// Dynamic admin login router
-function DynamicAdminLoginRouter() {
-  const { adminSlug } = useParams();
+// Catch-all router - handles custom admin slugs with slashes (e.g., goti/admin)
+function CatchAllRouter() {
+  const { '*': fullPath } = useParams();
   const { pageSlugs, loaded } = usePageSlugs();
 
   if (!loaded) {
     return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>;
   }
 
-  if (pageSlugs.admin?.slug === adminSlug) {
-    return (
-      <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
-        <AdminLogin />
-      </Suspense>
-    );
+  const adminSlug = pageSlugs.admin?.slug || 'admin';
+
+  // Check if path starts with custom admin slug (handles multi-segment slugs like "goti/admin")
+  if (fullPath && adminSlug !== 'admin') {
+    // Check for admin login
+    if (fullPath === `${adminSlug}/login`) {
+      return (
+        <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+          <AdminLogin />
+        </Suspense>
+      );
+    }
+
+    // Check if path starts with admin slug
+    if (fullPath === adminSlug || fullPath.startsWith(`${adminSlug}/`)) {
+      return (
+        <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        </Suspense>
+      );
+    }
   }
 
+  // Not a valid path, redirect to home
   return <Navigate to="/" replace />;
 }
 
@@ -280,12 +273,11 @@ function App() {
             }
           />
 
-          {/* Dynamic Admin Routes - for custom admin slugs with subroutes */}
-          <Route path="/:adminSlug/login" element={<DynamicAdminLoginRouter />} />
-          <Route path="/:adminSlug/*" element={<DynamicAdminRouter />} />
-
           {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
           <Route path="/:slug" element={<DynamicPageRouter />} />
+
+          {/* Catch-all for multi-segment admin slugs like goti/admin */}
+          <Route path="/*" element={<CatchAllRouter />} />
         </Routes>
       </PageSlugsProvider>
     </Router>
