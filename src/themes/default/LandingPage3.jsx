@@ -616,7 +616,7 @@ const LandingPage3 = () => {
       if (rotationStartedRef.current) return;
       rotationStartedRef.current = true;
 
-      const interval = 5000; // 5 seconds
+      const interval = 3000; // 3 seconds
 
       rotationTimerRef.current = setInterval(() => {
         setCurrentFeatureGroup(prev => (prev + 1) % featureGroupsLengthRef.current);
