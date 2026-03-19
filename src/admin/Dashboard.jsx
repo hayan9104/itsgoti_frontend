@@ -496,6 +496,7 @@ const ThemePagesWrapper = () => {
     { value: 'landing', label: landingPageSlugs['landing']?.label || 'Landing Page 1' },
     { value: 'landing-page-2', label: landingPageSlugs['landing-page-2']?.label || 'Landing Page 2' },
     { value: 'landing-page-3', label: landingPageSlugs['landing-page-3']?.label || 'Landing Page 3' },
+    { value: 'ab-test', label: 'A/B Test (Random 1, 2, 3)' },
   ];
 
   if (loading) return <div style={{ color: '#6b7280' }}>Loading...</div>;

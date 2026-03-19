@@ -70,9 +70,11 @@ const ThemePagesManager = () => {
 
   // Landing page options for the dropdown
   const landingPageOptions = [
-    { value: 'landing', label: 'Landing Page' },
-    { value: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
-    { value: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+    { value: 'landing', label: 'Landing Page 1' },
+    { value: 'landing-page-2', label: 'Landing Page 2' },
+    { value: 'landing-page-3', label: 'Landing Page 3' },
+    { value: 'home', label: 'Home Page' },
+    { value: 'ab-test', label: 'A/B Test (Random 1, 2, 3)' },
   ];
 
   return (
