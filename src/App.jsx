@@ -138,7 +138,7 @@ function getABTestVersion() {
 
     // Track the assignment in GA
     if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'ab_test_assigned', {
+      window.gtag('event', 'landing_page_assigned', {
         event_category: 'A/B Test',
         landing_page_version: version,
       });
