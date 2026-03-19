@@ -2,10 +2,12 @@ export const contactSections = [
   {
     id: 'hero',
     label: 'Hero Section',
-    description: 'Hero image on the left side',
+    description: 'Hero image on the left side with partner logos',
     fields: [
       { key: 'heroImage', type: 'image', label: 'Hero Image (Desktop)' },
       { key: 'heroImageMobile', type: 'image', label: 'Hero Image (Mobile)' },
+      { key: 'companyText', type: 'text', label: 'Company Text', hint: 'e.g. "You are in great company"' },
+      { key: 'contactLogos', type: 'imageArray', label: 'Partner Logos', hint: 'Logo images', useObjectFormat: true },
     ]
   },
   {

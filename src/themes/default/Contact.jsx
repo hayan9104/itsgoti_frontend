@@ -21,12 +21,22 @@ const Contact = () => {
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
   const [selectedSection, setSelectedSection] = useState(null);
+  const [visibleLogos, setVisibleLogos] = useState([]);
+  const [currentGroup, setCurrentGroup] = useState(0);
 
   // Page content from CMS
   const [pageContent, setPageContent] = useState({
     // Hero Image
     heroImage: '',
     heroImageMobile: '',
+    // Company Text & Logos
+    companyText: 'You are in great company',
+    contactLogos: [
+      { id: 1, name: 'Square', image: '' },
+      { id: 2, name: 'dribbble', image: '' },
+      { id: 3, name: 'drips', image: '' },
+      { id: 4, name: 'Dropbox', image: '' },
+    ],
     // Form Section
     formTitle: 'Tell us',
     formTitleItalic: 'more',
@@ -103,6 +113,58 @@ const Contact = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, [isEditorMode]);
 
+  // Logo animation effect - show logos one by one, wait 2s, then hide one by one, then next group
+  useEffect(() => {
+    const logos = (pageContent.contactLogos || []).filter(logo => logo.image);
+    if (logos.length === 0) return;
+
+    if (logos.length <= 4) {
+      // If 4 or fewer logos, show all of them
+      setVisibleLogos(logos.map((_, i) => i));
+      return;
+    }
+
+    const logosPerGroup = 4;
+    const totalGroups = Math.ceil(logos.length / logosPerGroup);
+    const groupStart = currentGroup * logosPerGroup;
+    const groupEnd = Math.min(groupStart + logosPerGroup, logos.length);
+    const groupSize = groupEnd - groupStart;
+
+    let step = 0;
+    let isPaused = false;
+    let interval;
+
+    const animate = () => {
+      if (step < groupSize) {
+        // Showing phase - add logos one by one
+        setVisibleLogos(Array.from({ length: step + 1 }, (_, i) => groupStart + i));
+        step++;
+      } else if (step === groupSize && !isPaused) {
+        // Pause for 2 seconds after showing all
+        isPaused = true;
+        clearInterval(interval);
+        setTimeout(() => {
+          interval = setInterval(animate, 400);
+        }, 2000);
+      } else if (step < groupSize * 2) {
+        // Hiding phase - remove logos one by one from first
+        const hideCount = step - groupSize + 1;
+        setVisibleLogos(Array.from({ length: groupSize - hideCount }, (_, i) => groupStart + hideCount + i));
+        step++;
+      } else {
+        // Move to next group
+        clearInterval(interval);
+        setCurrentGroup(prev => (prev + 1) % totalGroups);
+      }
+    };
+
+    // Start animation
+    animate();
+    interval = setInterval(animate, 400);
+
+    return () => clearInterval(interval);
+  }, [pageContent.contactLogos, currentGroup]);
+
   const fetchPageContent = async () => {
     try {
       const response = await pagesAPI.getOne('contact');
@@ -142,7 +204,7 @@ const Contact = () => {
   const heroImage = getImageUrl(heroImagePath);
 
   return (
-    <div style={{ backgroundColor: '#fff', minHeight: '100vh', position: 'relative', overflow: 'visible' }}>
+    <div style={{ backgroundColor: '#fff', minHeight: '100vh', position: 'relative', overflow: 'visible' }} id="contact-page">
       {/* Left Image Section - extends down behind footer */}
       {shouldRenderSection('hero') && (
       <EditableSection
@@ -159,11 +221,73 @@ const Contact = () => {
             position: 'absolute',
             left: 0,
             top: 0,
-            height: 'calc(100% + 200px)',
+            height: 'calc(100vh + 300px)',
             overflow: 'hidden',
             zIndex: 1,
           }}
         >
+          {/* Partner Logos Overlay */}
+          <div
+            style={{
+              position: 'absolute',
+              top: isTablet ? '80px' : '100px',
+              left: isTablet ? '24px' : '40px',
+              zIndex: 10,
+              textAlign: 'left',
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "'Gilroy-Medium', sans-serif",
+                fontSize: '20px',
+                fontWeight: 400,
+                color: '#fff',
+                lineHeight: '24px',
+                marginBottom: '20px',
+              }}
+            >
+              {pageContent.companyText || 'You are in great company'}
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                gap: '35px',
+                minHeight: '50px',
+              }}
+            >
+              {(() => {
+                const logos = (pageContent.contactLogos || []).filter(logo => logo.image);
+                const logosPerGroup = 4;
+                const groupStart = currentGroup * logosPerGroup;
+                const groupEnd = Math.min(groupStart + logosPerGroup, logos.length);
+                const currentLogos = logos.slice(groupStart, groupEnd);
+
+                return currentLogos.map((logo, index) => {
+                  const globalIndex = groupStart + index;
+                  const isVisible = visibleLogos.includes(globalIndex);
+
+                  return (
+                    <img
+                      key={`${currentGroup}-${index}`}
+                      src={getImageUrl(logo.image)}
+                      alt={logo.name || `Partner ${index + 1}`}
+                      style={{
+                        height: '43.792px',
+                        width: 'auto',
+                        objectFit: 'contain',
+                        opacity: isVisible ? 1 : 0,
+                        transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
+                        transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
+                      }}
+                    />
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
           {heroImage ? (
             <img
               src={heroImage}
@@ -172,7 +296,7 @@ const Contact = () => {
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                objectPosition: 'top center',
+                objectPosition: 'center center',
               }}
             />
           ) : (

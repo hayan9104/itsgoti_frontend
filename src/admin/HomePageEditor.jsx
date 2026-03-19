@@ -127,6 +127,12 @@ const HomePageEditor = ({ onClose, onSave }) => {
     setFormData((prev) => {
       const currentIds = prev.selectedProjectIds || [];
       const isSelected = currentIds.includes(projectId);
+
+      // If trying to add and already have 3 selected, don't add more
+      if (!isSelected && currentIds.length >= 3) {
+        return prev;
+      }
+
       return {
         ...prev,
         selectedProjectIds: isSelected
@@ -374,8 +380,18 @@ const HomePageEditor = ({ onClose, onSave }) => {
               </span>
             </h3>
             <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
-              Select which projects to display on the home page. Selected projects will appear in the carousel.
+              Select which projects to display on the home page (<strong>maximum 3</strong>). Selected projects will appear in the carousel.
             </p>
+            {(formData.selectedProjectIds || []).length > 3 && (
+              <p style={{ fontSize: '14px', color: '#fff', backgroundColor: '#E53935', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontWeight: 500 }}>
+                ⚠️ You have {(formData.selectedProjectIds || []).length} projects selected. Please deselect {(formData.selectedProjectIds || []).length - 3} to meet the maximum of 3.
+              </p>
+            )}
+            {(formData.selectedProjectIds || []).length === 3 && (
+              <p style={{ fontSize: '13px', color: '#E2775A', marginBottom: '16px', fontWeight: 500 }}>
+                Maximum 3 projects selected. Uncheck one to select another.
+              </p>
+            )}
 
             {allWorks.length === 0 ? (
               <p style={{ color: '#999', textAlign: 'center', padding: '40px' }}>
@@ -384,8 +400,15 @@ const HomePageEditor = ({ onClose, onSave }) => {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {allWorks.map((work) => (
-                  <label
+                  <div
                     key={work._id}
+                    onClick={() => {
+                      const isSelected = (formData.selectedProjectIds || []).includes(work._id);
+                      const isMaxReached = (formData.selectedProjectIds || []).length >= 3;
+                      if (!isMaxReached || isSelected) {
+                        handleProjectToggle(work._id);
+                      }
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -393,16 +416,25 @@ const HomePageEditor = ({ onClose, onSave }) => {
                       padding: '16px',
                       backgroundColor: (formData.selectedProjectIds || []).includes(work._id) ? '#E8F4FD' : '#F9F9F9',
                       borderRadius: '12px',
-                      cursor: 'pointer',
+                      cursor: (formData.selectedProjectIds || []).length >= 3 && !(formData.selectedProjectIds || []).includes(work._id) ? 'not-allowed' : 'pointer',
                       border: (formData.selectedProjectIds || []).includes(work._id) ? '2px solid #2558BF' : '2px solid transparent',
                       transition: 'all 0.2s ease',
+                      opacity: (formData.selectedProjectIds || []).length >= 3 && !(formData.selectedProjectIds || []).includes(work._id) ? 0.4 : 1,
+                      filter: (formData.selectedProjectIds || []).length >= 3 && !(formData.selectedProjectIds || []).includes(work._id) ? 'grayscale(100%)' : 'none',
+                      pointerEvents: (formData.selectedProjectIds || []).length >= 3 && !(formData.selectedProjectIds || []).includes(work._id) ? 'none' : 'auto',
                     }}
                   >
                     <input
                       type="checkbox"
                       checked={(formData.selectedProjectIds || []).includes(work._id)}
-                      onChange={() => handleProjectToggle(work._id)}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                      onChange={() => {}}
+                      disabled={(formData.selectedProjectIds || []).length >= 3 && !(formData.selectedProjectIds || []).includes(work._id)}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        cursor: (formData.selectedProjectIds || []).length >= 3 && !(formData.selectedProjectIds || []).includes(work._id) ? 'not-allowed' : 'pointer',
+                        pointerEvents: 'none',
+                      }}
                     />
                     {work.image && (
                       <img
@@ -419,7 +451,7 @@ const HomePageEditor = ({ onClose, onSave }) => {
                         {work.description?.substring(0, 100)}{work.description?.length > 100 ? '...' : ''}
                       </p>
                     </div>
-                  </label>
+                  </div>
                 ))}
               </div>
             )}

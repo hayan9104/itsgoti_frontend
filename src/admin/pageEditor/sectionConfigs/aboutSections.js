@@ -36,7 +36,7 @@ export const aboutSections = [
     description: 'Scroll-animated section',
     fields: [
       { key: 'mindsTitle', type: 'text', label: 'Section Title' },
-      { key: 'mindsImages', type: 'imageArray', label: 'Scroll Images', maxItems: 3, hint: 'Images that change on scroll', useObjectFormat: true },
+      { key: 'mindsImages', type: 'imageArray', label: 'Scroll Images', maxItems: 15, hint: 'Images that change on scroll', useObjectFormat: true },
     ]
   },
   {

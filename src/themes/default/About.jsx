@@ -20,6 +20,7 @@ const About = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+  const [expansionProgress, setExpansionProgress] = useState(0);
   const stickyRef = useRef(null);
 
   // Editor mode detection
@@ -233,12 +234,25 @@ const About = () => {
       const scrollProgress = Math.max(0, Math.min(1, -rect.top / (sectionHeight - viewportHeight)));
 
       // Get images array
-      const images = pageContent.mindsImages || [];
+      const images = (pageContent.mindsImages || []).filter(img => img.image);
       const numImages = images.length || 1;
 
-      // Calculate which image to show
-      const imageIndex = Math.min(Math.floor(scrollProgress * numImages), numImages - 1);
-      setCurrentImageIndex(imageIndex);
+      // Reserve last 30% of scroll for expansion animation
+      const imageScrollPortion = 0.7;
+      const expansionScrollPortion = 0.3;
+
+      if (scrollProgress <= imageScrollPortion) {
+        // Image scroll phase
+        const imageProgress = scrollProgress / imageScrollPortion;
+        const imageIndex = Math.min(Math.floor(imageProgress * numImages), numImages - 1);
+        setCurrentImageIndex(imageIndex);
+        setExpansionProgress(0);
+      } else {
+        // Expansion phase - all images shown, now expand to grid
+        setCurrentImageIndex(numImages - 1);
+        const expProgress = (scrollProgress - imageScrollPortion) / expansionScrollPortion;
+        setExpansionProgress(Math.min(1, expProgress));
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -925,8 +939,28 @@ const About = () => {
         // Filter only images that have been uploaded
         const uploadedImages = (pageContent.mindsImages || []).filter(img => img.image);
         const imageCount = uploadedImages.length || 1;
-        // Calculate scroll height based on number of images
-        const scrollHeight = isMobile ? `${100 + (imageCount * 50)}vh` : `${100 + (imageCount * 80)}vh`;
+        // Calculate scroll height based on number of images + expansion phase
+        const scrollHeight = isMobile ? `${150 + (imageCount * 50)}vh` : `${150 + (imageCount * 80)}vh`;
+
+        // Grid layout calculations
+        const gridCols = isMobile ? 3 : 4;
+        const gridRows = Math.ceil(uploadedImages.length / gridCols);
+        const gap = 8;
+
+        // Calculate positions for grid expansion
+        const getGridPosition = (index) => {
+          const col = index % gridCols;
+          const row = Math.floor(index / gridCols);
+          const cellWidth = isMobile ? 110 : 180;
+          const cellHeight = isMobile ? 140 : 200;
+          const totalWidth = gridCols * cellWidth + (gridCols - 1) * gap;
+          const totalHeight = gridRows * cellHeight + (gridRows - 1) * gap;
+
+          const x = col * (cellWidth + gap) - totalWidth / 2 + cellWidth / 2;
+          const y = row * (cellHeight + gap) - totalHeight / 2 + cellHeight / 2;
+
+          return { x, y, width: cellWidth, height: cellHeight };
+        };
 
         return (
           <div
@@ -950,103 +984,191 @@ const About = () => {
                 overflow: 'hidden',
               }}
             >
-              {/* Image Container */}
-              <div
-                style={{
-                  position: 'relative',
-                  width: isMobile ? '280px' : isTablet ? '320px' : '391px',
-                  height: isMobile ? '380px' : isTablet ? '450px' : '531px',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Layer 2: First Image (base) */}
-                {uploadedImages.length > 0 ? (
-                  <img
-                    src={getImageUrl(uploadedImages[0].image)}
-                    alt="Team 1"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      zIndex: 1,
-                    }}
-                  />
-                ) : (
-                  // Fallback if no images uploaded
-                  pageContent.mindsImage ? (
-                    <img
-                      src={getImageUrl(pageContent.mindsImage)}
-                      alt="Team"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        zIndex: 1,
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: '#ccc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#666',
-                        zIndex: 1,
-                      }}
-                    >
-                      Upload images from admin
-                    </div>
-                  )
-                )}
-
-                {/* Layer 4+: Subsequent images scroll up from below */}
-                {uploadedImages.slice(1).map((img, index) => (
+              {/* Single Image View (before expansion) */}
+              {expansionProgress < 0.3 && (
+                <>
+                  {/* Image Container */}
                   <div
-                    key={img.id}
                     style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      transform: `translateY(${Math.max(0, (index + 1 - currentImageIndex)) * 100}%)`,
-                      transition: 'transform 0.6s ease-out',
-                      zIndex: 10 + index,
+                      position: 'relative',
+                      width: isMobile ? '280px' : isTablet ? '320px' : '391px',
+                      height: isMobile ? '380px' : isTablet ? '450px' : '531px',
+                      overflow: 'hidden',
+                      opacity: 1 - expansionProgress * 3,
+                      transform: `scale(${1 + expansionProgress * 0.5})`,
+                      transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
                     }}
                   >
-                    <img
-                      src={getImageUrl(img.image)}
-                      alt={`Team ${index + 2}`}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
+                    {/* First Image (base) */}
+                    {uploadedImages.length > 0 ? (
+                      <img
+                        src={getImageUrl(uploadedImages[0].image)}
+                        alt="Team 1"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          zIndex: 1,
+                        }}
+                      />
+                    ) : (
+                      pageContent.mindsImage ? (
+                        <img
+                          src={getImageUrl(pageContent.mindsImage)}
+                          alt="Team"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            zIndex: 1,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: '#ccc',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#666',
+                            zIndex: 1,
+                          }}
+                        >
+                          Upload images from admin
+                        </div>
+                      )
+                    )}
 
-              {/* Text - Outside image container, always visible */}
+                    {/* Subsequent images scroll up */}
+                    {uploadedImages.slice(1).map((img, index) => (
+                      <div
+                        key={img.id}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          transform: `translateY(${Math.max(0, (index + 1 - currentImageIndex)) * 100}%)`,
+                          transition: 'transform 0.6s ease-out',
+                          zIndex: 10 + index,
+                        }}
+                      >
+                        <img
+                          src={getImageUrl(img.image)}
+                          alt={`Team ${index + 2}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Grid Expansion View - Full Bleed */}
+              {expansionProgress >= 0.1 && uploadedImages.length > 0 && (() => {
+                // Calculate grid that fills entire section with overflow
+                const sectionWidth = typeof window !== 'undefined' ? window.innerWidth : 1440;
+                const sectionHeight = isMobile ? 500 : isTablet ? 600 : 775;
+
+                // Dynamic columns based on image count
+                const cols = uploadedImages.length <= 3 ? uploadedImages.length : (isMobile ? 3 : Math.min(5, Math.ceil(Math.sqrt(uploadedImages.length * 1.5))));
+                const rows = Math.ceil(uploadedImages.length / cols);
+
+                // Make cells larger than section to create overflow/cut effect
+                const cellWidth = (sectionWidth / cols) * 1.15;
+                const cellHeight = (sectionHeight / rows) * 1.15;
+                const gapSize = isMobile ? 6 : 10;
+
+                // Total grid size (larger than viewport for cut-off effect)
+                const totalGridWidth = cols * cellWidth + (cols - 1) * gapSize;
+                const totalGridHeight = rows * cellHeight + (rows - 1) * gapSize;
+
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: `${totalGridWidth}px`,
+                      height: `${totalGridHeight}px`,
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${cols}, ${cellWidth}px)`,
+                      gridTemplateRows: `repeat(${rows}, ${cellHeight}px)`,
+                      gap: `${gapSize}px`,
+                      opacity: Math.min(1, (expansionProgress - 0.1) * 2.5),
+                      transition: 'opacity 0.3s ease-out',
+                      zIndex: 50,
+                    }}
+                  >
+                    {uploadedImages.map((img, index) => {
+                      // Calculate animation progress for staggered effect
+                      const staggerDelay = index * 0.03;
+                      const itemProgress = Math.max(0, Math.min(1, (expansionProgress - 0.1 - staggerDelay) * 2.5));
+
+                      // Start from center, expand outward
+                      const col = index % cols;
+                      const row = Math.floor(index / cols);
+                      const centerCol = (cols - 1) / 2;
+                      const centerRow = (rows - 1) / 2;
+
+                      const offsetX = (col - centerCol) * cellWidth * (1 - itemProgress);
+                      const offsetY = (row - centerRow) * cellHeight * (1 - itemProgress);
+                      const scale = 0.2 + itemProgress * 0.8;
+                      const rotation = (1 - itemProgress) * (index % 2 === 0 ? 20 : -20);
+
+                      return (
+                        <div
+                          key={img.id}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            transform: `translate(${-offsetX}px, ${-offsetY}px) scale(${scale}) rotate(${rotation}deg)`,
+                            transition: 'transform 0.4s ease-out',
+                            overflow: 'hidden',
+                            filter: 'grayscale(100%)',
+                          }}
+                        >
+                          <img
+                            src={getImageUrl(img.image)}
+                            alt={`Team ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* Text - "The ONES" style - Always on top */}
               <h3
                 style={{
                   position: 'absolute',
                   top: '50%',
                   left: '50%',
                   transform: 'translate(-50%, -50%)',
-                  zIndex: 100,
+                  zIndex: 200,
                   fontFamily: "'Plus Jakarta Sans-Medium', 'Plus Jakarta Sans', 'Inter', sans-serif",
                   fontSize: isMobile ? '36px' : isTablet ? '56px' : '80px',
                   fontWeight: 400,
@@ -1055,8 +1177,9 @@ const About = () => {
                   color: '#FFFFFF',
                   textAlign: 'center',
                   whiteSpace: 'nowrap',
-                  textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                  textShadow: '0 4px 20px rgba(0,0,0,0.5), 0 2px 10px rgba(0,0,0,0.3)',
                   margin: 0,
+                  pointerEvents: 'none',
                 }}
               >
                 {pageContent.mindsTitle}
