@@ -6,6 +6,9 @@ import { worksAPI, uploadAPI, pagesAPI, caseStudiesAPI } from '../services/api';
 const WorksList = ({ basePath = '/goti/admin/works' }) => {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [dragOverItem, setDragOverItem] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchWorks();
@@ -33,6 +36,63 @@ const WorksList = ({ basePath = '/goti/admin/works' }) => {
     }
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e, index) => {
+    setDraggedItem(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.outerHTML);
+    e.target.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedItem(null);
+    setDragOverItem(null);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverItem(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverItem(null);
+  };
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+
+    if (draggedItem === null || draggedItem === dropIndex) {
+      setDraggedItem(null);
+      setDragOverItem(null);
+      return;
+    }
+
+    // Reorder the array
+    const newWorks = [...works];
+    const draggedWork = newWorks[draggedItem];
+    newWorks.splice(draggedItem, 1);
+    newWorks.splice(dropIndex, 0, draggedWork);
+
+    setWorks(newWorks);
+    setDraggedItem(null);
+    setDragOverItem(null);
+
+    // Save new order to database
+    try {
+      setSaving(true);
+      const orderedIds = newWorks.map(work => work._id);
+      await worksAPI.reorder(orderedIds);
+    } catch (error) {
+      console.error('Error saving order:', error);
+      // Refresh to get correct order if save failed
+      fetchWorks();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -44,7 +104,13 @@ const WorksList = ({ basePath = '/goti/admin/works' }) => {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>Works / Projects</h1>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>Works / Projects</h1>
+          <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
+            Drag rows to reorder projects. Changes save automatically.
+            {saving && <span style={{ color: '#2563eb', marginLeft: '8px' }}>Saving...</span>}
+          </p>
+        </div>
         <Link
           to={`${basePath}/new`}
           style={{ backgroundColor: '#2563eb', color: '#fff', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
@@ -57,6 +123,9 @@ const WorksList = ({ basePath = '/goti/admin/works' }) => {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ backgroundColor: '#f9fafb' }}>
             <tr>
+              <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb', width: '50px' }}>
+                #
+              </th>
               <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '12px', fontWeight: 500, color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>
                 Image
               </th>
@@ -75,14 +144,50 @@ const WorksList = ({ basePath = '/goti/admin/works' }) => {
             </tr>
           </thead>
           <tbody>
-            {works.map((work) => (
-              <tr key={work._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+            {works.map((work, index) => (
+              <tr
+                key={work._id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                style={{
+                  borderBottom: '1px solid #e5e7eb',
+                  cursor: 'grab',
+                  backgroundColor: dragOverItem === index ? '#eff6ff' : 'transparent',
+                  borderTop: dragOverItem === index ? '2px solid #2563eb' : 'none',
+                  transition: 'background-color 0.15s ease',
+                }}
+              >
+                <td style={{ padding: '16px', textAlign: 'center' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    color: '#9ca3af',
+                  }}>
+                    {/* Drag Handle Icon */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="9" cy="6" r="1.5" />
+                      <circle cx="15" cy="6" r="1.5" />
+                      <circle cx="9" cy="12" r="1.5" />
+                      <circle cx="15" cy="12" r="1.5" />
+                      <circle cx="9" cy="18" r="1.5" />
+                      <circle cx="15" cy="18" r="1.5" />
+                    </svg>
+                    <span style={{ fontSize: '12px', fontWeight: 500 }}>{index + 1}</span>
+                  </div>
+                </td>
                 <td style={{ padding: '16px 24px' }}>
                   {work.image ? (
                     <img
                       src={work.image}
                       alt={work.title}
                       style={{ height: '64px', width: '96px', objectFit: 'cover', borderRadius: '4px' }}
+                      draggable={false}
                     />
                   ) : (
                     <div style={{ height: '64px', width: '96px', backgroundColor: '#f3f4f6', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '12px' }}>No image</div>

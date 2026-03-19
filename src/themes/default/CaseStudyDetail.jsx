@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { caseStudiesAPI, pagesAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
+import EditableSection from '@/components/EditableSection';
 import vectorIcon from '@/assets/Vector.png';
 import sliderIcon from '@/assets/Frame 1618874557.png';
 
@@ -316,11 +317,16 @@ const ImageComparisonSlider = ({ leftImage, rightImage, isMobile, isTablet, slid
 
 const CaseStudyDetail = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
   const { isMobile, isTablet } = useWindowSize();
 
-  // Initialize smooth scrolling
-  useSmoothScroll(!isMobile);
-  useScrollAnimations(!isMobile);
+  // Editor mode detection
+  const isEditorMode = searchParams.get('editor') === 'true';
+  const [selectedSection, setSelectedSection] = useState(null);
+
+  // Initialize smooth scrolling (disabled in editor mode)
+  useSmoothScroll(!isMobile && !isEditorMode);
+  useScrollAnimations(!isMobile && !isEditorMode);
 
   const [caseStudy, setCaseStudy] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -355,6 +361,48 @@ const CaseStudyDetail = () => {
       stat3Label: 'Return-rate per customer',
     },
   ]);
+
+  // Listen for editor updates from admin panel
+  useEffect(() => {
+    if (!isEditorMode) return;
+
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'EDITOR_UPDATE' || event.data.type === 'EDITOR_INIT') {
+        const { section, data } = event.data.payload;
+        setSelectedSection(section);
+        if (data) {
+          setCaseStudy(prev => ({ ...prev, ...data }));
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Notify parent that preview is ready
+    window.parent.postMessage({ type: 'PREVIEW_READY' }, window.location.origin);
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, [isEditorMode]);
+
+  // Check if section is visible (for editor toggle)
+  const isSectionVisible = (sectionId) => {
+    if (!caseStudy) return true;
+    const visibilityKey = `${sectionId}Visible`;
+    return caseStudy[visibilityKey] !== false;
+  };
+
+  // Check if section should render (always render in editor mode for toggle preview)
+  const shouldRenderSection = (sectionId) => {
+    if (isEditorMode) return true;
+    return isSectionVisible(sectionId);
+  };
+
+  // Check if section is hidden (for blur effect in editor)
+  const isSectionHidden = (sectionId) => {
+    return !isSectionVisible(sectionId);
+  };
 
   useEffect(() => {
     fetchCaseStudy();
@@ -472,13 +520,21 @@ const CaseStudyDetail = () => {
     <div style={{ backgroundColor: '#fff', fontFamily: "'Plus Jakarta Sans', sans-serif", overflowX: 'hidden' }}>
 
       {/* ==================== HERO SECTION (Blue Part) ==================== */}
-      <section style={{
-        backgroundColor: '#2558BF',
-        position: 'relative',
-        overflow: 'hidden',
-        height: isMobile ? '184px' : isTablet ? '200px' : '220px',
-        width: '100%',
-      }}>
+      {shouldRenderSection('hero') && (
+      <EditableSection
+        sectionId="hero"
+        label="Hero Section"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'hero'}
+        isHidden={isSectionHidden('hero')}
+        style={{
+          backgroundColor: '#2558BF',
+          position: 'relative',
+          overflow: 'hidden',
+          height: isMobile ? '184px' : isTablet ? '200px' : '220px',
+          width: '100%',
+        }}
+      >
         {/* Noise texture overlay with blue tint */}
         <div style={{
           position: 'absolute',
@@ -550,14 +606,23 @@ const CaseStudyDetail = () => {
             ))}
           </div>
         </div>
-      </section>
+      </EditableSection>
+      )}
 
       {/* ==================== BANNER IMAGE SECTION ==================== */}
-      <section style={{
-        width: '100%',
-        height: isMobile ? '356px' : isTablet ? '400px' : '533px',
-        overflow: 'hidden',
-      }}>
+      {shouldRenderSection('hero') && (
+      <EditableSection
+        sectionId="hero"
+        label="Banner Image"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'hero'}
+        isHidden={isSectionHidden('hero')}
+        style={{
+          width: '100%',
+          height: isMobile ? '356px' : isTablet ? '400px' : '533px',
+          overflow: 'hidden',
+        }}
+      >
         <img
           src={
             isMobile
@@ -571,14 +636,23 @@ const CaseStudyDetail = () => {
             objectFit: 'cover',
           }}
         />
-      </section>
+      </EditableSection>
+      )}
 
       {/* ==================== THE COLLABORATION SECTION ==================== */}
-      <section style={{
-        padding: isMobile ? '56px 20px 0' : isTablet ? '60px 40px' : '60px 50px',
-        maxWidth: '1440px',
-        margin: '0 auto',
-      }}>
+      {shouldRenderSection('collaboration') && (
+      <EditableSection
+        sectionId="collaboration"
+        label="Collaboration"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'collaboration'}
+        isHidden={isSectionHidden('collaboration')}
+        style={{
+          padding: isMobile ? '56px 20px 0' : isTablet ? '60px 40px' : '60px 50px',
+          maxWidth: '1440px',
+          margin: '0 auto',
+        }}
+      >
         {isMobile ? (
           /* Mobile Layout - Vertical stacking */
           <div style={{
@@ -799,11 +873,20 @@ const CaseStudyDetail = () => {
             </div>
           </div>
         )}
-      </section>
+      </EditableSection>
+      )}
 
       {/* ==================== PROBLEM DEFINITION SECTION ==================== */}
-      <div style={{ position: 'relative', overflow: 'hidden' }}>
-      <section style={{
+      {shouldRenderSection('challenge') && (
+      <EditableSection
+        sectionId="challenge"
+        label="Challenge & Solution"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'challenge'}
+        isHidden={isSectionHidden('challenge')}
+        style={{ position: 'relative', overflow: 'hidden' }}
+      >
+      <div style={{
         padding: isMobile ? '50px 20px 60px' : isTablet ? '40px 40px 80px' : '50px 50px 100px',
         maxWidth: '1440px',
         margin: '0 auto',
@@ -883,7 +966,7 @@ const CaseStudyDetail = () => {
             {activeTab === 'results' && (caseStudy.results || 'Results coming soon...')}
           </p>
         </div>
-      </section>
+      </div>
 
       {/* Blue Divider Line - Touches right edge */}
       {!isMobile && (
@@ -899,11 +982,18 @@ const CaseStudyDetail = () => {
           borderBottomLeftRadius: '20px',
         }} />
       )}
-      </div>
+      </EditableSection>
+      )}
 
       {/* ==================== APP SCREENSHOTS SECTION - Image Comparison Slider ==================== */}
-      {(caseStudy.images?.length > 0 || caseStudy.imagesMobile?.length > 0) && (
-        <>
+      {shouldRenderSection('gallery') && (caseStudy.images?.length > 0 || caseStudy.imagesMobile?.length > 0) && (
+        <EditableSection
+          sectionId="gallery"
+          label="Gallery Images"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'gallery'}
+          isHidden={isSectionHidden('gallery')}
+        >
           {/* If 2+ images, show comparison slider */}
           {(caseStudy.images?.length > 1 || caseStudy.imagesMobile?.length > 1) ? (
             <ImageComparisonSlider
@@ -944,16 +1034,23 @@ const CaseStudyDetail = () => {
               />
             </section>
           )}
-        </>
+        </EditableSection>
       )}
 
       {/* ==================== THE PROCESS SECTION ==================== */}
-      {caseStudy.processSteps && caseStudy.processSteps.length > 0 && (
-        <section style={{
-          padding: isMobile ? '48px 20px 0' : isTablet ? '80px 40px 0' : '80px 50px 0',
-          maxWidth: '1440px',
-          margin: '0 auto',
-        }}>
+      {shouldRenderSection('process') && caseStudy.processSteps && caseStudy.processSteps.length > 0 && (
+        <EditableSection
+          sectionId="process"
+          label="Process Steps"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'process'}
+          isHidden={isSectionHidden('process')}
+          style={{
+            padding: isMobile ? '48px 20px 0' : isTablet ? '80px 40px 0' : '80px 50px 0',
+            maxWidth: '1440px',
+            margin: '0 auto',
+          }}
+        >
           {/* Mobile: Title centered above steps */}
           {isMobile && (
             <h2 style={{
@@ -1072,16 +1169,23 @@ const CaseStudyDetail = () => {
               ))}
             </div>
           </div>
-        </section>
+        </EditableSection>
       )}
 
       {/* ==================== OPPORTUNITIES DISCOVERED SECTION ==================== */}
-      {caseStudy.opportunities && caseStudy.opportunities.length > 0 && (
-        <section style={{
-          padding: isMobile ? '48px 22px 75px' : isTablet ? '82px 40px 80px' : '82px 50px 80px',
-          maxWidth: '1440px',
-          margin: '0 auto',
-        }}>
+      {shouldRenderSection('opportunities') && caseStudy.opportunities && caseStudy.opportunities.length > 0 && (
+        <EditableSection
+          sectionId="opportunities"
+          label="Opportunities"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'opportunities'}
+          isHidden={isSectionHidden('opportunities')}
+          style={{
+            padding: isMobile ? '48px 22px 75px' : isTablet ? '82px 40px 80px' : '82px 50px 80px',
+            maxWidth: '1440px',
+            margin: '0 auto',
+          }}
+        >
           <h2 style={{
             fontSize: isMobile ? '26px' : isTablet ? '42px' : '50px',
             color: '#000',
@@ -1185,7 +1289,7 @@ const CaseStudyDetail = () => {
               </div>
             ))}
           </div>
-        </section>
+        </EditableSection>
       )}
 
       {/* ==================== DIVIDER LINE ==================== */}
@@ -1199,9 +1303,17 @@ const CaseStudyDetail = () => {
       }} />
 
       {/* ==================== THE EXPERIENCE SECTION ==================== */}
-      <section style={{
-        padding: isMobile ? '60px 0' : isTablet ? '80px 0' : '80px 0',
-      }}>
+      {shouldRenderSection('experience') && (
+      <EditableSection
+        sectionId="experience"
+        label="Experience"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'experience'}
+        isHidden={isSectionHidden('experience')}
+        style={{
+          padding: isMobile ? '60px 0' : isTablet ? '80px 0' : '80px 0',
+        }}
+      >
         <h2 style={{
           fontSize: isMobile ? '26px' : isTablet ? '42px' : '50px',
           color: '#000',
@@ -1360,10 +1472,19 @@ const CaseStudyDetail = () => {
             </p>
           </div>
         )}
-      </section>
+      </EditableSection>
+      )}
 
       {/* ==================== COLOR PALETTE SECTION ==================== */}
-      <section style={{ position: 'relative' }}>
+      {shouldRenderSection('colors') && (
+      <EditableSection
+        sectionId="colors"
+        label="Color Palette"
+        isEditorMode={isEditorMode}
+        isSelected={selectedSection === 'colors'}
+        isHidden={isSectionHidden('colors')}
+        style={{ position: 'relative' }}
+      >
         {colorPalette.map((color, index) => (
           <div
             key={index}
@@ -1407,16 +1528,24 @@ const CaseStudyDetail = () => {
             Palatte
           </p>
         </div>
-      </section>
+      </EditableSection>
+      )}
 
       {/* ==================== TYPOGRAPHY SECTION ==================== */}
-      {(caseStudy.typography?.fontImage || caseStudy.typography?.fontImageMobile) && (
-        <section style={{
-          width: '100%',
-          height: isMobile ? '664px' : isTablet ? '450px' : '603px',
-          overflow: 'hidden',
-          position: 'relative',
-        }}>
+      {shouldRenderSection('typography') && (caseStudy.typography?.fontImage || caseStudy.typography?.fontImageMobile) && (
+        <EditableSection
+          sectionId="typography"
+          label="Typography"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'typography'}
+          isHidden={isSectionHidden('typography')}
+          style={{
+            width: '100%',
+            height: isMobile ? '664px' : isTablet ? '450px' : '603px',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
           <img
             src={isMobile
               ? (caseStudy.typography?.fontImageMobile || caseStudy.typography?.fontImage)
@@ -1429,7 +1558,7 @@ const CaseStudyDetail = () => {
               objectFit: 'cover',
             }}
           />
-        </section>
+        </EditableSection>
       )}
 
       {/* ==================== CTA SECTION ==================== */}
@@ -2052,10 +2181,17 @@ const CaseStudyDetail = () => {
       }} />
 
       {/* ==================== RELATED PROJECTS SECTION ==================== */}
-      {caseStudy.relatedWorks && caseStudy.relatedWorks.length > 0 && (
-        <section style={{
-          padding: isMobile ? '48px 0 100px' : isTablet ? '40px 0 200px' : '40px 0 200px',
-        }}>
+      {shouldRenderSection('related') && caseStudy.relatedWorks && caseStudy.relatedWorks.length > 0 && (
+        <EditableSection
+          sectionId="related"
+          label="Related Projects"
+          isEditorMode={isEditorMode}
+          isSelected={selectedSection === 'related'}
+          isHidden={isSectionHidden('related')}
+          style={{
+            padding: isMobile ? '48px 0 100px' : isTablet ? '40px 0 200px' : '40px 0 200px',
+          }}
+        >
           {/* Title */}
           <h2 style={{
             fontSize: isMobile ? '26px' : isTablet ? '42px' : '50px',
@@ -2198,7 +2334,7 @@ const CaseStudyDetail = () => {
               </Link>
             ))}
           </div>
-        </section>
+        </EditableSection>
       )}
     </div>
   );

@@ -69,6 +69,7 @@ export const worksAPI = {
   create: (data) => api.post('/works', data),
   update: (id, data) => api.put(`/works/${id}`, data),
   delete: (id) => api.delete(`/works/${id}`),
+  reorder: (orderedIds) => api.put('/works/reorder', { orderedIds }),
 };
 
 // Case Studies API
