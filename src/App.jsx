@@ -122,12 +122,63 @@ function PageSlugsProvider({ children }) {
   );
 }
 
+// A/B Testing: Get or assign a random landing page version for the user
+function getABTestVersion() {
+  const AB_TEST_KEY = 'itsgoti_ab_landing_version';
+  const landingPages = ['landing', 'landing-page-2', 'landing-page-3'];
+
+  // Check if user already has a version assigned
+  let version = localStorage.getItem(AB_TEST_KEY);
+
+  if (!version || !landingPages.includes(version)) {
+    // Assign a random version
+    const randomIndex = Math.floor(Math.random() * landingPages.length);
+    version = landingPages[randomIndex];
+    localStorage.setItem(AB_TEST_KEY, version);
+
+    // Track the assignment in GA
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'ab_test_assigned', {
+        event_category: 'A/B Test',
+        landing_page_version: version,
+      });
+    }
+  }
+
+  return version;
+}
+
 // Component to render the default landing page based on theme settings
 function DefaultLandingRouter() {
   const { defaultLandingPage } = useLandingSlugs();
+  const [abVersion, setAbVersion] = useState(null);
+
+  useEffect(() => {
+    // Check if A/B testing is enabled (defaultLandingPage === 'ab-test')
+    if (defaultLandingPage === 'ab-test') {
+      const version = getABTestVersion();
+      setAbVersion(version);
+
+      // Send page view with version to GA
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'page_view', {
+          page_title: `Landing Page - ${version}`,
+          landing_page_version: version,
+        });
+      }
+    }
+  }, [defaultLandingPage]);
+
+  // If A/B testing is enabled, use the random version
+  const activePage = defaultLandingPage === 'ab-test' ? abVersion : defaultLandingPage;
+
+  // Wait for AB version to be determined
+  if (defaultLandingPage === 'ab-test' && !abVersion) {
+    return <PageLoader />;
+  }
 
   // Home page
-  if (defaultLandingPage === 'home') {
+  if (activePage === 'home') {
     return (
       <Suspense fallback={<PageLoader />}>
         <PageVisibilityWrapper pageName="home" fallbackPath="/">
@@ -138,7 +189,7 @@ function DefaultLandingRouter() {
   }
 
   // LandingPage3 is loaded eagerly, others are lazy
-  if (defaultLandingPage === 'landing-page-3') {
+  if (activePage === 'landing-page-3') {
     return (
       <PageVisibilityWrapper pageName="landing-page-3" fallbackPath="/home">
         <LandingPage3 />
@@ -149,9 +200,9 @@ function DefaultLandingRouter() {
   // Other landing pages are lazy loaded
   return (
     <Suspense fallback={<PageLoader />}>
-      <PageVisibilityWrapper pageName={defaultLandingPage} fallbackPath="/home">
-        {defaultLandingPage === 'landing' && <Landing />}
-        {defaultLandingPage === 'landing-page-2' && <LandingPage2 />}
+      <PageVisibilityWrapper pageName={activePage} fallbackPath="/home">
+        {activePage === 'landing' && <Landing />}
+        {activePage === 'landing-page-2' && <LandingPage2 />}
       </PageVisibilityWrapper>
     </Suspense>
   );

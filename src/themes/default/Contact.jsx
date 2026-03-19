@@ -199,6 +199,16 @@ const Contact = () => {
       setSubmitted(true);
       reset();
       setSelectedSource('');
+
+      // Send form submission event to Google Analytics
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'form_submission', {
+          event_category: 'Contact',
+          event_label: 'Contact Form',
+          source: selectedSource,
+          value: 1
+        });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');
     }
