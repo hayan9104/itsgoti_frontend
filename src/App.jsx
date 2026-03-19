@@ -157,12 +157,12 @@ function getABTestVersion() {
 
 // Component to render the default landing page based on theme settings
 function DefaultLandingRouter() {
-  const { defaultLandingPage } = useLandingSlugs();
+  const { defaultLandingPage, loaded } = useLandingSlugs();
   const [abVersion, setAbVersion] = useState(null);
 
   useEffect(() => {
     // Check if A/B testing is enabled (defaultLandingPage === 'ab-test')
-    if (defaultLandingPage === 'ab-test') {
+    if (loaded && defaultLandingPage === 'ab-test') {
       const version = getABTestVersion();
       setAbVersion(version);
 
@@ -174,7 +174,12 @@ function DefaultLandingRouter() {
         });
       }
     }
-  }, [defaultLandingPage]);
+  }, [defaultLandingPage, loaded]);
+
+  // Wait for settings to load first
+  if (!loaded) {
+    return <PageLoader />;
+  }
 
   // If A/B testing is enabled, use the random version
   const activePage = defaultLandingPage === 'ab-test' ? abVersion : defaultLandingPage;
