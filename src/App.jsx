@@ -127,6 +127,13 @@ function getABTestVersion() {
   const AB_TEST_KEY = 'itsgoti_ab_landing_version';
   const landingPages = ['landing', 'landing-page-2', 'landing-page-3'];
 
+  // Friendly names for GA tracking
+  const landingPageNames = {
+    'landing': 'Landing Page 1',
+    'landing-page-2': 'Landing Page 2',
+    'landing-page-3': 'Landing Page 3',
+  };
+
   // Check if user already has a version assigned
   let version = localStorage.getItem(AB_TEST_KEY);
 
@@ -140,7 +147,7 @@ function getABTestVersion() {
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', 'landing_page_assigned', {
         event_category: 'A/B Test',
-        landing_page_version: version,
+        landing_page_version: landingPageNames[version],
       });
     }
   }
