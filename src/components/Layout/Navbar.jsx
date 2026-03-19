@@ -43,8 +43,8 @@ const Navbar = ({ dark = false, blue = false, orange = false }) => {
 
   // Define nav links with their corresponding page names
   const allNavLinks = [
+    { to: '/home', label: 'Home', pageName: 'home' },
     { to: '/work', label: 'Projects', pageName: 'work' },
-    { to: '/case-studies', label: 'Case Study', pageName: 'case-study' },
     { to: '/about', label: 'About', pageName: 'about' },
     { to: '/approach', label: 'Industries', pageName: 'approach' },
   ];

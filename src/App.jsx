@@ -131,7 +131,7 @@ function DefaultLandingRouter() {
     return (
       <Suspense fallback={<PageLoader />}>
         <PageVisibilityWrapper pageName="home" fallbackPath="/">
-          <Layout><Home /></Layout>
+          <Layout blueNav={true}><Home /></Layout>
         </PageVisibilityWrapper>
       </Suspense>
     );
@@ -194,7 +194,7 @@ function DynamicPageRouter() {
       return (
         <Suspense fallback={<PageLoader />}>
           <PageVisibilityWrapper pageName={pageKey} fallbackPath="/">
-            {pageKey === 'home' && <Layout><Home /></Layout>}
+            {pageKey === 'home' && <Layout blueNav={true}><Home /></Layout>}
             {pageKey === 'about' && <Layout darkNav={true}><About /></Layout>}
             {pageKey === 'approach' && <Layout orangeNav={true}><Approach /></Layout>}
             {pageKey === 'work' && <Layout><Work /></Layout>}
