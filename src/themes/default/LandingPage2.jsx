@@ -194,6 +194,15 @@ const LandingPage2 = () => {
       });
       setFormSubmitted(true);
       reset();
+
+      // Send GA event for LP2 form
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'form_submission', {
+          event_category: 'Contact',
+          event_label: 'LP2 Bottom',
+          value: 1
+        });
+      }
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('Something went wrong. Please try again.');

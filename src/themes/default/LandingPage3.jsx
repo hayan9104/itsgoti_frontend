@@ -257,6 +257,17 @@ const LandingPage3 = () => {
       });
       setModalFormSubmitted(true);
       setModalFormData({ companyName: '', contactNumber: '', service: '' });
+
+      // Send GA event for popup form
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'form_submission', {
+          event_category: 'Contact',
+          event_label: 'LP3 Popup',
+          source: modalSource,
+          value: 1
+        });
+      }
+
       setTimeout(() => {
         setIsModalOpen(false);
         setModalFormSubmitted(false);
@@ -419,6 +430,16 @@ const LandingPage3 = () => {
       });
       setFormSubmitted(true);
       reset();
+
+      // Send GA event for bottom form
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'form_submission', {
+          event_category: 'Contact',
+          event_label: 'LP3 Bottom',
+          service: data.service,
+          value: 1
+        });
+      }
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('Something went wrong. Please try again.');

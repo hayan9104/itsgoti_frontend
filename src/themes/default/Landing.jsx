@@ -301,6 +301,15 @@ const Landing = () => {
       });
       setFormSuccess(true);
       setFormData({ fullName: '', email: '', companyName: '', phone: '', message: '' });
+
+      // Send GA event for LP1 form
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'form_submission', {
+          event_category: 'Contact',
+          event_label: 'LP1 Bottom',
+          value: 1
+        });
+      }
     } catch (err) {
       setFormError(err.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {
