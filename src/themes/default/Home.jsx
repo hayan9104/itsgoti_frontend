@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { pagesAPI, worksAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import vectorIcon from '@/assets/Vector.png';
 import EditableSection from '@/components/EditableSection';
 import heroDecor1 from '@/assets/Group 37369.png';
@@ -23,11 +25,7 @@ const servicePatternBlue = `data:image/svg+xml,${encodeURIComponent(`<svg width=
 <path d="M666.499 444.663L599.447 395.178L509.153 517.527L576.205 567.011L586.858 552.576L534.241 513.744L603.228 420.266L655.846 459.098L666.499 444.663Z" fill="#336BB7"/>
 </svg>`)}`;
 
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-// Register GSAP plugin
-gsap.registerPlugin(ScrollTrigger);
+import { gsap, ScrollTrigger } from '@/lib/gsap';
 
 // Helper to get full image URL
 const getImageUrl = (path) => {
@@ -41,6 +39,10 @@ const Home = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
+
+  // Smooth scrolling and scroll animations (desktop only)
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
   const [selectedSection, setSelectedSection] = useState(null);
   const [expandedAccordion, setExpandedAccordion] = useState(0);
   const [expandedFaq, setExpandedFaq] = useState(null);
@@ -48,6 +50,8 @@ const Home = () => {
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [projectSliding, setProjectSliding] = useState(false);
   const [works, setWorks] = useState([]);
+  const sliderRef = useRef(null); // Ref for GSAP project slider animation
+  const servicesSliderRef = useRef(null); // Ref for GSAP services slider animation
   const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for client logos
 
   // Refs for GSAP animation
@@ -1054,45 +1058,98 @@ const Home = () => {
       </EditableSection>
       )}
 
-      {/* Projects Showcase Section - Carousel */}
+      {/* Projects Showcase Section - Horizontal Slider (Desktop) */}
       {shouldRenderSection('projects') && (
       <EditableSection sectionId="projects" label="Projects Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'projects'} isHidden={isSectionHidden('projects')}>
         <section style={{
           padding: isMobile ? '0 0 40px 0' : '0',
-          overflow: 'visible',
-          marginTop: isMobile ? '-180px' : '0', // Pull up to overlap with Experience section
+          overflow: 'hidden',
+          marginTop: isMobile ? '-180px' : '0',
         }}>
           {(() => {
-            const projectList = works.length > 0 ? works : [
+            const projectList = works.length > 0 ? works.slice(0, 3) : [
               { _id: '1', title: 'Project Name', featuredImage: null },
               { _id: '2', title: 'Project Name', featuredImage: null },
               { _id: '3', title: 'Project Name', featuredImage: null },
             ];
-            const totalProjects = projectList.length;
-            const currentWork = projectList[currentProjectIndex] || projectList[0];
-            const bgColor = isMobile ? '#E1FFA0' : '#D2F34C'; // Mobile: match Experience section, Desktop: lime green
-            const nextBgColor = '#2558BF'; // Blue for right section
+            const totalProjects = Math.min(projectList.length, 3);
 
+            // Card background colors for each project
+            const projectColors = ['#D2F34C', '#2558BF', '#E2775A']; // Green, Blue, Coral
+            const currentBgColor = projectColors[currentProjectIndex % 3];
+            const nextIndex = (currentProjectIndex + 1) % totalProjects;
+            const prevIndex = (currentProjectIndex - 1 + totalProjects) % totalProjects;
+            const nextBgColor = projectColors[nextIndex % 3];
+            const currentWork = projectList[currentProjectIndex] || projectList[0];
+            const nextWork = projectList[nextIndex] || projectList[0];
+
+            // Text colors based on background
+            const getTextColor = (bgColor) => bgColor === '#D2F34C' ? '#000' : '#FFF';
+            const currentTextColor = getTextColor(currentBgColor);
+            const nextTextColor = getTextColor(nextBgColor);
+
+            // Animate slider with GSAP for buttery smooth movement
+            const animateSlider = (targetIndex, onComplete) => {
+              if (!sliderRef.current) return;
+              const extendedLen = Math.min(projectList.length, 3) + 1; // 4 cards
+              const targetPercent = (targetIndex * 100) / extendedLen;
+
+              gsap.to(sliderRef.current, {
+                x: `-${targetPercent}%`,
+                duration: 2.5,
+                ease: 'power1.out', // Slightly fast start, then very slow & smooth
+                onComplete: onComplete,
+              });
+            };
+
+            // Navigate to specific slide with animation
+            const goToSlide = (targetIndex) => {
+              if (projectSliding || targetIndex === currentProjectIndex) return;
+              setProjectSliding(true);
+
+              animateSlider(targetIndex, () => {
+                setCurrentProjectIndex(targetIndex);
+                setProjectSliding(false);
+              });
+            };
+
+            // Handle next with infinite loop
             const handleNextProject = () => {
               if (projectSliding) return;
               setProjectSliding(true);
-              setTimeout(() => {
-                setCurrentProjectIndex((prev) => (prev + 1) % totalProjects);
+
+              const nextIdx = currentProjectIndex + 1;
+
+              animateSlider(nextIdx, () => {
+                // If we're at the clone (index 3), instantly reset to real first card (index 0)
+                if (nextIdx >= totalProjects) {
+                  gsap.set(sliderRef.current, { x: '0%' });
+                  setCurrentProjectIndex(0);
+                } else {
+                  setCurrentProjectIndex(nextIdx);
+                }
                 setProjectSliding(false);
-              }, 400);
+              });
+            };
+
+            const handlePrevProject = () => {
+              goToSlide((currentProjectIndex - 1 + totalProjects) % totalProjects);
             };
 
             // Mobile: Skip first project (shown in Experience section), show remaining with different colors
             const mobileProjectList = isMobile && projectList.length > 1 ? projectList.slice(1) : projectList;
-            // Different background colors for each mobile project card
-            const mobileProjectColors = ['#2558BF', '#E2775A']; // blue, coral (for 2nd and 3rd projects)
+            const mobileProjectColors = ['#2558BF', '#E2775A'];
+
+            // For infinite loop: create extended list with first card cloned at end
+            const extendedProjectList = [...projectList.slice(0, 3), projectList[0]];
+            const extendedTotal = extendedProjectList.length; // 4 cards (3 + 1 clone)
 
             return isMobile ? (
               // Mobile Layout - Stacked cards with different colors and border-radius, overlapping
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {mobileProjectList.slice(0, 2).map((project, idx) => {
                   const cardBgColor = mobileProjectColors[idx] || '#F5F5F5';
-                  const textColor = '#FFF'; // White text on blue and coral backgrounds
+                  const textColor = '#FFF';
                   return (
                     <div key={project._id || idx} style={{
                       backgroundColor: cardBgColor,
@@ -1101,10 +1158,9 @@ const Home = () => {
                       paddingTop: '0',
                       paddingBottom: '80px',
                       position: 'relative',
-                      marginTop: idx === 0 ? '0' : '-180px', // First card no margin (section has it), others pull up more
-                      zIndex: 10 - idx, // First card higher z-index
+                      marginTop: idx === 0 ? '0' : '-180px',
+                      zIndex: 10 - idx,
                     }}>
-                      {/* Image first (on top) - pushed down, same as Experience section */}
                       <div style={{ padding: '220px 25px 0' }}>
                         <div style={{
                           width: '100%',
@@ -1120,7 +1176,6 @@ const Home = () => {
                             <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: textColor }}>Project Image</div>
                           )}
                         </div>
-                        {/* Text below image */}
                         <p style={{
                           fontFamily: "'Gilroy-Medium', sans-serif",
                           fontSize: '26px',
@@ -1139,115 +1194,200 @@ const Home = () => {
                 })}
               </div>
             ) : (
-              // Desktop Layout - Carousel with slide animation
-              <div style={{ position: 'relative', minHeight: '646px', width: '100%', backgroundColor: bgColor }}>
-                {/* Full Width Yellow Background with Content */}
-                <div style={{
-                  width: '100%',
-                  backgroundColor: bgColor,
-                  padding: '60px 80px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  minHeight: '646px',
-                }}>
-                  <div style={{
-                    transform: projectSliding ? 'translateX(-100%)' : 'translateX(0)',
-                    opacity: projectSliding ? 0 : 1,
-                    transition: 'transform 0.4s ease, opacity 0.4s ease',
-                  }}>
-                    {/* Title */}
-                    <h3 style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: '32px',
-                      fontWeight: 500,
-                      color: '#000',
-                      marginBottom: '40px',
-                      maxWidth: '700px',
-                      lineHeight: 1.3,
-                    }}>
-                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{currentWork.title || 'Project Name'}</span>
-                      <span style={{ fontWeight: 500 }}> , {currentWork.homeDescription || currentWork.description?.substring(0, 80) || 'and the description goes here'}</span>
-                    </h3>
-                    {/* Image */}
-                    {(currentWork.featuredImage || currentWork.image) ? (
-                      <img src={getImageUrl(currentWork.featuredImage || currentWork.image)} alt={currentWork.title} style={{ maxWidth: '500px', width: '100%', height: 'auto', objectFit: 'cover', borderRadius: '8px' }} />
-                    ) : (
-                      <div style={{ width: '500px', maxWidth: '100%', height: '350px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>Project Image</div>
-                    )}
-                  </div>
-                  {/* Slide indicators */}
-                  <div style={{ position: 'absolute', bottom: '40px', left: '80px', display: 'flex', gap: '8px' }}>
-                    {projectList.map((_, idx) => (
-                      <button key={idx} onClick={() => setCurrentProjectIndex(idx)} style={{
-                        width: '12px', height: '12px', borderRadius: '50%',
-                        backgroundColor: idx === currentProjectIndex ? '#000' : 'rgba(0,0,0,0.2)',
-                        border: 'none', cursor: 'pointer', transition: 'background-color 0.3s',
-                      }} />
-                    ))}
-                  </div>
-                </div>
-                {/* Right Section - Blue curved overlay on top of yellow */}
-                <div style={{
-                  backgroundColor: nextBgColor,
-                  borderRadius: '300px 0 0 300px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '40%',
-                  zIndex: 10,
-                }}>
-                  {/* Arrow Button and Next Project Title */}
-                  <div style={{
+              // Desktop Layout - Full Card Horizontal Slider with Infinite Loop
+              <div style={{
+                position: 'relative',
+                minHeight: '646px',
+                width: '100%',
+                overflow: 'hidden',
+              }}>
+                {/* Cards Container - Slides horizontally (4 cards for infinite loop) */}
+                <div
+                  ref={sliderRef}
+                  style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '24px',
-                    position: 'absolute',
-                    left: '45px',
-                    right: '40px',
-                    transform: projectSliding ? 'translateX(50px)' : 'translateX(0)',
-                    opacity: projectSliding ? 0 : 1,
-                    transition: 'transform 0.4s ease, opacity 0.4s ease',
-                  }}>
-                    <button onClick={handleNextProject} style={{
-                      width: '100px',
-                      height: '100px',
-                      borderRadius: '300px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.44)',
-                      border: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.3s, transform 0.2s',
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.6)'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.44)'; e.currentTarget.style.transform = 'scale(1)'; }}
-                    >
-                      <img src={rightArrowIcon} alt="Next" style={{ width: '32px', height: '32px' }} />
-                    </button>
-                    {/* Next Project Title */}
-                    <h4 style={{
-                      fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      fontSize: '24px',
-                      fontWeight: 500,
-                      color: '#fff',
-                      flex: 1,
-                      margin: 0,
-                      lineHeight: 1.4,
-                    }}>
-                      <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{projectList[(currentProjectIndex + 1) % totalProjects]?.title || 'Project Name'}</span>
-                      <span style={{ fontWeight: 400 }}> , {projectList[(currentProjectIndex + 1) % totalProjects]?.homeDescription || projectList[(currentProjectIndex + 1) % totalProjects]?.description || 'and description goes here'}</span>
-                    </h4>
-                  </div>
+                    width: `${extendedTotal * 100}%`,
+                    willChange: 'transform',
+                  }}
+                >
+                  {extendedProjectList.map((project, idx) => {
+                    // Use modulo for colors since we have a clone
+                    const cardBgColor = projectColors[idx % 3];
+                    const textColor = getTextColor(cardBgColor);
+                    const nextIdx = (idx + 1) % totalProjects;
+                    const nextCardBgColor = projectColors[nextIdx % 3];
+                    const nextCardTextColor = getTextColor(nextCardBgColor);
+                    const nextProject = projectList[nextIdx];
+
+                    return (
+                      <div
+                        key={`${project._id || 'project'}-${idx}`}
+                        style={{
+                          width: `${100 / extendedTotal}%`,
+                          minHeight: '646px',
+                          position: 'relative',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {/* Main Card Content - Left Side */}
+                        <div style={{
+                          position: 'absolute',
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: '80%',
+                          backgroundColor: cardBgColor,
+                          padding: '60px 80px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'flex-start',
+                        }}>
+                          {/* Title */}
+                          <h3 style={{
+                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            fontSize: '32px',
+                            fontWeight: 500,
+                            color: textColor,
+                            marginBottom: '40px',
+                            maxWidth: '600px',
+                            lineHeight: 1.3,
+                          }}>
+                            <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{project.title || 'Project Name'}</span>
+                            <span style={{ fontWeight: 400 }}> , {project.homeDescription || project.description?.substring(0, 80) || 'An e-commerce project is an online platform where user can Buy Products'}</span>
+                          </h3>
+                          {/* Image */}
+                          <div style={{ maxWidth: '500px' }}>
+                            {(project.featuredImage || project.image) ? (
+                              <img
+                                src={getImageUrl(project.featuredImage || project.image)}
+                                alt={project.title}
+                                style={{
+                                  width: '100%',
+                                  height: 'auto',
+                                  maxHeight: '400px',
+                                  objectFit: 'contain',
+                                  borderRadius: '8px'
+                                }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: '100%',
+                                height: '350px',
+                                backgroundColor: textColor === '#000' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: textColor
+                              }}>
+                                Project Image
+                              </div>
+                            )}
+                          </div>
+                          {/* Slide indicators */}
+                          <div style={{ position: 'absolute', bottom: '40px', left: '80px', display: 'flex', gap: '8px' }}>
+                            {projectList.slice(0, 3).map((_, dotIdx) => {
+                              // Handle active state - index 3 (clone) should show dot 0 as active
+                              const displayIndex = currentProjectIndex >= totalProjects ? 0 : currentProjectIndex;
+                              return (
+                                <button
+                                  key={dotIdx}
+                                  onClick={() => goToSlide(dotIdx)}
+                                  style={{
+                                    width: '12px',
+                                    height: '12px',
+                                    borderRadius: '50%',
+                                    backgroundColor: dotIdx === displayIndex ? textColor : (textColor === '#000' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)'),
+                                    border: 'none',
+                                    cursor: projectSliding ? 'default' : 'pointer',
+                                    transition: 'background-color 0.3s',
+                                    opacity: projectSliding ? 0.5 : 1,
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Right Section - Next Card Preview with Curved Edge */}
+                        <div style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: '40%',
+                          backgroundColor: nextCardBgColor,
+                          borderRadius: '300px 0 0 300px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          {/* Right Arrow and Next Project Title - Always visible, loops infinitely */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '24px',
+                            position: 'absolute',
+                            left: '45px',
+                            right: '40px',
+                          }}>
+                            <button
+                              onClick={handleNextProject}
+                              style={{
+                                width: '100px',
+                                height: '100px',
+                                borderRadius: '50%',
+                                backgroundColor: nextCardTextColor === '#000' ? 'rgba(0,0,0,0.1)' : 'rgba(255, 255, 255, 0.44)',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: projectSliding ? 'default' : 'pointer',
+                                transition: 'background-color 0.3s, transform 0.2s',
+                                flexShrink: 0,
+                                opacity: projectSliding ? 0.5 : 1,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!projectSliding) {
+                                  e.currentTarget.style.backgroundColor = nextCardTextColor === '#000' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.6)';
+                                  e.currentTarget.style.transform = 'scale(1.05)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = nextCardTextColor === '#000' ? 'rgba(0,0,0,0.1)' : 'rgba(255, 255, 255, 0.44)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                            >
+                              <img
+                                src={rightArrowIcon}
+                                alt="Next"
+                                style={{
+                                  width: '32px',
+                                  height: '32px',
+                                  filter: nextCardTextColor === '#000' ? 'invert(1)' : 'none'
+                                }}
+                              />
+                            </button>
+                            {/* Next Project Title */}
+                            <h4 style={{
+                              fontFamily: "'Plus Jakarta Sans', sans-serif",
+                              fontSize: '24px',
+                              fontWeight: 500,
+                              color: nextCardTextColor,
+                              flex: 1,
+                              margin: 0,
+                              lineHeight: 1.4,
+                            }}>
+                              <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{nextProject?.title || 'Project Name'}</span>
+                              <span style={{ fontWeight: 400 }}> , {nextProject?.homeDescription || nextProject?.description?.substring(0, 60) || 'An e-commerce project is an online platform where user can Buy Products'}</span>
+                            </h4>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -1256,17 +1396,17 @@ const Home = () => {
       </EditableSection>
       )}
 
-      {/* Want To See More Section */}
-      {shouldRenderSection('wantMore') && (
+      {/* Want To See More Section - Hidden on mobile */}
+      {shouldRenderSection('wantMore') && !isMobile && (
       <EditableSection sectionId="wantMore" label="Want To See More" isEditorMode={isEditorMode} isSelected={selectedSection === 'wantMore'} isHidden={isSectionHidden('wantMore')}>
         <section style={{
-          padding: isMobile ? '40px 20px' : '60px 100px',
-          paddingBottom: isMobile ? '40px' : '50px',
+          padding: '60px 100px',
+          paddingBottom: '50px',
           textAlign: 'center',
         }}>
           <h3 style={{
             fontFamily: "'Plus Jakarta Sans', sans-serif",
-            fontSize: isMobile ? '24px' : '32px',
+            fontSize: '32px',
             fontWeight: 400,
             fontStyle: 'italic',
             color: '#000',
@@ -1274,26 +1414,24 @@ const Home = () => {
           }}>
             {pageContent.wantMoreTitle}
           </h3>
-          {!isMobile && (
-            <Link to="/case-studies" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '64px',
-              padding: '12px 24px',
-              gap: '12px',
-              backgroundColor: '#2558BF',
-              color: '#fff',
-              borderRadius: '200px',
-              textDecoration: 'none',
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '20px',
-              fontWeight: 400,
-              lineHeight: '24px',
-            }}>
-              {pageContent.wantMoreButtonText}
-            </Link>
-          )}
+          <Link to="/case-studies" style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '64px',
+            padding: '12px 24px',
+            gap: '12px',
+            backgroundColor: '#2558BF',
+            color: '#fff',
+            borderRadius: '200px',
+            textDecoration: 'none',
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            fontSize: '20px',
+            fontWeight: 400,
+            lineHeight: '24px',
+          }}>
+            {pageContent.wantMoreButtonText}
+          </Link>
         </section>
       </EditableSection>
       )}
@@ -1302,20 +1440,22 @@ const Home = () => {
       {shouldRenderSection('realNumbers') && (
       <EditableSection sectionId="realNumbers" label="Real Numbers Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'realNumbers'} isHidden={isSectionHidden('realNumbers')}>
         <section style={{
-          padding: isMobile ? '0 23px' : isTablet ? '60px 40px' : '50px 100px 80px',
+          padding: isMobile ? '20px 23px 0' : isTablet ? '60px 40px' : '50px 100px 80px',
           textAlign: isMobile ? 'center' : 'center',
         }}>
           <h2 style={{
             fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : "'Plus Jakarta Sans', sans-serif",
             fontSize: isMobile ? '28px' : isTablet ? '36px' : '42px',
-            fontWeight: isMobile ? 400 : 500,
+            fontWeight: 400,
             color: '#000',
-            marginBottom: isMobile ? '74px' : '48px',
+            marginBottom: isMobile ? '40px' : '48px',
             letterSpacing: isMobile ? '-0.5px' : '0',
             whiteSpace: isMobile ? 'nowrap' : 'normal',
+            textAlign: 'center',
           }}>
-            <span style={{ fontFamily: isMobile ? "'Gilroy-MediumItalic', sans-serif" : 'inherit', fontStyle: 'italic', fontWeight: isMobile ? 400 : 500 }}>{pageContent.realNumbersTitle}</span>{' '}
-            {pageContent.realNumbersTitleNormal}
+            <span style={{ fontFamily: isMobile ? "'Gilroy-MediumItalic', sans-serif" : 'inherit', fontStyle: 'italic', fontWeight: 400 }}>Real</span>
+            <span style={{ fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : 'inherit', fontStyle: 'normal', fontWeight: isMobile ? 400 : 500 }}> Numbers.</span>{' '}
+            <span style={{ fontFamily: isMobile ? "'Gilroy-Medium', sans-serif" : 'inherit', fontStyle: 'normal', fontWeight: isMobile ? 400 : 500 }}>Real Impacts</span>
           </h2>
 
           {/* Stats Grid */}
@@ -1522,7 +1662,7 @@ const Home = () => {
             justifyContent: 'space-between',
             alignItems: isMobile ? 'flex-start' : 'flex-start',
             marginBottom: isMobile ? '32px' : '48px',
-            gap: isMobile ? '24px' : '40px',
+            gap: isMobile ? '0' : '40px',
             paddingRight: isMobile ? '20px' : '100px',
           }}>
             <h2 style={{
@@ -1530,7 +1670,7 @@ const Home = () => {
               fontSize: isMobile ? '28px' : isTablet ? '36px' : '50px',
               fontWeight: 400,
               color: '#000',
-              maxWidth: '600px',
+              maxWidth: isMobile ? '260px' : '600px',
               lineHeight: 1.2,
               letterSpacing: '-1px',
               margin: 0,
@@ -1538,58 +1678,109 @@ const Home = () => {
               <span style={{ fontStyle: 'italic', fontWeight: 600 }}>{pageContent.servicesTitle}</span>{' '}
               {pageContent.servicesTitleNormal}
             </h2>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: isMobile ? 'flex-start' : 'flex-end',
-              gap: '8px',
-            }}>
-              <Link to="/contact" style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '64px',
-                padding: '12px 24px',
-                backgroundColor: '#2558BF',
-                color: '#fff',
-                borderRadius: '200px',
-                textDecoration: 'none',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '20px',
-                fontWeight: 600,
-                lineHeight: '24px',
-              }}>
-                {pageContent.ctaMidButtonText}
-              </Link>
+            {!isMobile && (
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: isMobile ? 'flex-start' : 'flex-end',
-                gap: '4px',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: '8px',
               }}>
-                <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0)' }} />
-                <span style={{
+                <Link to="/contact" style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '64px',
+                  padding: '12px 24px',
+                  backgroundColor: '#2558BF',
+                  color: '#fff',
+                  borderRadius: '200px',
+                  textDecoration: 'none',
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  color: '#000',
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  lineHeight: '24px',
                 }}>
-                  {pageContent.ctaMidInstantText}
-                </span>
+                  {pageContent.ctaMidButtonText}
+                </Link>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '4px',
+                }}>
+                  <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0)' }} />
+                  <span style={{
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    color: '#000',
+                  }}>
+                    {pageContent.ctaMidInstantText}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Services Cards Carousel - Shows 2 full + partial 3rd with nav arrow on 3rd card */}
           <div style={{
             position: 'relative',
           }}>
-            <div style={{
-              display: 'flex',
-              gap: '24px',
-              transform: `translateX(-${currentServiceIndex * (isMobile ? 324 : 567)}px)`,
-              transition: 'transform 0.4s ease-out',
-            }}>
+            <div
+              ref={servicesSliderRef}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                servicesSliderRef.current.touchStartX = touch.clientX;
+                servicesSliderRef.current.touchStartY = touch.clientY;
+              }}
+              onTouchMove={(e) => {
+                if (!servicesSliderRef.current.touchStartX) return;
+                const touch = e.touches[0];
+                const diffX = servicesSliderRef.current.touchStartX - touch.clientX;
+                const diffY = Math.abs(servicesSliderRef.current.touchStartY - touch.clientY);
+                // Only prevent default if horizontal swipe is dominant
+                if (Math.abs(diffX) > diffY) {
+                  e.preventDefault();
+                }
+              }}
+              onTouchEnd={(e) => {
+                if (!servicesSliderRef.current.touchStartX) return;
+                const touch = e.changedTouches[0];
+                const diffX = servicesSliderRef.current.touchStartX - touch.clientX;
+                const threshold = 50;
+
+                if (Math.abs(diffX) > threshold) {
+                  if (diffX > 0 && currentServiceIndex < services.length - 1) {
+                    // Swipe left - next
+                    const newIndex = currentServiceIndex + 1;
+                    const cardWidth = isMobile ? (window.innerWidth - 40) : 567;
+                    setCurrentServiceIndex(newIndex);
+                    gsap.to(servicesSliderRef.current, {
+                      x: -newIndex * (cardWidth + 24),
+                      duration: 0.8,
+                      ease: 'power2.out',
+                    });
+                  } else if (diffX < 0 && currentServiceIndex > 0) {
+                    // Swipe right - previous
+                    const newIndex = currentServiceIndex - 1;
+                    const cardWidth = isMobile ? (window.innerWidth - 40) : 567;
+                    setCurrentServiceIndex(newIndex);
+                    gsap.to(servicesSliderRef.current, {
+                      x: -newIndex * (cardWidth + 24),
+                      duration: 0.8,
+                      ease: 'power2.out',
+                    });
+                  }
+                }
+                servicesSliderRef.current.touchStartX = null;
+                servicesSliderRef.current.touchStartY = null;
+              }}
+              style={{
+                display: 'flex',
+                gap: '24px',
+                touchAction: isMobile ? 'pan-y' : 'auto',
+              }}
+            >
               {services.map((service, index) => {
                 // Use green pattern for odd cards (1st, 3rd, 5th) and blue for even cards (2nd, 4th)
                 const patternImage = index % 2 === 0 ? servicePatternGreen : servicePatternBlue;
@@ -1597,10 +1788,10 @@ const Home = () => {
                 return (
                   <div key={index} style={{
                     flex: '0 0 auto',
-                    width: isMobile ? '300px' : '543px',
-                    height: isMobile ? '380px' : '416px',
+                    width: isMobile ? 'calc(100vw - 40px)' : '543px',
+                    height: isMobile ? '297.252px' : '416px',
                     borderRadius: '24px',
-                    padding: '32px',
+                    padding: isMobile ? '24px' : '32px',
                     display: 'flex',
                     flexDirection: 'column',
                     position: 'relative',
@@ -1635,7 +1826,7 @@ const Home = () => {
                       fontSize: isMobile ? '20px' : '24px',
                       fontWeight: 600,
                       color: '#fff',
-                      margin: '0 0 20px 0',
+                      margin: '0 0 16px 0',
                       position: 'relative',
                       zIndex: 2,
                     }}>
@@ -1646,7 +1837,7 @@ const Home = () => {
                       fontSize: isMobile ? '14px' : '16px',
                       fontWeight: 400,
                       color: 'rgba(255, 255, 255, 0.7)',
-                      lineHeight: '26px',
+                      lineHeight: isMobile ? '22px' : '26px',
                       margin: '0',
                       maxWidth: '400px',
                       position: 'relative',
@@ -1655,12 +1846,19 @@ const Home = () => {
                       {service.description}
                     </p>
 
-                    {/* Left Navigation Arrow - show on first visible card when scrolled */}
-                    {index === currentServiceIndex && currentServiceIndex > 0 && (
+                    {/* Left Navigation Arrow - show on first visible card when scrolled (desktop only) */}
+                    {!isMobile && index === currentServiceIndex && currentServiceIndex > 0 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCurrentServiceIndex(prev => Math.max(0, prev - 1));
+                          const newIndex = Math.max(0, currentServiceIndex - 1);
+                          const cardWidth = 567;
+                          setCurrentServiceIndex(newIndex);
+                          gsap.to(servicesSliderRef.current, {
+                            x: -newIndex * cardWidth,
+                            duration: 1.5,
+                            ease: 'power1.out',
+                          });
                         }}
                         style={{
                           position: 'absolute',
@@ -1683,12 +1881,19 @@ const Home = () => {
                       </button>
                     )}
 
-                    {/* Right Navigation Arrow - show on partially visible card */}
-                    {index === currentServiceIndex + 2 && currentServiceIndex < services.length - 1 && (
+                    {/* Right Navigation Arrow - show on partially visible card (desktop only) */}
+                    {!isMobile && index === currentServiceIndex + 2 && currentServiceIndex < services.length - 1 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setCurrentServiceIndex(prev => Math.min(services.length - 1, prev + 1));
+                          const newIndex = Math.min(services.length - 1, currentServiceIndex + 1);
+                          const cardWidth = 567;
+                          setCurrentServiceIndex(newIndex);
+                          gsap.to(servicesSliderRef.current, {
+                            x: -newIndex * cardWidth,
+                            duration: 1.5,
+                            ease: 'power1.out',
+                          });
                         }}
                         style={{
                           position: 'absolute',
@@ -1714,6 +1919,80 @@ const Home = () => {
                 );
               })}
             </div>
+
+            {/* Mobile Navigation Arrows - Below Card */}
+            {isMobile && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '16px',
+                marginTop: '24px',
+              }}>
+                <button
+                  onClick={() => {
+                    if (currentServiceIndex > 0) {
+                      const newIndex = currentServiceIndex - 1;
+                      const cardWidth = window.innerWidth - 40;
+                      setCurrentServiceIndex(newIndex);
+                      gsap.to(servicesSliderRef.current, {
+                        x: -newIndex * (cardWidth + 24),
+                        duration: 0.8,
+                        ease: 'power2.out',
+                      });
+                    }
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    border: '1px solid #000',
+                    backgroundColor: 'transparent',
+                    cursor: currentServiceIndex > 0 ? 'pointer' : 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: currentServiceIndex > 0 ? 1 : 0.4,
+                  }}
+                  disabled={currentServiceIndex === 0}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 18L9 12L15 6" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentServiceIndex < services.length - 1) {
+                      const newIndex = currentServiceIndex + 1;
+                      const cardWidth = window.innerWidth - 40;
+                      setCurrentServiceIndex(newIndex);
+                      gsap.to(servicesSliderRef.current, {
+                        x: -newIndex * (cardWidth + 24),
+                        duration: 0.8,
+                        ease: 'power2.out',
+                      });
+                    }
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    border: '1px solid #000',
+                    backgroundColor: 'transparent',
+                    cursor: currentServiceIndex < services.length - 1 ? 'pointer' : 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: currentServiceIndex < services.length - 1 ? 1 : 0.4,
+                  }}
+                  disabled={currentServiceIndex === services.length - 1}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 18L15 12L9 6" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </EditableSection>
@@ -1737,7 +2016,7 @@ const Home = () => {
               lineHeight: 'normal',
               letterSpacing: isMobile ? '-0.5px' : '-1px',
               color: '#000',
-              marginBottom: isMobile ? '80px' : '60px',
+              marginBottom: isMobile ? '40px' : '60px',
             }}>
               <em style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{testimonialHeading.clientLabelItalic}</em>{testimonialHeading.clientLabelNormal}
             </h3>
@@ -1838,7 +2117,7 @@ const Home = () => {
                           width: '40px',
                           height: '40px',
                           borderRadius: '50%',
-                          border: '1px solid #E2775A',
+                          border: '1px solid #000',
                           backgroundColor: 'transparent',
                           cursor: currentTestimonialIndex === 0 ? 'not-allowed' : 'pointer',
                           opacity: currentTestimonialIndex === 0 ? 0.4 : 1,
@@ -1847,7 +2126,7 @@ const Home = () => {
                           justifyContent: 'center',
                         }}
                       >
-                        <img src={arrowLeft} alt="Previous" style={{ width: '14px', height: '14px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                        <img src={arrowLeft} alt="Previous" style={{ width: '14px', height: '14px', filter: 'brightness(0)' }} />
                       </button>
                       <button
                         onClick={() => setCurrentTestimonialIndex((prev) => Math.min(testimonials.length - 1, prev + 1))}
@@ -1856,7 +2135,7 @@ const Home = () => {
                           width: '40px',
                           height: '40px',
                           borderRadius: '50%',
-                          border: '1px solid #E2775A',
+                          border: '1px solid #000',
                           backgroundColor: 'transparent',
                           cursor: currentTestimonialIndex === testimonials.length - 1 ? 'not-allowed' : 'pointer',
                           opacity: currentTestimonialIndex === testimonials.length - 1 ? 0.4 : 1,
@@ -1865,7 +2144,7 @@ const Home = () => {
                           justifyContent: 'center',
                         }}
                       >
-                        <img src={arrowRight} alt="Next" style={{ width: '14px', height: '14px', filter: 'brightness(0) saturate(100%) invert(58%) sepia(49%) saturate(1018%) hue-rotate(331deg) brightness(91%) contrast(90%)' }} />
+                        <img src={arrowRight} alt="Next" style={{ width: '14px', height: '14px', filter: 'brightness(0)' }} />
                       </button>
                     </div>
                   )}
@@ -2336,16 +2615,16 @@ const Home = () => {
             margin: '0 auto',
             borderTopLeftRadius: isMobile ? '160px' : '300px',
             borderTopRightRadius: isMobile ? '160px' : '300px',
-            borderBottomLeftRadius: isMobile ? '0' : '300px',
-            borderBottomRightRadius: isMobile ? '0' : '300px',
+            borderBottomLeftRadius: isMobile ? '160px' : '300px',
+            borderBottomRightRadius: isMobile ? '160px' : '300px',
             backgroundColor: '#E2775A',
             position: 'relative',
-            overflow: isMobile ? 'visible' : 'hidden',
+            overflow: 'hidden',
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
             alignItems: 'center',
             padding: isMobile ? '60px 24px 80px 24px' : isTablet ? '48px 60px' : '60px 118px',
-            paddingBottom: isMobile ? '214px' : undefined,
+            paddingBottom: isMobile ? '87px' : undefined,
           }}>
             {/* Left Content */}
             <div style={{ maxWidth: isMobile ? '100%' : '600px', zIndex: 1, textAlign: isMobile ? 'center' : 'left', marginTop: isMobile ? '0' : '-50px' }}>
@@ -2608,22 +2887,28 @@ const Home = () => {
 
           {/* Contact Link */}
           <p style={{
-            fontFamily: "'Gilroy-Medium', sans-serif",
-            fontSize: isMobile ? '16px' : '20px',
+            width: isMobile ? '342px' : 'auto',
+            maxWidth: '100%',
+            margin: '0 auto',
+            marginTop: isMobile ? '32px' : '48px',
+            fontFamily: "'Gilroy-MediumItalic', sans-serif",
+            fontSize: '20px',
+            fontStyle: 'normal',
             fontWeight: 400,
             color: '#000',
             textAlign: 'center',
-            marginTop: isMobile ? '32px' : '48px',
-            lineHeight: '24px',
+            lineHeight: '28px',
           }}>
-            <span style={{ fontFamily: "'Gilroy-MediumItalic', sans-serif", fontStyle: 'italic' }}>
-              {pageContent.faqContactText}
-            </span>{' '}
+            {pageContent.faqContactText}{' '}
             <Link to="/contact" style={{
               color: '#000',
+              fontFamily: "'Gilroy-SemiBoldItalic', sans-serif",
+              fontSize: '20px',
+              fontStyle: 'normal',
+              fontWeight: 400,
+              lineHeight: '28px',
               textDecoration: 'underline',
-              fontWeight: 500,
-              fontFamily: "'Gilroy-Medium', sans-serif",
+              textDecorationStyle: 'solid',
             }}>
               {pageContent.faqContactLink}
             </Link>

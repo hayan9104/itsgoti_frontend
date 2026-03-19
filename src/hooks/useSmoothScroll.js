@@ -1,9 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-// Note: ScrollTrigger is registered once in main.jsx
+import { gsap, ScrollTrigger } from '@/lib/gsap';
 
 /**
  * Hook to initialize Lenis smooth scrolling and GSAP ScrollTrigger

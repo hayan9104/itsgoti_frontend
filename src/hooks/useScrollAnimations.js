@@ -1,8 +1,5 @@
 import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-// Note: ScrollTrigger is registered once in main.jsx
+import { gsap, ScrollTrigger } from '@/lib/gsap';
 
 /**
  * Hook to apply scroll-triggered animations to elements

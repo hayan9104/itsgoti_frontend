@@ -6,11 +6,7 @@ import vectorIcon from '../assets/Vector.png';
 import EditableSection from '../components/EditableSection';
 import heroDecor1 from '../assets/Group 37369.png';
 import heroDecor2 from '../assets/Group 37368.png';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-// Register GSAP plugin
-gsap.registerPlugin(ScrollTrigger);
+import { gsap, ScrollTrigger } from '@/lib/gsap';
 
 // Helper to get full image URL
 const getImageUrl = (path) => {

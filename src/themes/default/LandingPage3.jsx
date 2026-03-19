@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { gsap, ScrollTrigger } from '@/lib/gsap';
 import useWindowSize from '@/hooks/useWindowSize';
 import useThemeColors from '@/hooks/useThemeColors';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
-
-// Note: ScrollTrigger is registered once in main.jsx
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
 import TickMark from '@/assets/Tick mark.png';
