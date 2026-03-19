@@ -258,12 +258,11 @@ const LandingPage3 = () => {
       setModalFormSubmitted(true);
       setModalFormData({ companyName: '', contactNumber: '', service: '' });
 
-      // Send GA event for popup form
+      // Send GA event for popup form - uses modalSource to identify which button
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'form_submission', {
           event_category: 'Contact',
-          event_label: 'LP3 Popup',
-          source: modalSource,
+          event_label: modalSource,
           value: 1
         });
       }
