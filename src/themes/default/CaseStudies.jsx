@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { caseStudiesAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 
 const CaseStudies = () => {
   const [caseStudies, setCaseStudies] = useState([]);
   const [loading, setLoading] = useState(true);
   const { isMobile, isTablet } = useWindowSize();
   const navigate = useNavigate();
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
 
   useEffect(() => {
     fetchCaseStudies();

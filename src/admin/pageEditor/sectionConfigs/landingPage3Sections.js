@@ -49,6 +49,7 @@ export const landingPage3Sections = [
     fields: [
       { key: 'solutionTitle', type: 'text', label: 'Section Title', hint: 'e.g. "Design a Shopify store that actually sells."' },
       { key: 'services', type: 'servicesArray', label: 'Services', maxItems: 6, hint: 'Add services with icon and label' },
+      { key: 'pointsBackgroundImage', type: 'image', label: 'Points Background Image', hint: 'Optional background image for points section. If set, will be used instead of color.' },
     ]
   },
   {

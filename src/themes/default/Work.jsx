@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { worksAPI, pagesAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import vectorIcon from '@/assets/Vector.png';
 import EditableSection from '@/components/EditableSection';
 
@@ -12,6 +14,10 @@ const Work = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
   const [selectedSection, setSelectedSection] = useState(null);
 
   // Page content from CMS

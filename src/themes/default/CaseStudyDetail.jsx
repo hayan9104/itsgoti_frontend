@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { caseStudiesAPI, pagesAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import vectorIcon from '@/assets/Vector.png';
 import sliderIcon from '@/assets/Frame 1618874557.png';
 
@@ -315,6 +317,11 @@ const ImageComparisonSlider = ({ leftImage, rightImage, isMobile, isTablet, slid
 const CaseStudyDetail = () => {
   const { slug } = useParams();
   const { isMobile, isTablet } = useWindowSize();
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
+
   const [caseStudy, setCaseStudy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('challenges');

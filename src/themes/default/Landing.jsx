@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import EditableSection from '@/components/EditableSection';
 import arrowImage from '@/assets/Arrow 1.png';
 import arrow2Image from '@/assets/Arrow 2.png';
@@ -14,6 +16,10 @@ const Landing = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
   const [selectedSection, setSelectedSection] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });

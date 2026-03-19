@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI } from '@/services/api';
 import arrowLeft from '@/assets/arrow-left.png';
 import arrowRight from '@/assets/arrow-right.png';
@@ -18,6 +20,11 @@ const getImageUrl = (path) => {
 
 const About = () => {
   const { isMobile, isTablet } = useWindowSize();
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
   const [expansionProgress, setExpansionProgress] = useState(0);

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 import vectorIcon from '@/assets/Vector.png';
@@ -17,6 +19,10 @@ const Approach = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
   const [selectedSection, setSelectedSection] = useState(null);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);

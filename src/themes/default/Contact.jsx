@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import { contactsAPI, pagesAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import EditableSection from '@/components/EditableSection';
 
 // Helper to get full image URL
@@ -15,6 +17,11 @@ const getImageUrl = (path) => {
 
 const Contact = () => {
   const { isMobile, isTablet } = useWindowSize();
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
+
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [selectedSource, setSelectedSource] = useState('');

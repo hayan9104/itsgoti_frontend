@@ -2,11 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
+import useSmoothScroll from '@/hooks/useSmoothScroll';
+import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 
 const LandingPage2 = () => {
   const { isMobile, isTablet } = useWindowSize();
+
+  // Initialize smooth scrolling
+  useSmoothScroll(!isMobile);
+  useScrollAnimations(!isMobile);
+
   const [pageContent, setPageContent] = useState({});
   const [loading, setLoading] = useState(true);
   const [formSubmitted, setFormSubmitted] = useState(false);

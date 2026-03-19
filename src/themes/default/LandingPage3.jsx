@@ -1670,19 +1670,21 @@ const LandingPage3 = () => {
 
           {/* Understand Why Card */}
           <div style={{
-            backgroundColor: '#311900',
+            backgroundColor: problemColors.cardBackground || '#FFFFFF',
             borderRadius: '16px',
             padding: isMobile ? '24px 16px' : '32px 40px',
             maxWidth: isMobile ? '390px' : '500px',
             margin: '0 auto 40px',
             textAlign: 'center',
+            border: `1px solid ${problemColors.cardBorderColor || '#000000'}`,
+            boxShadow: '4px 4px 0px 0px #150634',
           }}>
             <h3 style={{
               fontFamily: "'Gabarito', sans-serif",
               fontSize: isMobile ? '22px' : '24px',
               fontWeight: 600,
               lineHeight: 1.2,
-              color: '#fff',
+              color: problemColors.headingColor || '#1f1f1f',
               marginBottom: '24px',
             }}>
               {content.understandWhyTitle}
@@ -1690,16 +1692,17 @@ const LandingPage3 = () => {
             <div style={{
               fontFamily: "'Barlow', sans-serif",
               fontSize: isMobile ? '16px' : '20px',
-              fontWeight: 700,
+              fontWeight: 500,
               lineHeight: '150%',
-              color: '#fff',
+              color: problemColors.textColor || '#1f1f1f',
               textAlign: 'center',
             }}>
               {ensureArray(content.painPoints, defaultContent.painPoints).map((item, index) => (
                 <p key={index} style={{ margin: '0 0 6px' }}>
                   <span style={{
-                    backgroundColor: '#FFA562',
-                    color: '#7F3600',
+                    backgroundColor: problemColors.accentColor || '#FFA562',
+                    color: problemColors.highlightColor || '#7F3600',
+                    fontWeight: 700,
                   }}>
                     {item.highlight}
                   </span>
@@ -1708,10 +1711,10 @@ const LandingPage3 = () => {
               ))}
               <p style={{
                 fontFamily: "'Barlow', sans-serif",
-                fontSize: isMobile ? '16px' : '18px',
+                fontSize: isMobile ? '16px' : '20px',
                 fontWeight: 600,
                 marginTop: '20px',
-                color: '#fff',
+                color: problemColors.textColor || '#1f1f1f',
               }}>
                 {content.understandWhyConclusion}
               </p>
@@ -1863,9 +1866,13 @@ const LandingPage3 = () => {
             {/* Features Content - Gray background */}
             {currentGroup && (
               <div style={{
-                backgroundColor: 'rgba(242, 240, 235, 0.80)',
+                backgroundColor: content.pointsBackgroundImage ? 'transparent' : (solutionColors.pointsBackground || 'rgba(242, 240, 235, 0.80)'),
+                backgroundImage: content.pointsBackgroundImage ? `url(${content.pointsBackgroundImage})` : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 padding: isMobile ? '30px 20px' : '50px 120px',
                 minHeight: isMobile ? 'auto' : '257px',
+                border: solutionColors.pointsBorderColor ? `1px solid ${solutionColors.pointsBorderColor}` : 'none',
               }}>
                 <div
                   key={currentFeatureGroup}
@@ -1890,7 +1897,7 @@ const LandingPage3 = () => {
                     fontSize: isMobile ? '18px' : '22px',
                     fontWeight: 700,
                     lineHeight: '150%',
-                    color: '#000',
+                    color: solutionColors.pointsTextColor || solutionColors.textColor || '#000',
                     marginBottom: isMobile ? '16px' : '20px',
                   }}>
                     {currentGroup.title}
@@ -1908,16 +1915,14 @@ const LandingPage3 = () => {
                         style={{
                           display: 'flex',
                           alignItems: 'flex-start',
-                          gap: '10px',
                         }}
                       >
-                        <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
                         <span style={{
                           fontFamily: "'Barlow', sans-serif",
                           fontSize: isMobile ? '16px' : '20px',
                           fontWeight: 500,
                           lineHeight: '150%',
-                          color: '#000',
+                          color: solutionColors.pointsTextColor || solutionColors.textColor || '#000',
                         }}>
                           {point}
                         </span>
@@ -1929,15 +1934,16 @@ const LandingPage3 = () => {
                       <div style={{
                         display: 'flex',
                         alignItems: 'flex-start',
-                        gap: '10px',
                       }}>
-                        <img src={TickMark} alt="✓" style={{ width: '20px', height: '20px', marginTop: '4px' }} />
                         <span style={{
                           fontFamily: "'Barlow', sans-serif",
                           fontSize: isMobile ? '16px' : '20px',
                           fontWeight: 700,
                           lineHeight: '150%',
                           color: '#311900',
+                          backgroundColor: solutionColors.lastPointHighlight || '#FFA562',
+                          padding: '2px 8px',
+                          borderRadius: '0',
                         }}>
                           {currentGroup.highlightPoint}
                         </span>
