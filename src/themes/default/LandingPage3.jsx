@@ -183,19 +183,38 @@ const LandingPage3 = () => {
     }
   };
 
-  // Case Study swipe handlers
+  // Case Study swipe handlers - smooth drag tracking
   const [caseStudyTouchX, setCaseStudyTouchX] = useState(null);
+  const [caseStudyDragOffset, setCaseStudyDragOffset] = useState(0);
+  const [caseStudyIsDragging, setCaseStudyIsDragging] = useState(false);
 
-  const handleCaseStudyTouchStart = (e) => setCaseStudyTouchX(e.touches[0].clientX);
+  const handleCaseStudyTouchStart = (e) => {
+    setCaseStudyTouchX(e.touches[0].clientX);
+    setCaseStudyIsDragging(true);
+    setCaseStudyDragOffset(0);
+  };
+
+  const handleCaseStudyTouchMove = (e) => {
+    if (caseStudyTouchX === null) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - caseStudyTouchX;
+    // Limit drag at edges
+    const maxDrag = window.innerWidth * 0.4;
+    const limitedDiff = Math.max(-maxDrag, Math.min(maxDrag, diff));
+    setCaseStudyDragOffset(limitedDiff);
+  };
 
   const handleCaseStudyTouchEnd = (e) => {
     if (caseStudyTouchX === null) return;
     const diff = caseStudyTouchX - e.changedTouches[0].clientX;
+    // Threshold for swipe detection
     if (Math.abs(diff) > 50) {
       if (diff > 0 && currentCaseStudy < caseStudies.length - 1) setCurrentCaseStudy(s => s + 1);
       if (diff < 0 && currentCaseStudy > 0) setCurrentCaseStudy(s => s - 1);
     }
     setCaseStudyTouchX(null);
+    setCaseStudyDragOffset(0);
+    setCaseStudyIsDragging(false);
   };
 
   const handleCaseStudyWheel = (e) => {
@@ -2048,14 +2067,16 @@ const LandingPage3 = () => {
             {isMobile && caseStudies.length > 0 && (
               <div
                 onTouchStart={handleCaseStudyTouchStart}
+                onTouchMove={handleCaseStudyTouchMove}
                 onTouchEnd={handleCaseStudyTouchEnd}
                 onWheel={handleCaseStudyWheel}
                 style={{
                   display: 'flex',
-                  transition: 'transform 0.4s ease-in-out',
-                  transform: `translateX(-${currentCaseStudy * 100}%)`,
+                  transition: caseStudyIsDragging ? 'none' : 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                  transform: `translateX(calc(-${currentCaseStudy * 100}% + ${caseStudyDragOffset}px))`,
                   paddingTop: '24px',
-                  cursor: 'grab',
+                  cursor: caseStudyIsDragging ? 'grabbing' : 'grab',
+                  touchAction: 'pan-y',
                 }}
               >
                 {caseStudies.map((study, studyIndex) => (
