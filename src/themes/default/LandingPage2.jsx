@@ -323,17 +323,7 @@ const LandingPage2 = () => {
   const clientLogos = parseClientLogos();
 
   if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#fff',
-      }}>
-        <div style={{ fontSize: '18px', color: '#666' }}>Loading...</div>
-      </div>
-    );
+    return <div style={{ minHeight: '100vh', backgroundColor: '#fff' }} />;
   }
 
   return (

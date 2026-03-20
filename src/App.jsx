@@ -26,11 +26,9 @@ const Landing = lazy(() => import('./themes/default/Landing'));
 const LandingPage2 = lazy(() => import('./themes/default/LandingPage2'));
 const FooterPreview = lazy(() => import('./themes/default/FooterPreview'));
 
-// Simple loading fallback
+// Simple loading fallback - blank screen, no text
 const PageLoader = () => (
-  <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',backgroundColor:'#fffdf8'}}>
-    <div style={{fontSize:'16px',color:'#666'}}>Loading...</div>
-  </div>
+  <div style={{height:'100vh',backgroundColor:'#fffdf8'}} />
 );
 
 // Wrapper for case study to hide navbar in preview/editor mode
@@ -176,17 +174,27 @@ function DefaultLandingRouter() {
     }
   }, [defaultLandingPage, loaded]);
 
-  // Wait for settings to load first
+  // Show LandingPage3 immediately while loading (it's eagerly loaded and the default)
+  // Only wait if A/B testing is enabled and we need to determine the version
   if (!loaded) {
-    return <PageLoader />;
+    // Render LandingPage3 instantly - no waiting
+    return (
+      <PageVisibilityWrapper pageName="landing-page-3" fallbackPath="/home">
+        <LandingPage3 />
+      </PageVisibilityWrapper>
+    );
   }
 
   // If A/B testing is enabled, use the random version
   const activePage = defaultLandingPage === 'ab-test' ? abVersion : defaultLandingPage;
 
-  // Wait for AB version to be determined
+  // Wait for AB version to be determined (only for A/B testing)
   if (defaultLandingPage === 'ab-test' && !abVersion) {
-    return <PageLoader />;
+    return (
+      <PageVisibilityWrapper pageName="landing-page-3" fallbackPath="/home">
+        <LandingPage3 />
+      </PageVisibilityWrapper>
+    );
   }
 
   // Home page
@@ -223,12 +231,7 @@ function DefaultLandingRouter() {
 // Dynamic page router - matches any slug to the correct page
 function DynamicPageRouter() {
   const { slug } = useParams();
-  const { landingSlugs, pageSlugs, loaded } = usePageSlugs();
-
-  // Wait for slugs to load before matching
-  if (!loaded) {
-    return <PageLoader />;
-  }
+  const { landingSlugs, pageSlugs } = usePageSlugs();
 
   // Check landing pages first
   for (const [pageKey, slugData] of Object.entries(landingSlugs)) {
@@ -295,11 +298,11 @@ function App() {
           <Route path="/footer-preview" element={<Suspense fallback={<PageLoader />}><FooterPreview /></Suspense>} />
 
           {/* Admin Routes - /goti/admin */}
-          <Route path="/goti/admin/login" element={<Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}><AdminLogin /></Suspense>} />
+          <Route path="/goti/admin/login" element={<Suspense fallback={<PageLoader />}><AdminLogin /></Suspense>} />
           <Route
             path="/goti/admin/*"
             element={
-              <Suspense fallback={<div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div>}>
+              <Suspense fallback={<PageLoader />}>
                 <ProtectedRoute>
                   <AdminDashboard />
                 </ProtectedRoute>

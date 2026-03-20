@@ -884,17 +884,7 @@ const LandingPage3 = () => {
   const hasClientLogos = clientLogos.length > 0 && clientLogos.some(logo => logo && typeof logo === 'string' && logo.trim() !== '');
 
   if (loading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#fffdf8',
-      }}>
-        <div style={{ fontSize: '18px', color: '#666' }}>Loading...</div>
-      </div>
-    );
+    return <div style={{ minHeight: '100vh', backgroundColor: '#fffdf8' }} />;
   }
 
   // Get dynamic colors - prioritize editor colors for live preview
