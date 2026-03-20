@@ -183,6 +183,29 @@ const LandingPage3 = () => {
     }
   };
 
+  // Case Study swipe handlers
+  const [caseStudyTouchX, setCaseStudyTouchX] = useState(null);
+
+  const handleCaseStudyTouchStart = (e) => setCaseStudyTouchX(e.touches[0].clientX);
+
+  const handleCaseStudyTouchEnd = (e) => {
+    if (caseStudyTouchX === null) return;
+    const diff = caseStudyTouchX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0 && currentCaseStudy < caseStudies.length - 1) setCurrentCaseStudy(s => s + 1);
+      if (diff < 0 && currentCaseStudy > 0) setCurrentCaseStudy(s => s - 1);
+    }
+    setCaseStudyTouchX(null);
+  };
+
+  const handleCaseStudyWheel = (e) => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 30) {
+      e.preventDefault();
+      if (e.deltaX > 0 && currentCaseStudy < caseStudies.length - 1) setCurrentCaseStudy(s => s + 1);
+      if (e.deltaX < 0 && currentCaseStudy > 0) setCurrentCaseStudy(s => s - 1);
+    }
+  };
+
   // Scroll to section helper
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
@@ -2014,79 +2037,61 @@ const LandingPage3 = () => {
             style={{
               position: 'relative',
               width: '100%',
-              maxWidth: isMobile ? '388px' : '959px',
+              maxWidth: isMobile ? '100%' : '959px',
               margin: '0 auto',
               // Natural height based on card aspect ratio
               height: isMobile ? 'auto' : '500px',
+              overflow: isMobile ? 'hidden' : 'visible',
             }}
           >
-            {caseStudies.length > 0 ? caseStudies.map((study, studyIndex) => {
-              // On mobile, only show the current case study
-              if (isMobile && studyIndex !== currentCaseStudy) return null;
-
-              // Calculate smooth progress-based transforms using displayPosition (animated)
-              // displayPosition: 0 = first card, 1 = second card, 1.5 = second card with third halfway visible, etc.
-              let translateY = 0;
-
-              if (!isMobile) {
-                // How far into this card's reveal are we?
-                // Use displayPosition for smooth animation
-                const cardRevealPosition = displayPosition - (studyIndex - 1);
-
-                if (studyIndex === 0) {
-                  // First card is always visible
-                  translateY = 0;
-                } else if (cardRevealPosition >= 1) {
-                  // Card is fully revealed
-                  translateY = 0;
-                } else if (cardRevealPosition > 0) {
-                  // Card is partially revealed (0 to 1 progress)
-                  translateY = 100 - (cardRevealPosition * 100);
-                } else {
-                  // Card is not yet revealed (hidden below)
-                  translateY = 100;
-                }
-              }
-
-              return (
-                <div
-                  key={study.id || studyIndex}
-                  style={{
-                    position: isMobile ? 'relative' : 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: isMobile ? 'auto' : '100%',
-                    // Smooth progressive slide - using will-change for GPU acceleration
-                    transform: isMobile ? 'none' : `translateY(${translateY}%)`,
-                    willChange: 'transform',
-                    // Later cards stack on top (higher index = higher z-index)
-                    zIndex: studyIndex + 1,
-                    // Always fully opaque - no transparency
-                    opacity: 1,
-                  }}
-                >
-                  {isMobile ? (
-                    /* Mobile Case Study Card Layout - CSS-based with tab */
+            {/* Mobile: Sliding cards container */}
+            {isMobile && caseStudies.length > 0 && (
+              <div
+                onTouchStart={handleCaseStudyTouchStart}
+                onTouchEnd={handleCaseStudyTouchEnd}
+                onWheel={handleCaseStudyWheel}
+                style={{
+                  display: 'flex',
+                  transition: 'transform 0.4s ease-in-out',
+                  transform: `translateX(-${currentCaseStudy * 100}%)`,
+                  paddingTop: '24px',
+                  cursor: 'grab',
+                }}
+              >
+                {caseStudies.map((study, studyIndex) => (
+                  <div
+                    key={study.id || studyIndex}
+                    style={{
+                      minWidth: '100%',
+                      flexShrink: 0,
+                      padding: '0 20px 12px 20px',
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {/* Mobile Case Study Card - Simple CSS design */}
                     <div style={{
                       position: 'relative',
-                      marginTop: '20px',
+                      width: '100%',
+                      maxWidth: '290px',
+                      transform: 'translateX(-2px)',
                     }}>
-                      {/* Tab Label - positioned above the card */}
+                      {/* Tab Label - simple rounded tab above card */}
                       <div style={{
                         position: 'absolute',
                         top: '-20px',
-                        left: '20px',
+                        left: '16px',
                         backgroundColor: '#fff',
-                        padding: '4px 16px',
-                        borderRadius: '8px 8px 0 0',
+                        padding: '4px 12px',
+                        borderRadius: '6px 6px 0 0',
                         border: '1px solid #000',
                         borderBottom: 'none',
                         zIndex: 2,
                       }}>
                         <span style={{
                           fontFamily: "'Barlow', sans-serif",
-                          fontSize: '14px',
+                          fontSize: '12px',
                           fontWeight: 600,
                           color: '#000',
                           whiteSpace: 'nowrap',
@@ -2095,96 +2100,89 @@ const LandingPage3 = () => {
                         </span>
                       </div>
 
-                      {/* Main Card with border and shadow */}
+                      {/* Main Card */}
                       <div style={{
                         backgroundColor: '#fff',
                         border: '1px solid #000',
                         borderRadius: '12px',
-                        boxShadow: '4px 4px 0px 0px #150634',
-                        padding: '24px 18px',
-                        minHeight: '400px',
+                        boxShadow: '4px 4px 0px 0px #1a1a4e',
+                        padding: '20px 16px',
                       }}>
-                        {/* Content */}
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '14px',
+                        {/* Brand */}
+                        <p style={{
+                          fontFamily: "'Archivo Black', sans-serif",
+                          fontSize: '22px',
+                          fontWeight: 400,
+                          lineHeight: 'normal',
+                          letterSpacing: '-0.5px',
+                          color: '#000',
+                          margin: 0,
                         }}>
-                          {/* Brand */}
-                          <p style={{
-                            fontFamily: "'Archivo Black', sans-serif",
-                            fontSize: '26px',
-                            fontWeight: 400,
-                            lineHeight: 'normal',
-                            letterSpacing: '-0.68px',
-                            color: '#000',
-                            margin: 0,
-                          }}>
-                            {study.brand || 'GOTI'}
-                          </p>
-                          {/* Title */}
-                          <h3 style={{
-                            fontFamily: "'Gabarito', sans-serif",
-                            fontSize: '24px',
-                            fontWeight: 600,
-                            lineHeight: 1.2,
-                            color: '#000',
-                            margin: 0,
-                          }}>
-                            {study.title}
-                          </h3>
-                          {/* Description */}
-                          <p style={{
-                            fontFamily: "'Barlow', sans-serif",
-                            fontSize: '14px',
-                            fontWeight: 400,
-                            lineHeight: 1.5,
-                            color: '#000',
-                            margin: 0,
-                          }}>
-                            {study.description}
-                          </p>
-                        </div>
+                          {study.brand || 'GOTI'}
+                        </p>
+
+                        {/* Title */}
+                        <h3 style={{
+                          fontFamily: "'Gabarito', sans-serif",
+                          fontSize: '18px',
+                          fontWeight: 600,
+                          lineHeight: 1.3,
+                          color: '#000',
+                          margin: '10px 0',
+                        }}>
+                          {study.title}
+                        </h3>
+
+                        {/* Description */}
+                        <p style={{
+                          fontFamily: "'Barlow', sans-serif",
+                          fontSize: '13px',
+                          fontWeight: 400,
+                          lineHeight: 1.5,
+                          color: '#444',
+                          margin: 0,
+                        }}>
+                          {study.description}
+                        </p>
 
                         {/* Metrics */}
                         <div style={{
                           display: 'flex',
-                          gap: '14px',
-                          marginTop: '16px',
-                          flexWrap: 'nowrap',
+                          gap: '8px',
+                          marginTop: '14px',
                         }}>
                           {ensureArray(study.metrics, defaultContent.caseStudies[0].metrics).map((metric, mIndex) => (
                             <div
                               key={mIndex}
                               style={{
-                                backgroundColor: 'rgba(255,138,53,0.1)',
-                                border: '1px dashed #ff8a35',
-                                borderRadius: '12px',
-                                padding: '10px 8px',
+                                backgroundColor: 'rgba(255,138,53,0.08)',
+                                borderRadius: '8px',
+                                padding: '8px 4px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                height: '68px',
                                 flex: 1,
+                                minWidth: 0,
                               }}
                             >
                               <span style={{
                                 fontFamily: "'Barlow', sans-serif",
-                                fontSize: '13px',
+                                fontSize: '10px',
                                 fontWeight: 400,
-                                color: '#000',
+                                color: '#666',
                                 lineHeight: 1,
+                                textAlign: 'center',
                               }}>
                                 {metric.label}
                               </span>
                               <span style={{
                                 fontFamily: "'Gabarito', sans-serif",
-                                fontSize: '18px',
-                                fontWeight: 600,
+                                fontSize: '14px',
+                                fontWeight: 700,
                                 lineHeight: 1.2,
                                 color: '#000',
-                                marginTop: '4px',
+                                marginTop: '2px',
                               }}>
                                 {metric.value}
                               </span>
@@ -2195,19 +2193,18 @@ const LandingPage3 = () => {
                         {/* Image */}
                         <div style={{
                           width: '100%',
-                          height: '220px',
-                          backgroundColor: '#c4c4c4',
-                          border: '0.5px solid #000',
-                          borderRadius: '10px',
-                          marginTop: '24px',
+                          height: '140px',
+                          backgroundColor: '#d9d9d9',
+                          borderRadius: '8px',
+                          marginTop: '14px',
                           overflow: 'hidden',
                         }}>
                           {study.image && (
                             <img
                               src={study.image}
                               alt={study.brand}
-                              width={350}
-                              height={280}
+                              width={320}
+                              height={140}
                               loading="lazy"
                               style={{
                                 width: '100%',
@@ -2219,9 +2216,52 @@ const LandingPage3 = () => {
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    /* Desktop Case Study Card Layout */
-                    <>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Desktop: Stacked cards with scroll animation */}
+            {!isMobile && caseStudies.length > 0 && caseStudies.map((study, studyIndex) => {
+              // Calculate smooth progress-based transforms using displayPosition (animated)
+              // displayPosition: 0 = first card, 1 = second card, 1.5 = second card with third halfway visible, etc.
+              const cardRevealPosition = displayPosition - (studyIndex - 1);
+              let translateY = 0;
+
+              if (studyIndex === 0) {
+                // First card is always visible
+                translateY = 0;
+              } else if (cardRevealPosition >= 1) {
+                // Card is fully revealed
+                translateY = 0;
+              } else if (cardRevealPosition > 0) {
+                // Card is partially revealed (0 to 1 progress)
+                translateY = 100 - (cardRevealPosition * 100);
+              } else {
+                // Card is not yet revealed (hidden below)
+                translateY = 100;
+              }
+
+              return (
+                <div
+                  key={study.id || studyIndex}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    // Smooth progressive slide - using will-change for GPU acceleration
+                    transform: `translateY(${translateY}%)`,
+                    willChange: 'transform',
+                    // Later cards stack on top (higher index = higher z-index)
+                    zIndex: studyIndex + 1,
+                    // Always fully opaque - no transparency
+                    opacity: 1,
+                  }}
+                >
+                  {/* Desktop Case Study Card Layout */}
+                  <>
                       {/* SVG Container with integrated tab */}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2397,10 +2437,9 @@ const LandingPage3 = () => {
                         </div>
                       </div>
                     </>
-                  )}
                 </div>
               );
-            }) : null}
+            })}
           </div>
 
           {/* Mobile Carousel Navigation for Case Studies */}
