@@ -991,26 +991,41 @@ const MeetingSettingsView = () => {
 // Form Editor View - Visual editor for booking form
 // ─────────────────────────────────────────────────
 const defaultFormFieldsConfig = [
-  { id: 'name', label: 'Name', placeholder: 'Your full name', type: 'text', required: true, enabled: true },
-  { id: 'email', label: 'Email', placeholder: 'your@email.com', type: 'email', required: true, enabled: true },
-  { id: 'phone', label: 'Phone', placeholder: '9876543210', type: 'tel', required: true, enabled: true },
-  { id: 'companyName', label: 'Company Name', placeholder: 'Your company name', type: 'text', required: true, enabled: true },
-  { id: 'brandDetails', label: 'About Your Brand', placeholder: 'Brief description of your brand and what you sell...', type: 'textarea', required: true, enabled: true },
-  { id: 'challenge', label: 'Your Biggest Challenge', placeholder: 'What challenges are you facing?', type: 'textarea', required: false, enabled: true },
+  { id: 'name', label: 'Name', placeholder: 'Enter your name', type: 'text', required: true, enabled: true },
+  { id: 'email', label: 'Email', placeholder: 'Enter your email', type: 'email', required: true, enabled: true },
+  { id: 'companyName', label: 'Name of the company', placeholder: 'Your company name', type: 'text', required: true, enabled: true },
+  { id: 'brandDetails', label: 'Tell us more about your brand & products', placeholder: '', type: 'text', required: true, enabled: true },
+  { id: 'challenge', label: 'What is your biggest challenge around your brand?', placeholder: '', type: 'text', required: false, enabled: true },
+  { id: 'phone', label: 'Phone number', placeholder: '', type: 'tel', required: true, enabled: true },
 ];
 
 const FormEditorView = () => {
-  const [settings, setSettings] = useState({ slotDuration: 30, meetingTitle: 'Book a Call' });
+  const [settings, setSettings] = useState({
+    slotDuration: 30,
+    meetingTitle: "Book a Direct Call with Our Founder's Team",
+    hostName: 'Ved Patel',
+    hostRating: 5,
+    callType: 'Video Call',
+    priceAmount: 0,
+    pageBackgroundColor: '#1e3a3a',
+    cardBackgroundColor: '#ffffff',
+    primaryColor: '#000000',
+    accentColor: '#f59e0b',
+    headingColor: '#111111',
+    textColor: '#333333',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
   const [formFields, setFormFields] = useState(defaultFormFieldsConfig);
   const [initialData, setInitialData] = useState(null);
+  const [activeTab, setActiveTab] = useState('content'); // 'content' or 'styling'
+  const [previewPage, setPreviewPage] = useState('page1'); // 'page1' or 'page2'
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // Check if there are unsaved changes
   const hasChanges = () => {
     if (!initialData) return false;
-    const currentData = JSON.stringify({ formFields, meetingTitle: settings.meetingTitle, slotDuration: settings.slotDuration });
+    const currentData = JSON.stringify({ formFields, settings });
     return currentData !== initialData;
   };
 
@@ -1025,16 +1040,9 @@ const FormEditorView = () => {
         const data = await res.json();
         if (isMounted && data.success) {
           setSettings(data.data);
-          const fields = data.data.formFields && data.data.formFields.length > 0
-            ? data.data.formFields
-            : defaultFormFieldsConfig;
+          const fields = data.data.formFields?.length > 0 ? data.data.formFields : defaultFormFieldsConfig;
           setFormFields(fields);
-          // Store initial data for comparison
-          setInitialData(JSON.stringify({
-            formFields: fields,
-            meetingTitle: data.data.meetingTitle,
-            slotDuration: data.data.slotDuration
-          }));
+          setInitialData(JSON.stringify({ formFields: fields, settings: data.data }));
         }
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -1049,500 +1057,529 @@ const FormEditorView = () => {
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
-      const payload = {
-        formFields,
-        meetingTitle: settings.meetingTitle,
-        slotDuration: settings.slotDuration,
-      };
       const res = await fetch(`${API_BASE}/meeting-settings`, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...settings, formFields }),
       });
       const data = await res.json();
       if (data.success) {
-        // Update initial data after successful save
-        setInitialData(JSON.stringify({
-          formFields,
-          meetingTitle: settings.meetingTitle,
-          slotDuration: settings.slotDuration
-        }));
-        alert('Form saved successfully!');
+        setInitialData(JSON.stringify({ formFields, settings }));
+        alert('Saved successfully!');
       } else {
-        alert('Error saving form: ' + (data.message || 'Unknown error'));
+        alert('Error: ' + (data.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Save error:', error);
-      alert('Error saving form');
+      alert('Error saving');
     }
     setSaving(false);
   };
 
-  const toggleField = (fieldId) => {
-    setFormFields(prev => prev.map(f =>
-      f.id === fieldId ? { ...f, enabled: !f.enabled } : f
-    ));
-  };
-
-  const updateField = (fieldId, updates) => {
-    setFormFields(prev => prev.map(f =>
-      f.id === fieldId ? { ...f, ...updates } : f
-    ));
-  };
-
+  const toggleField = (fieldId) => setFormFields(prev => prev.map(f => f.id === fieldId ? { ...f, enabled: !f.enabled } : f));
+  const updateField = (fieldId, updates) => setFormFields(prev => prev.map(f => f.id === fieldId ? { ...f, ...updates } : f));
   const addField = () => {
     const newId = `custom_${Date.now()}`;
-    const newField = {
-      id: newId,
-      label: 'New Field',
-      placeholder: 'Enter value...',
-      type: 'text',
-      required: false,
-      enabled: true,
-      isCustom: true,
-    };
-    setFormFields(prev => [...prev, newField]);
+    setFormFields(prev => [...prev, { id: newId, label: 'New Field', placeholder: '', type: 'text', required: false, enabled: true, isCustom: true }]);
     setSelectedField(newId);
   };
+  const deleteField = (fieldId) => { if (window.confirm('Delete this field?')) { setFormFields(prev => prev.filter(f => f.id !== fieldId)); setSelectedField(null); } };
 
-  const deleteField = (fieldId) => {
-    if (window.confirm('Are you sure you want to delete this field?')) {
-      setFormFields(prev => prev.filter(f => f.id !== fieldId));
-      setSelectedField(null);
+  // Logo upload handler
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const res = await fetch(`${API_BASE}/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSettings(p => ({ ...p, logoUrl: data.url }));
+      } else {
+        alert('Upload failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Error uploading logo');
     }
+    setUploadingLogo(false);
   };
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading...</div>;
-  }
+  // Color picker component
+  const ColorInput = ({ label, value, onChange }) => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4, color: '#374151' }}>{label}</label>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input type="color" value={value || '#000000'} onChange={(e) => onChange(e.target.value)}
+          style={{ width: 32, height: 32, padding: 0, border: '1px solid #e5e7eb', borderRadius: 4, cursor: 'pointer' }} />
+        <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)}
+          style={{ flex: 1, padding: '6px 8px', borderRadius: 4, border: '1px solid #e5e7eb', fontSize: 12 }} />
+      </div>
+    </div>
+  );
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}>Loading...</div>;
+
+  const styles = {
+    pageBg: settings.pageBackgroundColor || '#1e3a3a',
+    cardBg: settings.cardBackgroundColor || '#ffffff',
+    primary: settings.primaryColor || '#000000',
+    accent: settings.accentColor || '#f59e0b',
+    heading: settings.headingColor || '#111111',
+    text: settings.textColor || '#333333',
+  };
 
   return (
-    <div style={{ display: 'flex', gap: 24, minHeight: 'calc(100vh - 250px)' }}>
-      {/* Left Sidebar - Fields List */}
-      <div style={{ width: 300, flexShrink: 0 }}>
-        <div style={{
-          backgroundColor: '#fff',
-          borderRadius: 8,
-          padding: 16,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          marginBottom: 16,
-        }}>
-          <div style={{
-            padding: '12px 16px',
-            backgroundColor: '#eff6ff',
-            borderRadius: 6,
-            marginBottom: 16,
-          }}>
-            <p style={{ fontSize: 13, color: '#1e40af', margin: 0 }}>
-              <strong>Tip:</strong> Click on any field to edit. Use the toggle to show/hide fields.
-            </p>
-          </div>
+    <div style={{ display: 'flex', gap: 20, minHeight: 'calc(100vh - 250px)' }}>
+      {/* Left Panel */}
+      <div style={{ width: 320, flexShrink: 0 }}>
+        {/* Tabs - Content / Styling */}
+        <div style={{ display: 'flex', marginBottom: 12, backgroundColor: '#f3f4f6', borderRadius: 8, padding: 4 }}>
+          <button onClick={() => setActiveTab('content')} style={{
+            flex: 1, padding: '10px', borderRadius: 6, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            backgroundColor: activeTab === 'content' ? '#fff' : 'transparent', color: activeTab === 'content' ? '#111' : '#6b7280',
+            boxShadow: activeTab === 'content' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}>{previewPage === 'page1' ? 'Page Content' : 'Form Fields'}</button>
+          <button onClick={() => setActiveTab('styling')} style={{
+            flex: 1, padding: '10px', borderRadius: 6, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            backgroundColor: activeTab === 'styling' ? '#fff' : 'transparent', color: activeTab === 'styling' ? '#111' : '#6b7280',
+            boxShadow: activeTab === 'styling' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}>Styling</button>
+        </div>
 
-          {/* Meeting Header Settings */}
-          <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Header
-            </h3>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4, color: '#374151' }}>Meeting Title</label>
-              <input
-                type="text"
-                value={settings.meetingTitle || ''}
-                onChange={(e) => setSettings(prev => ({ ...prev, meetingTitle: e.target.value }))}
-                placeholder="Book a Call with Our Team"
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 6,
-                  border: '1px solid #e5e7eb',
-                  fontSize: 13,
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4, color: '#374151' }}>Duration (mins)</label>
-              <select
-                value={settings.slotDuration || 30}
-                onChange={(e) => setSettings(prev => ({ ...prev, slotDuration: parseInt(e.target.value) }))}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: 6,
-                  border: '1px solid #e5e7eb',
-                  fontSize: 13,
-                }}
-              >
-                <option value={10}>10 minutes</option>
-                <option value={15}>15 minutes</option>
-                <option value={20}>20 minutes</option>
-                <option value={30}>30 minutes</option>
-                <option value={45}>45 minutes</option>
-                <option value={60}>60 minutes</option>
-              </select>
-            </div>
-          </div>
+        <div style={{ backgroundColor: '#fff', borderRadius: 8, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: 12, maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+          {activeTab === 'content' ? (
+            <>
+              {/* PAGE 1 CONTENT - Logo, Host, Title, Price, Bullets */}
+              {previewPage === 'page1' ? (
+                <>
+                  {/* Logo */}
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>Logo & Host</h3>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6 }}>Logo Image</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {/* Upload Box */}
+                      <label style={{
+                        width: 80, height: 80, borderRadius: 12, border: '2px dashed #d1d5db', backgroundColor: '#f9fafb',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        overflow: 'hidden', position: 'relative'
+                      }}>
+                        {settings.logoUrl ? (
+                          <>
+                            <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div style={{
+                              position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              opacity: 0, transition: 'opacity 0.2s'
+                            }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
+                              <span style={{ color: '#fff', fontSize: 11, fontWeight: 500 }}>Change</span>
+                            </div>
+                          </>
+                        ) : uploadingLogo ? (
+                          <span style={{ fontSize: 11, color: '#6b7280' }}>Uploading...</span>
+                        ) : (
+                          <>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                              <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            <span style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>Upload</span>
+                          </>
+                        )}
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                      </label>
+                      {/* Remove Button */}
+                      {settings.logoUrl && (
+                        <button onClick={() => setSettings(p => ({ ...p, logoUrl: '' }))} style={{
+                          padding: '6px 12px', borderRadius: 6, border: '1px solid #e5e7eb', backgroundColor: '#fff',
+                          color: '#ef4444', fontSize: 11, fontWeight: 500, cursor: 'pointer'
+                        }}>Remove</button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Host Name</label>
+                      <input type="text" value={settings.hostName || ''} onChange={(e) => setSettings(p => ({ ...p, hostName: e.target.value }))}
+                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Rating (1-5)</label>
+                      <input type="number" min={1} max={5} value={settings.hostRating || 5} onChange={(e) => setSettings(p => ({ ...p, hostRating: parseInt(e.target.value) }))}
+                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
 
-          <h3 style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Form Fields
-          </h3>
+                  {/* Meeting Info */}
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>Meeting Info</h3>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Meeting Title</label>
+                    <input type="text" value={settings.meetingTitle || ''} onChange={(e) => setSettings(p => ({ ...p, meetingTitle: e.target.value }))}
+                      style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Call Type</label>
+                      <input type="text" value={settings.callType || ''} onChange={(e) => setSettings(p => ({ ...p, callType: e.target.value }))}
+                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Duration</label>
+                      <select value={settings.slotDuration || 30} onChange={(e) => setSettings(p => ({ ...p, slotDuration: parseInt(e.target.value) }))}
+                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}>
+                        <option value={10}>10 min</option><option value={15}>15 min</option><option value={20}>20 min</option>
+                        <option value={30}>30 min</option><option value={45}>45 min</option><option value={60}>60 min</option>
+                      </select>
+                    </div>
+                  </div>
 
-          {formFields.map((field) => (
-            <div
-              key={field.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px',
-                marginBottom: 8,
-                borderRadius: 8,
-                backgroundColor: selectedField === field.id ? '#eff6ff' : '#f9fafb',
-                border: selectedField === field.id ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}
-              onClick={() => setSelectedField(field.id)}
-            >
-              {/* Toggle */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleField(field.id);
-                }}
-                style={{
-                  width: 36,
-                  height: 20,
-                  borderRadius: 10,
-                  border: 'none',
-                  backgroundColor: field.enabled ? '#10b981' : '#d1d5db',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                <div style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  backgroundColor: '#fff',
-                  position: 'absolute',
-                  top: 2,
-                  left: field.enabled ? 18 : 2,
-                  transition: 'left 0.2s',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                }} />
-              </button>
+                  {/* Price */}
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>Pricing</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Price (0 = FREE)</label>
+                      <input type="number" min={0} value={settings.priceAmount || 0} onChange={(e) => setSettings(p => ({ ...p, priceAmount: parseInt(e.target.value) || 0 }))}
+                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Currency</label>
+                      <select value={settings.currency || '₹'} onChange={(e) => setSettings(p => ({ ...p, currency: e.target.value }))}
+                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}>
+                        <option value="₹">₹ INR</option><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option>
+                      </select>
+                    </div>
+                  </div>
 
-              {/* Field Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: field.enabled ? '#111827' : '#9ca3af',
-                  textDecoration: field.enabled ? 'none' : 'line-through',
-                }}>
-                  {field.label}
-                </div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>
-                  {field.type === 'textarea' ? 'Text Area' : 'Text Input'}
-                  {field.required && <span style={{ color: '#ef4444', marginLeft: 4 }}>*</span>}
-                </div>
-              </div>
+                  {/* Description Bullets */}
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>How We Help (Bullets)</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(settings.descriptionBullets?.length > 0 ? settings.descriptionBullets : ['', '', '', '']).map((bullet, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: styles.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{i + 1}</span>
+                        <input type="text" value={bullet} placeholder={`Point ${i + 1}`}
+                          onChange={(e) => {
+                            const bullets = settings.descriptionBullets?.length > 0 ? [...settings.descriptionBullets] : ['', '', '', ''];
+                            bullets[i] = e.target.value;
+                            setSettings(p => ({ ...p, descriptionBullets: bullets }));
+                          }}
+                          style={{ flex: 1, padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                    ))}
+                    <button onClick={() => {
+                      const bullets = settings.descriptionBullets?.length > 0 ? [...settings.descriptionBullets, ''] : ['', '', '', '', ''];
+                      setSettings(p => ({ ...p, descriptionBullets: bullets }));
+                    }} style={{ padding: '8px', borderRadius: 6, border: '2px dashed #d1d5db', backgroundColor: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer' }}>+ Add Point</button>
+                  </div>
+                </>
+              ) : (
+                /* PAGE 2 CONTENT - Form Fields */
+                <>
+                  <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>Form Fields</h3>
+                  {formFields.map((field) => (
+                    <div key={field.id} onClick={() => setSelectedField(field.id)} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px', marginBottom: 6, borderRadius: 6, cursor: 'pointer',
+                      backgroundColor: selectedField === field.id ? '#eff6ff' : '#f9fafb', border: selectedField === field.id ? '2px solid #2563eb' : '1px solid #e5e7eb'
+                    }}>
+                      <button onClick={(e) => { e.stopPropagation(); toggleField(field.id); }} style={{
+                        width: 32, height: 18, borderRadius: 9, border: 'none', backgroundColor: field.enabled ? '#10b981' : '#d1d5db', position: 'relative', cursor: 'pointer', flexShrink: 0
+                      }}>
+                        <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: '#fff', position: 'absolute', top: 2, left: field.enabled ? 16 : 2, transition: 'left 0.2s' }} />
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: field.enabled ? '#111' : '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{field.label}</div>
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={addField} style={{
+                    width: '100%', padding: '10px', marginTop: 8, borderRadius: 6, border: '2px dashed #d1d5db', backgroundColor: '#fff',
+                    color: '#6b7280', fontSize: 13, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                  }}>+ Add Field</button>
 
-              {/* Arrow */}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </div>
-          ))}
+                  {/* Field Editor */}
+                  {selectedField && (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 10 }}>Edit: {formFields.find(f => f.id === selectedField)?.label}</h4>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Label</label>
+                        <input type="text" value={formFields.find(f => f.id === selectedField)?.label || ''} onChange={(e) => updateField(selectedField, { label: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Placeholder</label>
+                        <input type="text" value={formFields.find(f => f.id === selectedField)?.placeholder || ''} onChange={(e) => updateField(selectedField, { placeholder: e.target.value })}
+                          style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => updateField(selectedField, { required: !formFields.find(f => f.id === selectedField)?.required })} style={{
+                          padding: '8px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                          backgroundColor: formFields.find(f => f.id === selectedField)?.required ? '#10b981' : '#e5e7eb', color: formFields.find(f => f.id === selectedField)?.required ? '#fff' : '#374151'
+                        }}>{formFields.find(f => f.id === selectedField)?.required ? 'Required' : 'Optional'}</button>
+                        {formFields.find(f => f.id === selectedField)?.isCustom && (
+                          <button onClick={() => deleteField(selectedField)} style={{ padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: '#fee2e2', color: '#dc2626', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Delete</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {/* Styling Tab - Colors for both pages */}
+              <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 12, textTransform: 'uppercase' }}>Page Colors</h3>
+              <ColorInput label="Page Background" value={settings.pageBackgroundColor} onChange={(v) => setSettings(p => ({ ...p, pageBackgroundColor: v }))} />
+              <ColorInput label="Card Background" value={settings.cardBackgroundColor} onChange={(v) => setSettings(p => ({ ...p, cardBackgroundColor: v }))} />
 
-          {/* Add Field Button */}
-          <button
-            onClick={addField}
-            style={{
-              width: '100%',
-              padding: '12px',
-              marginTop: 8,
-              borderRadius: 8,
-              border: '2px dashed #d1d5db',
-              backgroundColor: '#fff',
-              color: '#6b7280',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              transition: 'all 0.15s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#2563eb';
-              e.currentTarget.style.color = '#2563eb';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#d1d5db';
-              e.currentTarget.style.color = '#6b7280';
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Add Field
-          </button>
+              <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 12, marginTop: 16, textTransform: 'uppercase' }}>Button & Accent</h3>
+              <ColorInput label="Primary/Button Color" value={settings.primaryColor} onChange={(v) => setSettings(p => ({ ...p, primaryColor: v }))} />
+              <ColorInput label="Accent Color (Selection)" value={settings.accentColor} onChange={(v) => setSettings(p => ({ ...p, accentColor: v }))} />
+
+              <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 12, marginTop: 16, textTransform: 'uppercase' }}>Text Colors</h3>
+              <ColorInput label="Heading Color" value={settings.headingColor} onChange={(v) => setSettings(p => ({ ...p, headingColor: v }))} />
+              <ColorInput label="Body Text Color" value={settings.textColor} onChange={(v) => setSettings(p => ({ ...p, textColor: v }))} />
+            </>
+          )}
         </div>
 
         {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving || !hasChanges()}
-          style={{
-            width: '100%',
-            padding: '12px',
-            borderRadius: 8,
-            border: 'none',
-            backgroundColor: hasChanges() ? '#2563eb' : '#9ca3af',
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: (saving || !hasChanges()) ? 'not-allowed' : 'pointer',
-            opacity: (saving || !hasChanges()) ? 0.6 : 1,
-          }}
-        >
-          {saving ? 'Saving...' : hasChanges() ? 'Save Form' : 'No Changes'}
-        </button>
+        <button onClick={handleSave} disabled={saving || !hasChanges()} style={{
+          width: '100%', padding: '12px', borderRadius: 8, border: 'none', fontSize: 14, fontWeight: 600, cursor: (saving || !hasChanges()) ? 'not-allowed' : 'pointer',
+          backgroundColor: hasChanges() ? '#2563eb' : '#9ca3af', color: '#fff', opacity: (saving || !hasChanges()) ? 0.6 : 1
+        }}>{saving ? 'Saving...' : hasChanges() ? 'Save Changes' : 'No Changes'}</button>
       </div>
 
-      {/* Right - Preview & Editor */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Field Editor Panel */}
-        {selectedField && (
-          <div style={{
-            backgroundColor: '#fff',
-            borderRadius: 8,
-            padding: 20,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-                Edit Field: {formFields.find(f => f.id === selectedField)?.label}
-              </h3>
-              <button
-                onClick={() => setSelectedField(null)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 4,
-                  border: '1px solid #e5e7eb',
-                  backgroundColor: '#fff',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                }}
-              >
-                Close
-              </button>
-            </div>
+      {/* Right - Topmate Style Preview */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Page Tabs */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <button onClick={() => setPreviewPage('page1')} style={{
+            padding: '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            backgroundColor: previewPage === 'page1' ? '#2563eb' : '#e5e7eb', color: previewPage === 'page1' ? '#fff' : '#374151'
+          }}>Page 1 - Date/Time</button>
+          <button onClick={() => setPreviewPage('page2')} style={{
+            padding: '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            backgroundColor: previewPage === 'page2' ? '#2563eb' : '#e5e7eb', color: previewPage === 'page2' ? '#fff' : '#374151'
+          }}>Page 2 - Form</button>
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Label</label>
-                <input
-                  type="text"
-                  value={formFields.find(f => f.id === selectedField)?.label || ''}
-                  onChange={(e) => updateField(selectedField, { label: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #e5e7eb',
-                    fontSize: 14,
-                  }}
-                />
-              </div>
+        {/* Preview Area */}
+        <div style={{ flex: 1, backgroundColor: styles.pageBg, borderRadius: 12, padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflow: 'auto' }}>
 
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Placeholder</label>
-                <input
-                  type="text"
-                  value={formFields.find(f => f.id === selectedField)?.placeholder || ''}
-                  onChange={(e) => updateField(selectedField, { placeholder: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #e5e7eb',
-                    fontSize: 14,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Field Type</label>
-                <select
-                  value={formFields.find(f => f.id === selectedField)?.type || 'text'}
-                  onChange={(e) => updateField(selectedField, { type: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 6,
-                    border: '1px solid #e5e7eb',
-                    fontSize: 14,
-                  }}
-                >
-                  <option value="text">Text Input</option>
-                  <option value="email">Email</option>
-                  <option value="tel">Phone</option>
-                  <option value="textarea">Text Area</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Required</label>
-                <button
-                  onClick={() => {
-                    const field = formFields.find(f => f.id === selectedField);
-                    updateField(selectedField, { required: !field?.required });
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: 6,
-                    border: 'none',
-                    backgroundColor: formFields.find(f => f.id === selectedField)?.required ? '#10b981' : '#e5e7eb',
-                    color: formFields.find(f => f.id === selectedField)?.required ? '#fff' : '#374151',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {formFields.find(f => f.id === selectedField)?.required ? 'Required' : 'Optional'}
-                </button>
-              </div>
-            </div>
-
-            {/* Delete Button for Custom Fields */}
-            {formFields.find(f => f.id === selectedField)?.isCustom && (
-              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
-                <button
-                  onClick={() => deleteField(selectedField)}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: 6,
-                    border: 'none',
-                    backgroundColor: '#fee2e2',
-                    color: '#dc2626',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                  </svg>
-                  Delete Field
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Form Preview */}
-        <div style={{
-          backgroundColor: '#f3f4f6',
-          borderRadius: 8,
-          padding: 24,
-          flex: 1,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'flex-start',
-          overflow: 'auto',
-        }}>
-          <div style={{
-            backgroundColor: '#fff',
-            borderRadius: 16,
-            padding: 24,
-            width: '100%',
-            maxWidth: 450,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, textAlign: 'center' }}>
-              {settings?.meetingTitle || 'Book a Call'}
-            </h2>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20, textAlign: 'center' }}>
-              {settings?.slotDuration || 30} mins • Google Meet
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {formFields.filter(f => f.enabled).map((field) => (
-                <div
-                  key={field.id}
-                  onClick={() => setSelectedField(field.id)}
-                  style={{
-                    cursor: 'pointer',
-                    padding: 2,
-                    borderRadius: 8,
-                    border: selectedField === field.id ? '2px solid #2563eb' : '2px solid transparent',
-                  }}
-                >
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 4, color: '#374151' }}>
-                    {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
-                  </label>
-                  {field.type === 'textarea' ? (
-                    <textarea
-                      placeholder={field.placeholder}
-                      rows={3}
-                      readOnly
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        borderRadius: 8,
-                        border: '1px solid #d1d5db',
-                        fontSize: 14,
-                        resize: 'none',
-                        backgroundColor: '#f9fafb',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  ) : (
-                    <input
-                      type={field.type}
-                      placeholder={field.placeholder}
-                      readOnly
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        borderRadius: 8,
-                        border: '1px solid #d1d5db',
-                        fontSize: 14,
-                        backgroundColor: '#f9fafb',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  )}
+          {/* PAGE 1 - Date/Time Selection */}
+          {previewPage === 'page1' && (
+            <div style={{ display: 'flex', gap: 20, width: '100%', maxWidth: 900 }}>
+              {/* Left Info Panel */}
+              <div style={{ backgroundColor: styles.cardBg, borderRadius: 16, padding: 24, width: 320, flexShrink: 0 }}>
+                {/* Host Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <div style={{ width: 50, height: 50, borderRadius: '50%', backgroundColor: styles.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {settings.logoUrl ? <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>G</span>}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 16, color: styles.heading }}>{settings.hostName || 'Ved Patel'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#facc15" stroke="#facc15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                      <span style={{ fontWeight: 500, fontSize: 13, color: '#666' }}>{settings.hostRating || 5}/5</span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            <button
-              style={{
-                width: '100%',
-                marginTop: 20,
-                padding: '14px',
-                borderRadius: 10,
-                border: 'none',
-                backgroundColor: '#2563eb',
-                color: '#fff',
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: 'default',
-              }}
-            >
-              Book Meeting
-            </button>
-          </div>
+                {/* Title */}
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: styles.heading, marginBottom: 8 }}>{settings.meetingTitle || "Book A Direct Call"}</h2>
+
+                {/* Call Type & Duration */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, backgroundColor: '#f0f0f0' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    <span style={{ fontSize: 12, color: '#666' }}>{settings.callType || 'Video Call'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, backgroundColor: '#f0f0f0' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                    <span style={{ fontSize: 12, color: '#666' }}>{settings.slotDuration || 30} mins</span>
+                  </div>
+                </div>
+
+                {/* Price */}
+                <div style={{ marginBottom: 20, padding: '12px 16px', backgroundColor: styles.accent + '20', borderRadius: 10, border: `1px solid ${styles.accent}` }}>
+                  <span style={{ fontSize: 24, fontWeight: 700, color: styles.heading }}>{settings.priceAmount === 0 ? 'FREE' : `${settings.currency || '₹'}${settings.priceAmount || 0}`}</span>
+                </div>
+
+                {/* Description Title */}
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: styles.heading, marginBottom: 12 }}>How we will help you:</h3>
+
+                {/* Bullets */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {(settings.descriptionBullets?.length > 0 ? settings.descriptionBullets : [
+                    'Ask questions to understand your vision & challenges',
+                    'Break any myths that might be holding you back',
+                    'Walk you through our industry leading process',
+                    'See if this is a good fit, if yes then take it forward!'
+                  ]).map((bullet, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <span style={{ width: 22, height: 22, borderRadius: '50%', backgroundColor: styles.accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{i + 1}</span>
+                      <span style={{ fontSize: 13, color: styles.text, lineHeight: 1.5 }}>{bullet}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right - Calendar & Time */}
+              <div style={{ flex: 1, backgroundColor: styles.cardBg, borderRadius: 16, padding: 24 }}>
+                {/* Month Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <button style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid #e5e5e5', backgroundColor: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+                  </button>
+                  <span style={{ fontWeight: 600, fontSize: 16, color: styles.heading }}>March 2026</span>
+                  <button style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid #e5e5e5', backgroundColor: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                  </button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div style={{ marginBottom: 24 }}>
+                  {/* Day Labels */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 8 }}>
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <div key={i} style={{ textAlign: 'center', fontSize: 12, fontWeight: 500, color: '#999', padding: '8px 0' }}>{d}</div>
+                    ))}
+                  </div>
+                  {/* Dates */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+                    {[...Array(31)].map((_, i) => {
+                      const isSelected = i === 20; // 21st selected
+                      const isPast = i < 19;
+                      return (
+                        <div key={i} style={{
+                          padding: '10px 0', textAlign: 'center', borderRadius: 8, cursor: isPast ? 'default' : 'pointer',
+                          backgroundColor: isSelected ? styles.accent : 'transparent',
+                          color: isSelected ? '#fff' : isPast ? '#ccc' : styles.heading,
+                          fontWeight: isSelected ? 600 : 400, fontSize: 14
+                        }}>{i + 1}</div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Time Slots Label */}
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: styles.heading }}>Available Time Slots</span>
+                </div>
+
+                {/* Time Slots Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                  {['09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '02:00 PM', '02:30 PM', '03:00 PM'].map((time, i) => {
+                    const isSelected = i === 0;
+                    return (
+                      <div key={i} style={{
+                        padding: '12px', textAlign: 'center', borderRadius: 8, cursor: 'pointer',
+                        border: isSelected ? `2px solid ${styles.accent}` : '1px solid #e5e5e5',
+                        backgroundColor: isSelected ? styles.accent + '20' : '#fff',
+                        color: isSelected ? styles.accent : styles.text, fontWeight: 500, fontSize: 13
+                      }}>{time}</div>
+                    );
+                  })}
+                </div>
+
+                {/* Confirm Button */}
+                <button style={{ width: '100%', marginTop: 24, padding: '14px', borderRadius: 10, border: 'none', backgroundColor: styles.primary, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+                  Confirm Date & Time
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PAGE 2 - Form */}
+          {previewPage === 'page2' && (
+            <div style={{ backgroundColor: styles.cardBg, borderRadius: 20, width: '100%', maxWidth: 550, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ padding: '18px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={styles.heading} strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: styles.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {settings.logoUrl ? <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>G</span>}
+                  </div>
+                  <span style={{ fontWeight: 500, color: styles.heading, fontSize: 15 }}>{settings.hostName || 'Ved Patel'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#facc15" stroke="#facc15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{settings.hostRating || 5}/5</span>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div style={{ padding: '24px' }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: styles.heading, marginBottom: 6 }}>{settings.meetingTitle || "Book A Direct Call"}</h2>
+                <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>{settings.callType || 'Video Call'} | {settings.slotDuration || 30}mins</p>
+
+                {/* Date/Time Selection Preview */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: 12, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ backgroundColor: '#fff', padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e5e5', textAlign: 'center' }}>
+                      <div style={{ fontSize: 11, color: '#666' }}>MAR</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: styles.heading }}>21</div>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: styles.heading, fontSize: 14 }}>Sat, 21 Mar</div>
+                      <div style={{ fontSize: 13, color: '#666' }}>09:00 AM - 09:30 AM</div>
+                    </div>
+                  </div>
+                  <button style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e5e5', backgroundColor: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>Change</button>
+                </div>
+
+                {/* Form Fields */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  {formFields.filter(f => f.enabled).map((field) => (
+                    <div key={field.id} onClick={() => setSelectedField(field.id)} style={{
+                      cursor: 'pointer', padding: 3, borderRadius: 10, border: selectedField === field.id ? `2px solid ${styles.accent}` : '2px solid transparent'
+                    }}>
+                      <label style={{ display: 'block', fontWeight: 500, marginBottom: 6, color: styles.heading, fontSize: 14 }}>
+                        {field.label}{field.required && <span style={{ color: '#ef4444' }}> *</span>}
+                      </label>
+                      {field.id === 'phone' ? (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 10px', borderRadius: 8, border: '1px solid #e5e5e5', backgroundColor: '#f9fafb' }}>
+                            <span>🇮🇳</span><span style={{ fontWeight: 500 }}>+91</span>
+                          </div>
+                          <input type="tel" placeholder={field.placeholder} readOnly style={{ flex: 1, padding: '12px 14px', borderRadius: 8, border: '1px solid #e5e5e5', fontSize: 14, backgroundColor: '#fff' }} />
+                        </div>
+                      ) : (
+                        <input type={field.type} placeholder={field.placeholder} readOnly style={{
+                          width: '100%', padding: '13px 14px', borderRadius: 8, border: '1px solid #e5e5e5', fontSize: 14, backgroundColor: '#fff', boxSizing: 'border-box'
+                        }} />
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Checkbox */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <input type="checkbox" defaultChecked style={{ width: 18, height: 18, accentColor: '#10b981' }} />
+                    <span style={{ fontSize: 13, color: styles.text }}>Receive booking details on phone</span>
+                  </label>
+                </div>
+
+                {/* Order Summary */}
+                <div style={{ marginTop: 24, border: '1px solid #e5e5e5', borderRadius: 12, overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>Order Summary</span>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{settings.priceAmount === 0 ? '₹0' : `₹${settings.priceAmount || 0}`}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '18px 24px', borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fafafa' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: styles.heading }}>{settings.priceAmount === 0 ? 'FREE' : `₹${settings.priceAmount || 0}`}</div>
+                <button style={{ padding: '14px 32px', borderRadius: 10, border: 'none', backgroundColor: styles.primary, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>Book Session</button>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

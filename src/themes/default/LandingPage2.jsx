@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
-import BookingModal from '@/components/BookingModal';
-
 const LandingPage2 = () => {
   const { isMobile, isTablet } = useWindowSize();
+  const navigate = useNavigate();
 
   // Initialize smooth scrolling
   useSmoothScroll(!isMobile);
@@ -19,7 +18,6 @@ const LandingPage2 = () => {
   const [loading, setLoading] = useState(true);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
-  const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
@@ -1473,7 +1471,7 @@ const LandingPage2 = () => {
                   <button
                     className="btn-hover"
                     type="button"
-                    onClick={() => setShowBookingModal(true)}
+                    onClick={() => navigate('/book')}
                     style={{
                       width: '240px',
                       height: '40px',
@@ -1580,12 +1578,6 @@ const LandingPage2 = () => {
         </p>
       </EditableSection>
       )}
-
-      {/* Booking Modal */}
-      <BookingModal
-        isOpen={showBookingModal}
-        onClose={() => setShowBookingModal(false)}
-      />
     </div>
   );
 };
