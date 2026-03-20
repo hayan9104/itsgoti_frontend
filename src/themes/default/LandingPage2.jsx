@@ -6,6 +6,7 @@ import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
+import BookingModal from '@/components/BookingModal';
 
 const LandingPage2 = () => {
   const { isMobile, isTablet } = useWindowSize();
@@ -18,6 +19,7 @@ const LandingPage2 = () => {
   const [loading, setLoading] = useState(true);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchParams] = useSearchParams();
   const isEditorMode = searchParams.get('editor') === 'true';
@@ -1470,8 +1472,8 @@ const LandingPage2 = () => {
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button
                     className="btn-hover"
-                    type="submit"
-                    disabled={formLoading}
+                    type="button"
+                    onClick={() => setShowBookingModal(true)}
                     style={{
                       width: '240px',
                       height: '40px',
@@ -1484,11 +1486,10 @@ const LandingPage2 = () => {
                       fontSize: '16px',
                       fontWeight: 400,
                       lineHeight: '1.2em',
-                      cursor: formLoading ? 'not-allowed' : 'pointer',
-                      opacity: formLoading ? 0.7 : 1,
+                      cursor: 'pointer',
                     }}
                   >
-                    {formLoading ? 'Submitting...' : content.formButtonText}
+                    {content.formButtonText}
                   </button>
                 </div>
                 <p style={{
@@ -1579,6 +1580,12 @@ const LandingPage2 = () => {
         </p>
       </EditableSection>
       )}
+
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+      />
     </div>
   );
 };
