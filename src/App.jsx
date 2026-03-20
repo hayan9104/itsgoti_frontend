@@ -175,15 +175,9 @@ function DefaultLandingRouter() {
     }
   }, [defaultLandingPage, loaded]);
 
-  // Show LandingPage3 immediately while loading (it's eagerly loaded and the default)
-  // Only wait if A/B testing is enabled and we need to determine the version
+  // Show blank loader while waiting for settings to load
   if (!loaded) {
-    // Render LandingPage3 instantly - no waiting
-    return (
-      <PageVisibilityWrapper pageName="landing-page-3" fallbackPath="/home">
-        <LandingPage3 />
-      </PageVisibilityWrapper>
-    );
+    return <PageLoader />;
   }
 
   // If A/B testing is enabled, use the random version
@@ -191,11 +185,7 @@ function DefaultLandingRouter() {
 
   // Wait for AB version to be determined (only for A/B testing)
   if (defaultLandingPage === 'ab-test' && !abVersion) {
-    return (
-      <PageVisibilityWrapper pageName="landing-page-3" fallbackPath="/home">
-        <LandingPage3 />
-      </PageVisibilityWrapper>
-    );
+    return <PageLoader />;
   }
 
   // Home page

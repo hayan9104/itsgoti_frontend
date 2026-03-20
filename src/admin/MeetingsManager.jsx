@@ -1022,6 +1022,17 @@ const FormEditorView = () => {
   const [activeTab, setActiveTab] = useState('content'); // 'content' or 'styling'
   const [previewPage, setPreviewPage] = useState('page1'); // 'page1' or 'page2'
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showPreview, setShowPreview] = useState(true);
+
+  // Handle window resize for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const hasChanges = () => {
     if (!initialData) return false;
@@ -1137,9 +1148,47 @@ const FormEditorView = () => {
   };
 
   return (
-    <div style={{ display: 'flex', gap: 20, minHeight: 'calc(100vh - 250px)' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: isMobile ? 16 : 20,
+      minHeight: isMobile ? 'auto' : 'calc(100vh - 250px)'
+    }}>
       {/* Left Panel */}
-      <div style={{ width: 320, flexShrink: 0 }}>
+      <div style={{
+        width: isMobile ? '100%' : 320,
+        flexShrink: 0,
+        order: isMobile ? 1 : 0
+      }}>
+        {/* Mobile Preview Toggle */}
+        {isMobile && (
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              marginBottom: 12,
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              backgroundColor: showPreview ? '#2563eb' : '#fff',
+              color: showPreview ? '#fff' : '#374151',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            {showPreview ? 'Hide Preview' : 'Show Preview'}
+          </button>
+        )}
+
         {/* Tabs - Content / Styling */}
         <div style={{ display: 'flex', marginBottom: 12, backgroundColor: '#f3f4f6', borderRadius: 8, padding: 4 }}>
           <button onClick={() => setActiveTab('content')} style={{
@@ -1173,7 +1222,7 @@ const FormEditorView = () => {
                       }}>
                         {settings.logoUrl ? (
                           <>
-                            <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                             <div style={{
                               position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                               opacity: 0, transition: 'opacity 0.2s'
@@ -1354,31 +1403,62 @@ const FormEditorView = () => {
       </div>
 
       {/* Right - Topmate Style Preview */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {(!isMobile || showPreview) && (
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        order: isMobile ? 0 : 1,
+        marginBottom: isMobile ? 16 : 0
+      }}>
         {/* Page Tabs */}
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={() => setPreviewPage('page1')} style={{
-            padding: '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            padding: isMobile ? '8px 16px' : '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             backgroundColor: previewPage === 'page1' ? '#2563eb' : '#e5e7eb', color: previewPage === 'page1' ? '#fff' : '#374151'
           }}>Page 1 - Date/Time</button>
           <button onClick={() => setPreviewPage('page2')} style={{
-            padding: '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            padding: isMobile ? '8px 16px' : '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             backgroundColor: previewPage === 'page2' ? '#2563eb' : '#e5e7eb', color: previewPage === 'page2' ? '#fff' : '#374151'
           }}>Page 2 - Form</button>
         </div>
 
         {/* Preview Area */}
-        <div style={{ flex: 1, backgroundColor: styles.pageBg, borderRadius: 12, padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflow: 'auto' }}>
+        <div style={{
+          flex: isMobile ? 'none' : 1,
+          backgroundColor: styles.pageBg,
+          borderRadius: 12,
+          padding: isMobile ? 12 : 24,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
+          overflow: 'auto',
+          minHeight: isMobile ? 400 : 'auto',
+          maxHeight: isMobile ? 500 : 'none'
+        }}>
 
           {/* PAGE 1 - Date/Time Selection */}
           {previewPage === 'page1' && (
-            <div style={{ display: 'flex', gap: 20, width: '100%', maxWidth: 900 }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? 16 : 20,
+              width: '100%',
+              maxWidth: 900
+            }}>
               {/* Left Info Panel */}
-              <div style={{ backgroundColor: styles.cardBg, borderRadius: 16, padding: 24, width: 320, flexShrink: 0 }}>
+              <div style={{
+                backgroundColor: styles.cardBg,
+                borderRadius: 16,
+                padding: isMobile ? 16 : 24,
+                width: isMobile ? '100%' : 320,
+                flexShrink: 0
+              }}>
                 {/* Host Info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                   <div style={{ width: 50, height: 50, borderRadius: '50%', backgroundColor: styles.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {settings.logoUrl ? <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>G</span>}
+                    {settings.logoUrl ? <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} /> : <span style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>G</span>}
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 16, color: styles.heading }}>{settings.hostName || 'Ved Patel'}</div>
@@ -1429,7 +1509,13 @@ const FormEditorView = () => {
               </div>
 
               {/* Right - Calendar & Time */}
-              <div style={{ flex: 1, backgroundColor: styles.cardBg, borderRadius: 16, padding: 24 }}>
+              <div style={{
+                flex: 1,
+                backgroundColor: styles.cardBg,
+                borderRadius: 16,
+                padding: isMobile ? 16 : 24,
+                width: isMobile ? '100%' : 'auto'
+              }}>
                 {/* Month Header */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <button style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid #e5e5e5', backgroundColor: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1496,15 +1582,28 @@ const FormEditorView = () => {
 
           {/* PAGE 2 - Form */}
           {previewPage === 'page2' && (
-            <div style={{ backgroundColor: styles.cardBg, borderRadius: 20, width: '100%', maxWidth: 550, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            <div style={{
+              backgroundColor: styles.cardBg,
+              borderRadius: isMobile ? 12 : 20,
+              width: '100%',
+              maxWidth: isMobile ? '100%' : 550,
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              overflow: 'hidden'
+            }}>
               {/* Header */}
-              <div style={{ padding: '18px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                padding: isMobile ? '12px 16px' : '18px 24px',
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={styles.heading} strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: styles.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {settings.logoUrl ? <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>G</span>}
+                  <div style={{ width: isMobile ? 32 : 38, height: isMobile ? 32 : 38, borderRadius: '50%', backgroundColor: styles.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {settings.logoUrl ? <img src={settings.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%' }} /> : <span style={{ color: '#fff', fontSize: isMobile ? 12 : 14, fontWeight: 600 }}>G</span>}
                   </div>
-                  <span style={{ fontWeight: 500, color: styles.heading, fontSize: 15 }}>{settings.hostName || 'Ved Patel'}</span>
+                  <span style={{ fontWeight: 500, color: styles.heading, fontSize: isMobile ? 13 : 15 }}>{settings.hostName || 'Ved Patel'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="#facc15" stroke="#facc15"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
@@ -1513,23 +1612,33 @@ const FormEditorView = () => {
               </div>
 
               {/* Content */}
-              <div style={{ padding: '24px' }}>
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: styles.heading, marginBottom: 6 }}>{settings.meetingTitle || "Book A Direct Call"}</h2>
-                <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>{settings.callType || 'Video Call'} | {settings.slotDuration || 30}mins</p>
+              <div style={{ padding: isMobile ? '16px' : '24px' }}>
+                <h2 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: styles.heading, marginBottom: 6 }}>{settings.meetingTitle || "Book A Direct Call"}</h2>
+                <p style={{ color: '#666', fontSize: isMobile ? 12 : 14, marginBottom: isMobile ? 16 : 20 }}>{settings.callType || 'Video Call'} | {settings.slotDuration || 30}mins</p>
 
                 {/* Date/Time Selection Preview */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: 12, marginBottom: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ backgroundColor: '#fff', padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e5e5', textAlign: 'center' }}>
-                      <div style={{ fontSize: 11, color: '#666' }}>MAR</div>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: styles.heading }}>21</div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: isMobile ? '12px' : '16px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: 12,
+                  marginBottom: isMobile ? 16 : 24,
+                  flexWrap: isMobile ? 'wrap' : 'nowrap',
+                  gap: isMobile ? 10 : 0
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14 }}>
+                    <div style={{ backgroundColor: '#fff', padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, border: '1px solid #e5e5e5', textAlign: 'center' }}>
+                      <div style={{ fontSize: isMobile ? 10 : 11, color: '#666' }}>MAR</div>
+                      <div style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700, color: styles.heading }}>21</div>
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, color: styles.heading, fontSize: 14 }}>Sat, 21 Mar</div>
-                      <div style={{ fontSize: 13, color: '#666' }}>09:00 AM - 09:30 AM</div>
+                      <div style={{ fontWeight: 600, color: styles.heading, fontSize: isMobile ? 12 : 14 }}>Sat, 21 Mar</div>
+                      <div style={{ fontSize: isMobile ? 11 : 13, color: '#666' }}>09:00 AM - 09:30 AM</div>
                     </div>
                   </div>
-                  <button style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e5e5', backgroundColor: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>Change</button>
+                  <button style={{ padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: 8, border: '1px solid #e5e5e5', backgroundColor: '#fff', cursor: 'pointer', fontWeight: 500, fontSize: isMobile ? 11 : 13 }}>Change</button>
                 </div>
 
                 {/* Form Fields */}
@@ -1573,15 +1682,32 @@ const FormEditorView = () => {
               </div>
 
               {/* Footer */}
-              <div style={{ padding: '18px 24px', borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fafafa' }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: styles.heading }}>{settings.priceAmount === 0 ? 'FREE' : `₹${settings.priceAmount || 0}`}</div>
-                <button style={{ padding: '14px 32px', borderRadius: 10, border: 'none', backgroundColor: styles.primary, color: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>Book Session</button>
+              <div style={{
+                padding: isMobile ? '12px 16px' : '18px 24px',
+                borderTop: '1px solid #f0f0f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: '#fafafa'
+              }}>
+                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: styles.heading }}>{settings.priceAmount === 0 ? 'FREE' : `₹${settings.priceAmount || 0}`}</div>
+                <button style={{
+                  padding: isMobile ? '10px 20px' : '14px 32px',
+                  borderRadius: 10,
+                  border: 'none',
+                  backgroundColor: styles.primary,
+                  color: '#fff',
+                  fontSize: isMobile ? 13 : 15,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}>Book Session</button>
               </div>
             </div>
           )}
 
         </div>
       </div>
+      )}
     </div>
   );
 };
