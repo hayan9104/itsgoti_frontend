@@ -2091,43 +2091,69 @@ const LandingPage3 = () => {
                       justifyContent: 'center',
                     }}
                   >
-                    {/* Mobile Case Study Card - Simple CSS design */}
+                    {/* Mobile Case Study Card - SVG folder tab design (same as desktop) */}
                     <div style={{
                       position: 'relative',
                       width: '100%',
                       maxWidth: '290px',
                       transform: 'translateX(-2px)',
                     }}>
-                      {/* Tab Label - simple rounded tab above card */}
-                      <div style={{
+                      {/* SVG Container with integrated tab - Mobile version */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 388 580"
+                        fill="none"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          overflow: 'visible',
+                        }}
+                        preserveAspectRatio="xMidYMid meet"
+                      >
+                        <defs>
+                          <filter id={`mobile_shadow_${studyIndex}`} x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox">
+                            <feDropShadow dx="4" dy="4" stdDeviation="0" floodColor="#150634" floodOpacity="1"/>
+                          </filter>
+                        </defs>
+                        {/* Main card body with folder tab cutout - wider tab */}
+                        <path
+                          d="M1 548V42C1 37 1 34.5 2 32.5C3 30.5 4.5 28.5 6.5 27.5C8.5 26.5 11 26.5 16 26.5H25L45 27C47.5 27 49 27 50 26.7C53.5 25.8 56 23 56.8 19.5C57 18.5 57 17 57 14C57 11 57 9.5 57.3 8.5C58 5 60.5 2 64 1.3C65 1 66.5 1 69 1H150C153 1 154.5 1 156 1.5C157.5 2 159 2.8 160 4C161 5.2 161.8 7 163 10L167 18C168.5 21.5 169.5 23.5 171 25C172.5 26.5 174 27.5 176 28C178 28.5 180 28.5 184 28.5H372C377 28.5 380 28.5 382.5 29.5C385 30.5 386.5 32 388 34.5C389 37 387 39.5 387 44.5V549C387 554 387 557 386 559.5C385 562 383.5 564 381 565.5C378.5 567 376 567 371 567H17C12 567 9 567 6.5 566C4 565 2.5 563.5 1.5 561C0.5 558.5 1 556 1 551V548Z"
+                          fill="white"
+                          filter={`url(#mobile_shadow_${studyIndex})`}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        {/* Border stroke - wider tab */}
+                        <path
+                          d="M150 0.5C153 0.5 154.8 0.5 156.3 1C158 1.6 159.5 2.5 160.7 3.8C162 5.2 162.8 7.2 164 10.5L168 18.5C169.3 21.5 170.3 23.5 171.6 24.8C173 26.2 174.6 27.2 176.4 27.7C178.3 28.3 180.5 28.3 184 28H372C376.5 28 379.5 28 381.8 29C384 30 386 31.5 387.3 33.8C388.5 36 388 38.5 388 43.5V549C388 554 388 557.2 387 559.8C386 562.2 384.2 564.3 381.8 565.8C379.3 567.2 376.5 567.2 372 567H17C12.5 567.2 9.5 567.2 7 566C4.5 564.8 2.8 563 1.8 560.5C0.8 558 1 555 1 550V42C1 37.5 1 34.8 2 32.3C3 29.8 4.8 27.8 7 26.5C9.3 25.2 12 25.2 17 25.5L46 26C48.5 26 50 26 51 25.6C54 24.8 56.3 22.5 57 19.5C57.3 18.3 57.3 17 57.3 13.5C57.3 10 57.3 8.5 57.7 7.3C58.5 4 61 1.7 64.3 1C65.5 0.7 67 0.5 70 0.5H150Z"
+                          stroke="black"
+                          strokeWidth="1"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+
+                      {/* Tab Label - positioned in the folder tab area */}
+                      <span style={{
                         position: 'absolute',
-                        top: '-20px',
-                        left: '16px',
-                        backgroundColor: '#fff',
-                        padding: '4px 12px',
-                        borderRadius: '6px 6px 0 0',
-                        border: '1px solid #000',
-                        borderBottom: 'none',
+                        top: '1.5%',
+                        left: '50px',
+                        fontFamily: "'Barlow', sans-serif",
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#000',
+                        whiteSpace: 'nowrap',
                         zIndex: 2,
                       }}>
-                        <span style={{
-                          fontFamily: "'Barlow', sans-serif",
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          color: '#000',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {study.label || `Case Study ${studyIndex + 1}`}
-                        </span>
-                      </div>
+                        {study.label || `Case Study ${studyIndex + 1}`}
+                      </span>
 
-                      {/* Main Card */}
+                      {/* Main Card Content */}
                       <div style={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #000',
-                        borderRadius: '12px',
-                        boxShadow: '4px 4px 0px 0px #1a1a4e',
-                        padding: '20px 16px',
+                        position: 'relative',
+                        padding: '38px 16px 16px',
+                        aspectRatio: '388 / 580',
                       }}>
                         {/* Brand */}
                         <p style={{
@@ -2789,7 +2815,7 @@ const LandingPage3 = () => {
                     fontStyle: 'normal',
                     fontWeight: 400,
                     lineHeight: '1.1',
-                    marginLeft: '50px',
+                    marginLeft: '65px',
                   }}>
                     <div>MOST POPULAR</div>
                     <div>FOR GROWING STORES</div>
