@@ -314,7 +314,7 @@ const BookingPage = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(-1)}
             style={{
               padding: isMobile ? '14px 36px' : '16px 48px',
               borderRadius: 12,
@@ -367,7 +367,7 @@ const BookingPage = () => {
                 marginBottom: 16
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={styles.headingColor} strokeWidth="2">
                       <path d="M19 12H5M12 19l-7-7 7-7" />
                     </svg>
@@ -1083,7 +1083,7 @@ const BookingPage = () => {
           }}>
             {/* Back Button */}
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate(-1)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
