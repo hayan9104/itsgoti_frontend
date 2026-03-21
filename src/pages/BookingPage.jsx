@@ -15,6 +15,7 @@ const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [dateScrollIndex, setDateScrollIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState(null);
   const slotsContainerRef = useRef(null);
   const dateScrollRef = useRef(null);
 
@@ -169,6 +170,14 @@ const BookingPage = () => {
       const data = await res.json();
       if (data.success) {
         setSubmitted(true);
+        // Send GA event for successful booking
+        if (typeof window !== 'undefined' && window.gtag) {
+          window.gtag('event', 'booking_submission', {
+            event_category: 'Booking',
+            event_label: 'Booking Page',
+            value: 1
+          });
+        }
       } else {
         alert(data.message || 'Error booking. Please try again.');
       }
@@ -180,11 +189,14 @@ const BookingPage = () => {
 
   const scrollDates = (direction) => {
     const maxScroll = Math.max(0, availableDates.length - 5);
+    setSlideDirection(direction);
     if (direction === 'left') {
       setDateScrollIndex(Math.max(0, dateScrollIndex - 1));
     } else {
       setDateScrollIndex(Math.min(maxScroll, dateScrollIndex + 1));
     }
+    // Reset animation after it completes
+    setTimeout(() => setSlideDirection(null), 300);
   };
 
   const visibleDates = availableDates.slice(dateScrollIndex, dateScrollIndex + 5);
@@ -413,11 +425,26 @@ const BookingPage = () => {
                 <h3 style={{ fontSize: 15, fontWeight: 600, color: styles.headingColor, marginBottom: 12 }}>
                   Here is how we will help you:
                 </h3>
-                <ol style={{ margin: 0, paddingLeft: 20, color: styles.textColor, lineHeight: 1.8, fontSize: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {descriptionBullets.map((bullet, i) => (
-                    <li key={i} style={{ marginBottom: 4 }}>{bullet}</li>
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <span style={{
+                        width: 24,
+                        height: 24,
+                        minWidth: 24,
+                        borderRadius: '50%',
+                        backgroundColor: styles.accentColor,
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 13,
+                        fontWeight: 600
+                      }}>{i + 1}</span>
+                      <span style={{ color: styles.textColor, fontSize: 14, lineHeight: 1.5 }}>{bullet}</span>
+                    </div>
                   ))}
-                </ol>
+                </div>
               </div>
 
               {/* Book Your Session Section */}
@@ -1141,17 +1168,26 @@ const BookingPage = () => {
               }}>
                 Here is how we will help you:
               </h3>
-              <ol style={{
-                margin: 0,
-                paddingLeft: 24,
-                color: styles.textColor,
-                lineHeight: 2,
-                fontSize: 15
-              }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {descriptionBullets.map((bullet, i) => (
-                  <li key={i} style={{ marginBottom: 4 }}>{bullet}</li>
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                    <span style={{
+                      width: 26,
+                      height: 26,
+                      minWidth: 26,
+                      borderRadius: '50%',
+                      backgroundColor: styles.accentColor,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14,
+                      fontWeight: 600
+                    }}>{i + 1}</span>
+                    <span style={{ color: styles.textColor, fontSize: 15, lineHeight: 1.6 }}>{bullet}</span>
+                  </div>
                 ))}
-              </ol>
+              </div>
             </div>
           </div>
 
@@ -1204,51 +1240,58 @@ const BookingPage = () => {
               </button>
 
               <div style={{
-                display: 'flex',
-                gap: 10,
                 flex: 1,
-                justifyContent: 'center',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                maxWidth: 435
               }}>
-                {visibleDates.map((item) => {
-                  const d = formatDateCard(item.date);
-                  const isSelected = selectedDate === item.date;
-                  return (
-                    <button
-                      key={item.date}
-                      onClick={() => {
-                        setSelectedDate(item.date);
-                        setSelectedSlot(null);
-                      }}
-                      style={{
-                        padding: '14px 16px',
-                        borderRadius: 14,
-                        border: isSelected ? `2px solid ${styles.accentColor}` : '1px solid #e5e5e5',
-                        backgroundColor: isSelected ? `${styles.accentColor}15` : '#fff',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        minWidth: 75,
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <div style={{
-                        fontSize: 13,
-                        color: isSelected ? styles.accentColor : '#666',
-                        fontWeight: 500,
-                        marginBottom: 2
-                      }}>
-                        {d.day}
-                      </div>
-                      <div style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: isSelected ? styles.accentColor : styles.headingColor
-                      }}>
-                        {d.date} {d.month}
-                      </div>
-                    </button>
-                  );
-                })}
+                <div style={{
+                  display: 'flex',
+                  gap: 10,
+                  transform: `translateX(-${dateScrollIndex * 85}px)`,
+                  transition: 'transform 0.4s ease-out'
+                }}>
+                  {availableDates.map((item) => {
+                    const d = formatDateCard(item.date);
+                    const isSelected = selectedDate === item.date;
+                    return (
+                      <button
+                        key={item.date}
+                        onClick={() => {
+                          setSelectedDate(item.date);
+                          setSelectedSlot(null);
+                        }}
+                        style={{
+                          padding: '14px 16px',
+                          borderRadius: 14,
+                          border: isSelected ? `2px solid ${styles.accentColor}` : '1px solid #e5e5e5',
+                          backgroundColor: isSelected ? `${styles.accentColor}15` : '#fff',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          width: 75,
+                          minWidth: 75,
+                          flexShrink: 0,
+                          transition: 'border 0.2s, background-color 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          fontSize: 13,
+                          color: isSelected ? styles.accentColor : '#666',
+                          fontWeight: 500,
+                          marginBottom: 2
+                        }}>
+                          {d.day}
+                        </div>
+                        <div style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          color: isSelected ? styles.accentColor : styles.headingColor
+                        }}>
+                          {d.date} {d.month}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <button
