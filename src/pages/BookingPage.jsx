@@ -75,6 +75,23 @@ const BookingPage = () => {
 
   const fetchInitialData = async () => {
     try {
+      // Check for cached data first (pre-fetched from landing page)
+      const cached = sessionStorage.getItem('bookingData');
+      if (cached) {
+        const { dates, settings: cachedSettings, timestamp } = JSON.parse(cached);
+        // Use cache if less than 5 minutes old
+        if (Date.now() - timestamp < 5 * 60 * 1000) {
+          setAvailableDates(dates);
+          setSettings(cachedSettings || {});
+          if (dates.length > 0) {
+            setSelectedDate(dates[0].date);
+          }
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fetch fresh data if no cache or expired
       const res = await fetch(`${API_BASE}/bookings/available-dates`);
       const data = await res.json();
       if (data.success) {

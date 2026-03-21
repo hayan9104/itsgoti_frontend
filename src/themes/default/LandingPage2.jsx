@@ -44,6 +44,26 @@ const LandingPage2 = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Pre-fetch booking data for instant /book page load
+  useEffect(() => {
+    const prefetchBookingData = async () => {
+      try {
+        const res = await fetch('/api/bookings/available-dates');
+        const data = await res.json();
+        if (data.success) {
+          sessionStorage.setItem('bookingData', JSON.stringify({
+            dates: data.data,
+            settings: data.settings,
+            timestamp: Date.now()
+          }));
+        }
+      } catch (error) {
+        // Silent fail - will fetch on /book page if needed
+      }
+    };
+    prefetchBookingData();
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -1220,7 +1240,7 @@ const LandingPage2 = () => {
           </div>
           <button
             className="btn-hover"
-            onClick={() => document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => navigate('/book')}
             style={{
               backgroundColor: '#fff',
               color: '#000',
