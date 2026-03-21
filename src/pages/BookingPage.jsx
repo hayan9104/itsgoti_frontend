@@ -36,12 +36,19 @@ const BookingPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   const [receiveOnPhone, setReceiveOnPhone] = useState(true);
+  const [pageAnimated, setPageAnimated] = useState(false);
 
   // Handle resize
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Page zoom-in animation on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setPageAnimated(true), 50);
+    return () => clearTimeout(timer);
   }, []);
 
   // Default styling
@@ -347,7 +354,10 @@ const BookingPage = () => {
               padding: '20px',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'auto'
+              overflow: 'auto',
+              transform: pageAnimated ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(30px)',
+              opacity: pageAnimated ? 1 : 0,
+              transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-out'
             }}>
               {/* Header */}
               <div style={{
@@ -1058,7 +1068,10 @@ const BookingPage = () => {
           margin: '0 auto',
           display: 'flex',
           gap: 0,
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          transform: pageAnimated ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(30px)',
+          opacity: pageAnimated ? 1 : 0,
+          transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-out'
         }}>
           {/* Left Panel - Info */}
           <div style={{
