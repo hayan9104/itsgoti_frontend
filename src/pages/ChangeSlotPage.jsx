@@ -141,6 +141,7 @@ const ChangeSlotPage = () => {
   };
 
   const formatDateCard = (dateStr) => {
+    if (!dateStr) return { day: 'N/A', date: '', month: '' };
     const date = new Date(dateStr + 'T00:00:00');
     return {
       day: date.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -150,11 +151,13 @@ const ChangeSlotPage = () => {
   };
 
   const formatDateLong = (dateStr) => {
+    if (!dateStr) return 'N/A';
     const date = new Date(dateStr + 'T00:00:00');
     return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
   const formatTime = (timeStr) => {
+    if (!timeStr) return 'N/A';
     const [hours, minutes] = timeStr.split(':');
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
