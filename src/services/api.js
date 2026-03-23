@@ -148,6 +148,22 @@ export const uploadAPI = {
     }),
 };
 
+// WhatsApp Flows API (Flow Builder)
+export const whatsappFlowsAPI = {
+  getAll: () => api.get('/whatsapp-flows'),
+  getOne: (id) => api.get(`/whatsapp-flows/${id}`),
+  create: (data) => api.post('/whatsapp-flows', data),
+  update: (id, data) => api.put(`/whatsapp-flows/${id}`, data),
+  delete: (id) => api.delete(`/whatsapp-flows/${id}`),
+  toggle: (id) => api.patch(`/whatsapp-flows/${id}/toggle`),
+  duplicate: (id) => api.post(`/whatsapp-flows/${id}/duplicate`),
+  getTemplates: () => api.get('/whatsapp-flows/templates'),
+  createFromTemplate: (templateId, data) => api.post(`/whatsapp-flows/from-template/${templateId}`, data),
+  uploadMedia: (formData) => api.post('/whatsapp-flows/upload-media', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+};
+
 // Theme Colors API (Color Styling System)
 export const themeColorsAPI = {
   // Get all theme color configurations

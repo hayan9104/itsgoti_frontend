@@ -1,0 +1,597 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
+import { whatsappFlowsAPI } from '../services/api';
+import FlowBuilder from './whatsappBot/FlowBuilder';
+
+// Trigger type labels
+const triggerLabels = {
+  new_booking: 'New Booking',
+  booking_confirmed: 'Booking Confirmed',
+  booking_denied: 'Booking Denied',
+  reschedule_request: 'Reschedule Request',
+  user_message: 'User Message',
+  button_click: 'Button Click',
+  keyword: 'Keyword Match',
+  scheduled: 'Scheduled',
+  manual: 'Manual Trigger',
+};
+
+// Main WhatsApp Bot Manager
+const WhatsAppBotManager = ({ basePath }) => {
+  return (
+    <Routes>
+      <Route index element={<FlowsList basePath={basePath} />} />
+      <Route path="new" element={<FlowBuilder basePath={basePath} />} />
+      <Route path=":flowId/edit" element={<FlowBuilder basePath={basePath} />} />
+    </Routes>
+  );
+};
+
+// Flows List Component
+const FlowsList = ({ basePath }) => {
+  const navigate = useNavigate();
+  const [flows, setFlows] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    fetchFlows();
+    fetchTemplates();
+  }, []);
+
+  const fetchFlows = async () => {
+    try {
+      const res = await whatsappFlowsAPI.getAll();
+      setFlows(res.data.data || []);
+    } catch (error) {
+      console.error('Error fetching flows:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await whatsappFlowsAPI.getTemplates();
+      setTemplates(res.data.data || []);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    }
+  };
+
+  const handleToggle = async (flowId) => {
+    try {
+      await whatsappFlowsAPI.toggle(flowId);
+      fetchFlows();
+    } catch (error) {
+      console.error('Error toggling flow:', error);
+    }
+  };
+
+  const handleDuplicate = async (flowId) => {
+    try {
+      await whatsappFlowsAPI.duplicate(flowId);
+      fetchFlows();
+    } catch (error) {
+      console.error('Error duplicating flow:', error);
+    }
+  };
+
+  const handleDelete = async (flowId) => {
+    setDeleting(true);
+    try {
+      await whatsappFlowsAPI.delete(flowId);
+      setShowDeleteModal(null);
+      fetchFlows();
+    } catch (error) {
+      console.error('Error deleting flow:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCreateFromTemplate = async (templateId) => {
+    try {
+      const res = await whatsappFlowsAPI.createFromTemplate(templateId, {});
+      setShowTemplateModal(false);
+      navigate(`${basePath}/${res.data.data._id}/edit`);
+    } catch (error) {
+      console.error('Error creating from template:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+        <div style={{ color: '#6b7280' }}>Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: 0 }}>
+            WhatsApp Bot Flows
+          </h1>
+          <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+            Create and manage automated WhatsApp conversation flows
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#fff',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+            </svg>
+            Use Template
+          </button>
+          <button
+            onClick={() => navigate(`${basePath}/new`)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#25D366',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create Flow
+          </button>
+        </div>
+      </div>
+
+      {/* Flows Grid */}
+      {flows.length === 0 ? (
+        <div style={{
+          backgroundColor: '#fff',
+          borderRadius: 12,
+          padding: 60,
+          textAlign: 'center',
+          border: '2px dashed #e5e7eb',
+        }}>
+          <div style={{ marginBottom: 16 }}>
+            <svg width="48" height="48" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" style={{ margin: '0 auto' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 8 }}>
+            No flows yet
+          </h3>
+          <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 20 }}>
+            Create your first WhatsApp conversation flow to automate booking communications.
+          </p>
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            style={{
+              padding: '10px 24px',
+              backgroundColor: '#25D366',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontSize: 14,
+            }}
+          >
+            Start with a Template
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20 }}>
+          {flows.map((flow) => (
+            <div
+              key={flow._id}
+              style={{
+                backgroundColor: '#fff',
+                borderRadius: 12,
+                padding: 20,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                border: flow.isActive ? '2px solid #25D366' : '1px solid #e5e7eb',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {/* Flow Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
+                      {flow.name}
+                    </h3>
+                    {flow.isActive && (
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: '#fff',
+                        backgroundColor: '#25D366',
+                        padding: '2px 8px',
+                        borderRadius: 12,
+                      }}>
+                        ACTIVE
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                    {flow.description || 'No description'}
+                  </p>
+                </div>
+                {/* Toggle Switch */}
+                <button
+                  onClick={() => handleToggle(flow._id)}
+                  style={{
+                    width: 44,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: flow.isActive ? '#25D366' : '#e5e7eb',
+                    border: 'none',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'background-color 0.2s ease',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      backgroundColor: '#fff',
+                      position: 'absolute',
+                      top: 3,
+                      left: flow.isActive ? 23 : 3,
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                </button>
+              </div>
+
+              {/* Trigger Badge */}
+              <div style={{ marginBottom: 16 }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: '#7c3aed',
+                  backgroundColor: '#ede9fe',
+                  padding: '4px 10px',
+                  borderRadius: 6,
+                }}>
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  {triggerLabels[flow.trigger?.type] || flow.trigger?.type}
+                </span>
+              </div>
+
+              {/* Stats */}
+              <div style={{ display: 'flex', gap: 20, marginBottom: 16, fontSize: 13, color: '#6b7280' }}>
+                <div>
+                  <span style={{ fontWeight: 500 }}>{flow.stats?.totalRuns || 0}</span> runs
+                </div>
+                <div>
+                  <span style={{ fontWeight: 500 }}>{flow.stats?.completedRuns || 0}</span> completed
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => navigate(`${basePath}/${flow._id}/edit`)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDuplicate(flow._id)}
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                  title="Duplicate"
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(flow._id)}
+                  style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#fef2f2',
+                    color: '#dc2626',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                  title="Delete"
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: 16,
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxWidth: 600,
+            width: '100%',
+            maxHeight: '80vh',
+            overflow: 'hidden',
+            margin: 16,
+          }}>
+            <div style={{ padding: 24, borderBottom: '1px solid #e5e7eb' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, color: '#111827', margin: 0 }}>
+                Choose a Template
+              </h2>
+              <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+                Start with a pre-built flow or create from scratch
+              </p>
+            </div>
+            <div style={{ padding: 24, maxHeight: 400, overflowY: 'auto' }}>
+              {/* Blank Flow Option */}
+              <button
+                onClick={() => {
+                  setShowTemplateModal(false);
+                  navigate(`${basePath}/new`);
+                }}
+                style={{
+                  width: '100%',
+                  padding: 16,
+                  backgroundColor: '#f9fafb',
+                  border: '2px dashed #d1d5db',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 8,
+                    backgroundColor: '#e5e7eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <svg width="24" height="24" fill="none" stroke="#6b7280" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
+                      Start from Scratch
+                    </h3>
+                    <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                      Create a blank flow and build your own
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Template Options */}
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => handleCreateFromTemplate(template.id)}
+                  style={{
+                    width: '100%',
+                    padding: 16,
+                    backgroundColor: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    marginBottom: 12,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#25D366';
+                    e.currentTarget.style.backgroundColor = '#f0fdf4';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.backgroundColor = '#fff';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 8,
+                      backgroundColor: '#dcfce7',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <svg width="24" height="24" fill="#25D366" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                      </svg>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
+                        {template.name}
+                      </h3>
+                      <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                        {template.description}
+                      </p>
+                      <span style={{
+                        display: 'inline-block',
+                        marginTop: 6,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: '#7c3aed',
+                        backgroundColor: '#ede9fe',
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                      }}>
+                        {triggerLabels[template.trigger?.type] || template.trigger?.type}
+                      </span>
+                    </div>
+                    <svg width="20" height="20" fill="none" stroke="#9ca3af" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div style={{ padding: 16, borderTop: '1px solid #e5e7eb', textAlign: 'right' }}>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 24,
+            maxWidth: 400,
+            width: '100%',
+            margin: 16,
+          }}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: '#111827', marginBottom: 12 }}>
+              Delete Flow?
+            </h3>
+            <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 20 }}>
+              This action cannot be undone. The flow and all its data will be permanently deleted.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteModal(null)}
+                disabled={deleting}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(showDeleteModal)}
+                disabled={deleting}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc2626',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: deleting ? 'wait' : 'pointer',
+                  opacity: deleting ? 0.7 : 1,
+                }}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default WhatsAppBotManager;

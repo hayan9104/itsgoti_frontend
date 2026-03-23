@@ -26,6 +26,7 @@ const Landing = lazy(() => import('./themes/default/Landing'));
 const LandingPage2 = lazy(() => import('./themes/default/LandingPage2'));
 const FooterPreview = lazy(() => import('./themes/default/FooterPreview'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
+const ChangeSlotPage = lazy(() => import('./pages/ChangeSlotPage'));
 
 // Simple loading fallback - blank screen, no text
 const PageLoader = () => (
@@ -301,6 +302,9 @@ function App() {
 
           {/* Booking Page Route */}
           <Route path="/book" element={<Suspense fallback={<PageLoader />}><BookingPage /></Suspense>} />
+
+          {/* Slot Change Page Route (WhatsApp link) */}
+          <Route path="/book/change/:token" element={<Suspense fallback={<PageLoader />}><ChangeSlotPage /></Suspense>} />
 
           {/* Admin Routes - /goti/admin */}
           <Route path="/goti/admin/login" element={<Suspense fallback={<PageLoader />}><AdminLogin /></Suspense>} />
