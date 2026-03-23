@@ -13,6 +13,8 @@ import PainPointsArrayEditor from './fields/PainPointsArrayEditor';
 import ServicesArrayEditor from './fields/ServicesArrayEditor';
 import FeaturesGroupArrayEditor from './fields/FeaturesGroupArrayEditor';
 import WhatsAppNumberEditor from './fields/WhatsAppNumberEditor';
+import ToggleFieldEditor from './fields/ToggleFieldEditor';
+import RangeFieldEditor from './fields/RangeFieldEditor';
 import SectionColorPanel from './SectionColorPanel';
 
 const fieldComponents = {
@@ -29,6 +31,8 @@ const fieldComponents = {
   servicesArray: ServicesArrayEditor,
   featuresGroupArray: FeaturesGroupArrayEditor,
   whatsappNumber: WhatsAppNumberEditor,
+  toggle: ToggleFieldEditor,
+  range: RangeFieldEditor,
 };
 
 const SectionFieldsRenderer = () => {

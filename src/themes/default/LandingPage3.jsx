@@ -505,6 +505,10 @@ const LandingPage3 = () => {
     checkmark2: 'Launch your E-commerce in week',
     checkmark3: '2-3 weeks average delivery',
 
+    // Phone Carousel Settings
+    carouselAutoPlay: true,
+    carouselSpeed: 1, // seconds between slides
+
     // Problem Section
     problemTitle: 'Most Shopify stores are built to look good—not to convert—resulting in high bounce rates and lost revenue.',
     understandWhyTitle: 'Understand Why',
@@ -853,6 +857,21 @@ const LandingPage3 = () => {
     '/api/placeholder/300/629',
     '/api/placeholder/254/533',
   ]);
+
+  // Get carousel settings from content
+  const carouselAutoPlay = content.carouselAutoPlay !== false && content.carouselAutoPlay !== 'false';
+  const carouselSpeed = parseFloat(content.carouselSpeed) || 1; // Default 1 second
+
+  // Auto-rotate phone carousel (continuous loop) - only if autoPlay is enabled
+  useEffect(() => {
+    if (!carouselAutoPlay || portfolioImages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % portfolioImages.length);
+    }, carouselSpeed * 1000); // Convert seconds to milliseconds
+
+    return () => clearInterval(interval);
+  }, [portfolioImages.length, carouselAutoPlay, carouselSpeed]);
 
   // Parse case studies - ensure it's an array and normalize the structure
   const rawCaseStudies = ensureArray(content.caseStudies, defaultContent.caseStudies);
