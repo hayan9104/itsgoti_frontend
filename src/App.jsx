@@ -98,7 +98,8 @@ function PageSlugsProvider({ children }) {
   useEffect(() => {
     const fetchSlugs = async () => {
       try {
-        const response = await fetch('/api/themes/all-slugs');
+        // Add cache-busting to ensure fresh data
+        const response = await fetch(`/api/themes/all-slugs?t=${Date.now()}`);
         const data = await response.json();
         if (data.success && data.data) {
           setLandingSlugs(data.data.landingSlugs || defaultLandingSlugs);
@@ -222,7 +223,17 @@ function DefaultLandingRouter() {
 // Dynamic page router - matches any slug to the correct page
 function DynamicPageRouter() {
   const { slug } = useParams();
-  const { landingSlugs, pageSlugs } = usePageSlugs();
+  const { landingSlugs, pageSlugs, loaded } = usePageSlugs();
+
+  // Debug logging
+  console.log('[DynamicPageRouter] URL slug:', slug);
+  console.log('[DynamicPageRouter] Loaded:', loaded);
+  console.log('[DynamicPageRouter] Landing slugs:', landingSlugs);
+
+  // Wait for slugs to load before routing
+  if (!loaded) {
+    return <PageLoader />;
+  }
 
   // Check landing pages first
   for (const [pageKey, slugData] of Object.entries(landingSlugs)) {

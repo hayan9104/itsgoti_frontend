@@ -359,7 +359,7 @@ const Home = () => {
   ];
 
   // Project colors
-  const projectColors = ['#D2F34C', '#2558BF', '#E2775A'];
+  const projectColors = ['#E1FFA0', '#2558BF', '#E2775A'];
 
   // GSAP ScrollTrigger Animation for hero image (works on both mobile and desktop)
   useLayoutEffect(() => {
@@ -1075,7 +1075,7 @@ const Home = () => {
             const totalProjects = Math.min(projectList.length, 3);
 
             // Card background colors for each project
-            const projectColors = ['#D2F34C', '#2558BF', '#E2775A']; // Green, Blue, Coral
+            const projectColors = ['#E1FFA0', '#2558BF', '#E2775A']; // Green, Blue, Coral
             const currentBgColor = projectColors[currentProjectIndex % 3];
             const nextIndex = (currentProjectIndex + 1) % totalProjects;
             const prevIndex = (currentProjectIndex - 1 + totalProjects) % totalProjects;
@@ -1084,7 +1084,7 @@ const Home = () => {
             const nextWork = projectList[nextIndex] || projectList[0];
 
             // Text colors based on background
-            const getTextColor = (bgColor) => bgColor === '#D2F34C' ? '#000' : '#FFF';
+            const getTextColor = (bgColor) => bgColor === '#E1FFA0' ? '#000' : '#FFF';
             const currentTextColor = getTextColor(currentBgColor);
             const nextTextColor = getTextColor(nextBgColor);
 
@@ -1096,8 +1096,8 @@ const Home = () => {
 
               gsap.to(sliderRef.current, {
                 x: `-${targetPercent}%`,
-                duration: 2.5,
-                ease: 'power1.out', // Slightly fast start, then very slow & smooth
+                duration: 1.5,
+                ease: 'power2.out', // Faster, smoother animation
                 onComplete: onComplete,
               });
             };
@@ -1285,29 +1285,7 @@ const Home = () => {
                               </div>
                             )}
                           </div>
-                          {/* Slide indicators */}
-                          <div style={{ position: 'absolute', bottom: '40px', left: '80px', display: 'flex', gap: '8px' }}>
-                            {projectList.slice(0, 3).map((_, dotIdx) => {
-                              // Handle active state - index 3 (clone) should show dot 0 as active
-                              const displayIndex = currentProjectIndex >= totalProjects ? 0 : currentProjectIndex;
-                              return (
-                                <button
-                                  key={dotIdx}
-                                  onClick={() => goToSlide(dotIdx)}
-                                  style={{
-                                    width: '12px',
-                                    height: '12px',
-                                    borderRadius: '50%',
-                                    backgroundColor: dotIdx === displayIndex ? textColor : (textColor === '#000' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)'),
-                                    border: 'none',
-                                    cursor: projectSliding ? 'default' : 'pointer',
-                                    transition: 'background-color 0.3s',
-                                    opacity: projectSliding ? 0.5 : 1,
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
+                          {/* Slide indicators - hidden */}
                         </div>
 
                         {/* Right Section - Next Card Preview with Curved Edge */}
@@ -2396,7 +2374,7 @@ const Home = () => {
       {shouldRenderSection('brands') && (
       <EditableSection sectionId="brands" label="Brands Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'brands'} isHidden={isSectionHidden('brands')}>
         <section style={{
-          padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 161px 80px 100px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: isMobile ? 'flex-start' : 'flex-start',
@@ -2430,7 +2408,6 @@ const Home = () => {
           {/* Accordion - 4 Boxes */}
           <div style={{
             width: '100%',
-            maxWidth: isMobile ? '100%' : '1178px',
           }}>
             {accordionItems.map((item, index) => (
               <div key={index} style={{
@@ -2783,6 +2760,7 @@ const Home = () => {
       <EditableSection sectionId="faq" label="FAQ Section" isEditorMode={isEditorMode} isSelected={selectedSection === 'faq'} isHidden={isSectionHidden('faq')}>
         <section style={{
           padding: isMobile ? '40px 20px' : isTablet ? '60px 40px' : '80px 100px',
+          paddingBottom: isMobile ? '60px' : '200px',
           marginTop: isMobile ? '150px' : '0',
         }}>
           {/* FAQ Title */}
