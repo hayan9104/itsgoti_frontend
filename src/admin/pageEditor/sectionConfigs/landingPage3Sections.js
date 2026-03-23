@@ -102,6 +102,7 @@ export const landingPage3Sections = [
       { key: 'plan2MeansTitle', type: 'text', label: 'Plan 2 "What This Means" Title' },
       { key: 'plan2MeansDescription', type: 'textarea', label: 'Plan 2 "What This Means" Description' },
       { key: 'plan2Conclusion', type: 'text', label: 'Plan 2 Conclusion' },
+      { key: 'plan2ButtonText', type: 'text', label: 'Plan 2 Button Text', hint: 'e.g. "GET STARTED"' },
     ]
   },
   {
@@ -124,6 +125,7 @@ export const landingPage3Sections = [
     label: 'Sticky CTA Bar & WhatsApp',
     description: 'Bottom CTA bar with queue counter and WhatsApp settings',
     fields: [
+      { key: 'stickyCtaButtonText', type: 'text', label: 'Sticky CTA Button Text', hint: 'e.g. "GET A WEB DESIGN QUOTE"' },
       { key: 'queueCount', type: 'text', label: 'Queue Count', hint: 'e.g. "05"' },
       { key: 'queueText', type: 'text', label: 'Queue Text', hint: 'e.g. "Projects sessions in the queue"' },
       { key: 'whatsappNumber', type: 'whatsappNumber', label: 'WhatsApp Business Number', hint: 'Enter your WhatsApp number with country code. This will be used for all WhatsApp buttons on this page.' },

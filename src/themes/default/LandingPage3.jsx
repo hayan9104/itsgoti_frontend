@@ -498,7 +498,7 @@ const LandingPage3 = () => {
     heroTitle: 'Your Shopify Website Design Agency',
     heroSubtitle: 'We specialise in Shopify deign and developement',
     heroDescription: "Let's design, optimise, and launch your shopify store with guaranteed result or you don't pay",
-    heroButtonText: 'GET A WEB DEIGN QUOTE',
+    heroButtonText: 'GET STARTED',
 
     // Checkmarks
     checkmark1: '10-Days  Satisfaction Guarantee',
@@ -634,6 +634,7 @@ const LandingPage3 = () => {
     plan2MeansTitle: 'What this means for you',
     plan2MeansDescription: "You'll get clear guidance and CRO improvements to help turn more visitors into customers while you grow.",
     plan2Conclusion: "If you're still building traction, this plan is a great place to start.",
+    plan2ButtonText: 'GET STARTED',
 
     // Contact Form
     contactTitle: 'Have More Question?',
@@ -646,6 +647,7 @@ const LandingPage3 = () => {
     whatsappText: "Need instant response? Let's connect on WhatsApp",
 
     // Sticky CTA & WhatsApp
+    stickyCtaButtonText: 'GET A WEB DESIGN QUOTE',
     queueCount: '05',
     queueText: 'Projects sessions in the queue',
     whatsappNumber: 'IN:9876543210', // Format: "CountryCode:PhoneNumber"
@@ -1386,22 +1388,22 @@ const LandingPage3 = () => {
             {/* CTA Button */}
             <div style={{
               position: 'relative',
-              width: isMobile ? '280px' : '383px',
+              width: 'auto',
               marginTop: isMobile ? '8px' : '0',
             }}>
               <button
                 className="btn-hover"
                 onClick={() => openModal('LP3 - Hero Button')}
                 style={{
-                backgroundColor: heroColors.buttonBackground || '#000',
+                background: 'linear-gradient(166deg, #170935 23.75%, #000 93.95%)',
                 borderRadius: isMobile ? '630.925px' : '905.76px',
-                width: '100%',
+                width: 'auto',
                 height: isMobile ? '47px' : '68px',
                 border: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: isMobile ? 'center' : 'space-between',
-                gap: isMobile ? '12px' : '0',
+                justifyContent: 'center',
+                gap: isMobile ? '12px' : '20px',
                 padding: isMobile ? '0 15px' : '0 14px 0 28px',
                 cursor: 'pointer',
               }}>
@@ -1416,15 +1418,17 @@ const LandingPage3 = () => {
                   {content.heroButtonText}
                 </span>
                 <div style={{
-                  backgroundColor: '#fff',
+                  backgroundColor: '#ffa562',
                   borderRadius: '50%',
-                  width: isMobile ? '28px' : '40px',
-                  height: isMobile ? '28px' : '40px',
+                  width: isMobile ? '32px' : '44px',
+                  height: isMobile ? '32px' : '44px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <ArrowIcon color="#000" size={isMobile ? 10 : 14} />
+                  <svg width={isMobile ? "12" : "14"} height={isMobile ? "12" : "14"} viewBox="0 0 12 12" fill="none">
+                    <path d="M1 11L11 1M11 1H3M11 1V9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
               </button>
             </div>
@@ -3154,7 +3158,7 @@ const LandingPage3 = () => {
                     color: '#fff',
                     textTransform: 'uppercase',
                   }}>
-                  GET STARTED
+                    {content.plan2ButtonText || 'GET STARTED'}
                   </span>
                   <div style={{
                     backgroundColor: '#ffa562',
@@ -3646,7 +3650,7 @@ const LandingPage3 = () => {
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
               }}>
-                {content.heroButtonText}
+                {content.stickyCtaButtonText || 'GET A WEB DESIGN QUOTE'}
               </span>
               <div style={{
                 backgroundColor: '#63dd77',
