@@ -101,9 +101,9 @@ const Footer = () => {
                     padding: '12px 24px',
                     gap: '12px',
                     borderRadius: '200px',
-                    fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+                    fontFamily: "'Gilroy-SemiBold', sans-serif",
                     fontSize: '20px',
-                    fontWeight: isMobile ? 400 : 600,
+                    fontWeight: 400,
                     lineHeight: '24px',
                     textDecoration: 'none',
                     marginBottom: '16px',
@@ -114,7 +114,7 @@ const Footer = () => {
                 <div
                   style={{
                     color: '#fff',
-                    fontSize: isMobile ? '14px' : '16px',
+                    fontSize: '16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -123,7 +123,7 @@ const Footer = () => {
                   }}
                 >
                   <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0) invert(1)' }} />
-                  <span style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}>{content.instantResponseText}</span>
+                  <span style={{ fontFamily: "'Gilroy-Medium', sans-serif", fontWeight: 400 }}>{content.instantResponseText}</span>
                 </div>
               </>
             )}

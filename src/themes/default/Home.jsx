@@ -632,9 +632,10 @@ const Home = () => {
                 color: '#000',
                 borderRadius: '200px',
                 textDecoration: 'none',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: "'Gilroy-SemiBold', sans-serif",
                 fontSize: '20px',
-                fontWeight: 600,
+                fontWeight: 400,
+                lineHeight: '24px',
               }}>
                 {pageContent.heroButton1Text || 'Schedule Call'}
               </Link>
@@ -669,9 +670,9 @@ const Home = () => {
             }}>
               <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0) invert(1)' }} />
               <span style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontFamily: "'Gilroy-Medium', sans-serif",
                 fontSize: '16px',
-                fontWeight: 500,
+                fontWeight: 400,
                 color: '#fff',
               }}>
                 {pageContent.heroInstantText || 'Get instant response'}
@@ -1673,9 +1674,9 @@ const Home = () => {
                   color: '#fff',
                   borderRadius: '200px',
                   textDecoration: 'none',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  fontFamily: "'Gilroy-SemiBold', sans-serif",
                   fontSize: '20px',
-                  fontWeight: 600,
+                  fontWeight: 400,
                   lineHeight: '24px',
                 }}>
                   {pageContent.ctaMidButtonText}
@@ -1688,9 +1689,9 @@ const Home = () => {
                 }}>
                   <img src={vectorIcon} alt="" style={{ width: '18px', height: '20px', filter: 'brightness(0)' }} />
                   <span style={{
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    fontFamily: "'Gilroy-Medium', sans-serif",
                     fontSize: '16px',
-                    fontWeight: 500,
+                    fontWeight: 400,
                     color: '#000',
                   }}>
                     {pageContent.ctaMidInstantText}
@@ -2662,9 +2663,10 @@ const Home = () => {
               }}>
                 <span style={{
                   color: '#000',
-                  fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                  fontSize: isMobile ? '16px' : '20px',
-                  fontWeight: 600,
+                  fontFamily: "'Gilroy-SemiBold', sans-serif",
+                  fontSize: '20px',
+                  fontWeight: 400,
+                  lineHeight: '24px',
                 }}>
                   {pageContent.ctaButtonText}
                 </span>
@@ -2679,8 +2681,9 @@ const Home = () => {
                 <img src={vectorIcon} alt="" style={{ width: '16px', height: '16px' }} />
                 <span style={{
                   color: '#FFF',
-                  fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-                  fontSize: isMobile ? '14px' : '16px',
+                  fontFamily: "'Gilroy-Medium', sans-serif",
+                  fontSize: '16px',
+                  fontWeight: 400,
                 }}>
                   {pageContent.ctaInstantText}
                 </span>

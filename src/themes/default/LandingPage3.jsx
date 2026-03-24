@@ -1291,10 +1291,10 @@ const LandingPage3 = () => {
               width: isMobile ? '354px' : '900px',
             }}>
               <h1 style={{
-                fontFamily: "'Poppins', sans-serif",
-                fontSize: isMobile ? '28px' : isTablet ? '38px' : '48px',
+                fontFamily: "'Gabarito', sans-serif",
+                fontSize: isMobile ? '32px' : isTablet ? '48px' : '60px',
                 fontWeight: 600,
-                lineHeight: 1.3,
+                lineHeight: '120%',
                 color: heroColors.headingColor || '#000',
                 textAlign: 'center',
                 margin: 0,
@@ -1308,9 +1308,9 @@ const LandingPage3 = () => {
                   padding: isMobile ? '0 10px' : '0 15px',
                   borderRadius: '0',
                   display: 'inline-block',
-                  lineHeight: isMobile ? '36px' : '1.2',
+                  lineHeight: isMobile ? '38.4px' : '72px',
                   verticalAlign: 'middle',
-                  fontSize: isMobile ? '28px' : 'inherit',
+                  fontSize: isMobile ? '32px' : 'inherit',
                 }}>
                   Shopify Website
                 </span>
@@ -1332,14 +1332,14 @@ const LandingPage3 = () => {
                 flexDirection: 'column',
                 gap: isMobile ? '0' : '5px',
                 alignItems: 'center',
-                maxWidth: isMobile ? '378px' : '942px',
+                maxWidth: isMobile ? '378px' : '1100px',
               }}>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
                   fontSize: isMobile ? '16px' : '24px',
-                  fontWeight: 400,
-                  lineHeight: isMobile ? 'normal' : 1.5,
-                  color: heroColors.subheadingColor || heroColors.textColor || '#000',
+                  fontWeight: 500,
+                  lineHeight: '150%',
+                  color: '#000',
                   textAlign: 'center',
                   margin: 0,
                 }}>
@@ -1348,9 +1348,9 @@ const LandingPage3 = () => {
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
                   fontSize: isMobile ? '16px' : '24px',
-                  fontWeight: 400,
-                  lineHeight: 1.5,
-                  color: heroColors.textColor || '#000',
+                  fontWeight: 500,
+                  lineHeight: '150%',
+                  color: '#000',
                   textAlign: 'center',
                   margin: 0,
                 }}>
@@ -1395,7 +1395,7 @@ const LandingPage3 = () => {
                       fontSize: '18px',
                       fontWeight: 600,
                       color: '#000',
-                      lineHeight: 1.5,
+                      lineHeight: '150%',
                     }}>
                       {item}
                     </span>
@@ -1745,21 +1745,25 @@ const LandingPage3 = () => {
 
           {/* Understand Why Card */}
           <div style={{
-            backgroundColor: problemColors.cardBackground || '#FFFFFF',
+            backgroundColor: isMobile
+              ? (problemColors.cardBackgroundMobile || problemColors.cardBackground || '#FFFFFF')
+              : (problemColors.cardBackground || '#FFFFFF'),
             borderRadius: '16px',
             padding: isMobile ? '24px 16px' : '32px 40px',
             maxWidth: isMobile ? '390px' : '500px',
             margin: '0 auto 40px',
             textAlign: 'center',
-            border: `1px solid ${problemColors.cardBorderColor || '#000000'}`,
-            boxShadow: '4px 4px 0px 0px #150634',
+            border: isMobile ? 'none' : `1px solid ${problemColors.cardBorderColor || '#000000'}`,
+            boxShadow: isMobile ? 'none' : '4px 4px 0px 0px #150634',
           }}>
             <h3 style={{
               fontFamily: "'Gabarito', sans-serif",
               fontSize: isMobile ? '22px' : '24px',
               fontWeight: 600,
               lineHeight: 1.2,
-              color: problemColors.headingColor || '#1f1f1f',
+              color: isMobile
+                ? (problemColors.cardHeadingColorMobile || problemColors.headingColor || '#1f1f1f')
+                : (problemColors.headingColor || '#1f1f1f'),
               marginBottom: '24px',
             }}>
               {content.understandWhyTitle}
@@ -1769,7 +1773,9 @@ const LandingPage3 = () => {
               fontSize: isMobile ? '16px' : '20px',
               fontWeight: 500,
               lineHeight: '150%',
-              color: problemColors.textColor || '#1f1f1f',
+              color: isMobile
+                ? (problemColors.cardTextColorMobile || problemColors.textColor || '#1f1f1f')
+                : (problemColors.textColor || '#1f1f1f'),
               textAlign: 'center',
             }}>
               {ensureArray(content.painPoints, defaultContent.painPoints).map((item, index) => (
@@ -1789,7 +1795,9 @@ const LandingPage3 = () => {
                 fontSize: isMobile ? '16px' : '20px',
                 fontWeight: 600,
                 marginTop: '20px',
-                color: problemColors.textColor || '#1f1f1f',
+                color: isMobile
+                  ? (problemColors.cardTextColorMobile || problemColors.textColor || '#1f1f1f')
+                  : (problemColors.textColor || '#1f1f1f'),
               }}>
                 {content.understandWhyConclusion}
               </p>
@@ -2051,7 +2059,7 @@ const LandingPage3 = () => {
           isSelected={selectedSection === 'caseStudies'}
           isHidden={isSectionHidden('caseStudies')}
           style={{
-            padding: isMobile ? '20px 20px' : '40px 120px',
+            padding: isMobile ? '20px 20px' : '5px 120px 40px',
           }}
         >
           {/* Cards container wrapper for vertical centering */}
@@ -2069,10 +2077,10 @@ const LandingPage3 = () => {
             style={{
               position: 'relative',
               width: '100%',
-              maxWidth: isMobile ? '100%' : '959px',
+              maxWidth: isMobile ? '100%' : '989px',
               margin: '0 auto',
               // Natural height based on card aspect ratio
-              height: isMobile ? 'auto' : '500px',
+              height: isMobile ? 'auto' : '530px',
               overflow: isMobile ? 'hidden' : 'visible',
             }}
           >
@@ -2325,7 +2333,7 @@ const LandingPage3 = () => {
                       {/* SVG Container with integrated tab */}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 959 463"
+                        viewBox="0 0 989 493"
                         fill="none"
                         style={{
                           position: 'absolute',
@@ -2472,20 +2480,22 @@ const LandingPage3 = () => {
 
                         {/* Right Column - Image */}
                         <div style={{
-                          width: '350px',
-                          height: '280px',
+                          width: '380px',
+                          height: '330px',
                           backgroundColor: '#D9D9D9',
                           border: '1px solid #BFBFBF',
                           borderRadius: '24px',
                           flexShrink: 0,
                           overflow: 'hidden',
+                          marginTop: '-10px',
+                          marginRight: '20px',
                         }}>
                           {study.image && (
                             <img
                               src={study.image}
                               alt={study.brand}
-                              width={350}
-                              height={280}
+                              width={380}
+                              height={330}
                               loading="lazy"
                               style={{
                                 width: '100%',
