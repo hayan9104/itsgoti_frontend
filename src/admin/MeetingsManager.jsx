@@ -82,6 +82,12 @@ const BookingsView = () => {
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, todayBookings: 0 });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [dateRange, setDateRange] = useState('all');
+  const [sortBy, setSortBy] = useState('date_desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [customDateStart, setCustomDateStart] = useState('');
+  const [customDateEnd, setCustomDateEnd] = useState('');
+  const [showCustomDate, setShowCustomDate] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -119,6 +125,29 @@ const BookingsView = () => {
   useEffect(() => {
     Promise.all([fetchBookings(), fetchStats()]).finally(() => setLoading(false));
   }, [filter]);
+
+  // Mark booking as viewed and open modal
+  const handleViewBooking = async (booking) => {
+    // Open modal immediately
+    setSelectedBooking(booking);
+
+    // If not viewed, mark as viewed in background
+    if (!booking.isViewed) {
+      try {
+        const token = localStorage.getItem('token');
+        await fetch(`${API_BASE}/bookings/${booking._id}/viewed`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // Update local state
+        setBookings(prev =>
+          prev.map(b => b._id === booking._id ? { ...b, isViewed: true } : b)
+        );
+      } catch (error) {
+        console.error('Error marking as viewed:', error);
+      }
+    }
+  };
 
   const handleApprove = async (bookingId) => {
     setActionLoading(true);
@@ -198,6 +227,78 @@ const BookingsView = () => {
     }
   };
 
+  // Filter and sort bookings
+  const getFilteredBookings = () => {
+    let filtered = [...bookings];
+
+    // Status filter
+    if (filter !== 'all') {
+      filtered = filtered.filter(b => b.status === filter);
+    }
+
+    // Date range filter
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    if (dateRange === 'today') {
+      filtered = filtered.filter(b => {
+        const bookingDate = new Date(b.date);
+        bookingDate.setHours(0, 0, 0, 0);
+        return bookingDate.getTime() === today.getTime();
+      });
+    } else if (dateRange === 'week') {
+      filtered = filtered.filter(b => {
+        const bookingDate = new Date(b.date);
+        return bookingDate >= startOfWeek;
+      });
+    } else if (dateRange === 'month') {
+      filtered = filtered.filter(b => {
+        const bookingDate = new Date(b.date);
+        return bookingDate >= startOfMonth;
+      });
+    } else if (dateRange === 'custom' && customDateStart && customDateEnd) {
+      const start = new Date(customDateStart);
+      const end = new Date(customDateEnd);
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(b => {
+        const bookingDate = new Date(b.date);
+        return bookingDate >= start && bookingDate <= end;
+      });
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(b =>
+        b.name?.toLowerCase().includes(query) ||
+        b.email?.toLowerCase().includes(query) ||
+        b.phone?.includes(query) ||
+        b.companyName?.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      if (sortBy === 'date_desc') {
+        return new Date(b.date) - new Date(a.date);
+      } else if (sortBy === 'date_asc') {
+        return new Date(a.date) - new Date(b.date);
+      } else if (sortBy === 'name_asc') {
+        return (a.name || '').localeCompare(b.name || '');
+      } else if (sortBy === 'name_desc') {
+        return (b.name || '').localeCompare(a.name || '');
+      }
+      return 0;
+    });
+
+    return filtered;
+  };
+
+  const filteredBookings = getFilteredBookings();
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading...</div>;
   }
@@ -227,28 +328,198 @@ const BookingsView = () => {
         ))}
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {['all', 'pending', 'approved', 'denied', 'completed'].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
+      {/* Filter Bar */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 20,
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        alignItems: 'center',
+      }}>
+        {/* Search Box */}
+        <div style={{ flex: '1 1 280px', minWidth: 200 }}>
+          <div style={{ position: 'relative' }}>
+            <svg
+              style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#9ca3af' }}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by name, email, phone, company..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 40px',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb',
+                fontSize: 14,
+                outline: 'none',
+                transition: 'border-color 0.2s',
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+            />
+          </div>
+        </div>
+
+        {/* Status Dropdown */}
+        <div style={{ minWidth: 140 }}>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
             style={{
-              padding: '6px 14px',
-              borderRadius: 6,
-              border: 'none',
-              backgroundColor: filter === f ? '#111827' : '#f3f4f6',
-              color: filter === f ? '#fff' : '#374151',
+              width: '100%',
+              padding: '10px 32px 10px 12px',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              fontSize: 14,
               fontWeight: 500,
-              fontSize: 13,
+              backgroundColor: '#fff',
               cursor: 'pointer',
-              textTransform: 'capitalize',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              backgroundSize: '16px',
             }}
           >
-            {f}
-          </button>
-        ))}
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="denied">Denied</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        {/* Date Range Dropdown */}
+        <div style={{ minWidth: 150 }}>
+          <select
+            value={dateRange}
+            onChange={(e) => {
+              setDateRange(e.target.value);
+              setShowCustomDate(e.target.value === 'custom');
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 32px 10px 12px',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              fontSize: 14,
+              fontWeight: 500,
+              backgroundColor: '#fff',
+              cursor: 'pointer',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              backgroundSize: '16px',
+            }}
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+
+        {/* Sort By Dropdown */}
+        <div style={{ minWidth: 160 }}>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 32px 10px 12px',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb',
+              fontSize: 14,
+              fontWeight: 500,
+              backgroundColor: '#fff',
+              cursor: 'pointer',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              backgroundSize: '16px',
+            }}
+          >
+            <option value="date_desc">Date (Newest)</option>
+            <option value="date_asc">Date (Oldest)</option>
+            <option value="name_asc">Name (A-Z)</option>
+            <option value="name_desc">Name (Z-A)</option>
+          </select>
+        </div>
+
+        {/* Results Count */}
+        <div style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap' }}>
+          {filteredBookings.length} result{filteredBookings.length !== 1 ? 's' : ''}
+        </div>
       </div>
+
+      {/* Custom Date Range Picker */}
+      {showCustomDate && (
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          marginBottom: 16,
+          padding: 16,
+          backgroundColor: '#f9fafb',
+          borderRadius: 8,
+          alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 14, color: '#374151', fontWeight: 500 }}>From:</span>
+          <input
+            type="date"
+            value={customDateStart}
+            onChange={(e) => setCustomDateStart(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid #e5e7eb',
+              fontSize: 14,
+            }}
+          />
+          <span style={{ fontSize: 14, color: '#374151', fontWeight: 500 }}>To:</span>
+          <input
+            type="date"
+            value={customDateEnd}
+            onChange={(e) => setCustomDateEnd(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: '1px solid #e5e7eb',
+              fontSize: 14,
+            }}
+          />
+          <button
+            onClick={() => {
+              setShowCustomDate(false);
+              setDateRange('all');
+              setCustomDateStart('');
+              setCustomDateEnd('');
+            }}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 6,
+              border: 'none',
+              backgroundColor: '#ef4444',
+              color: '#fff',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Bookings Table */}
       <div style={{ backgroundColor: '#fff', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
@@ -263,28 +534,49 @@ const BookingsView = () => {
             </tr>
           </thead>
           <tbody>
-            {bookings.length === 0 ? (
+            {filteredBookings.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
-                  No bookings found
+                  {bookings.length === 0 ? 'No bookings found' : 'No bookings match your filters'}
                 </td>
               </tr>
             ) : (
-              bookings.map((booking) => {
+              filteredBookings.map((booking) => {
                 const statusStyle = getStatusColor(booking.status);
+                const isUnread = !booking.isViewed;
                 return (
-                  <tr key={booking._id} style={{ borderTop: '1px solid #e5e7eb' }}>
+                  <tr
+                    key={booking._id}
+                    style={{
+                      borderTop: '1px solid #e5e7eb',
+                      backgroundColor: isUnread ? '#eff6ff' : 'transparent',
+                      borderLeft: isUnread ? '3px solid #3b82f6' : '3px solid transparent',
+                    }}
+                  >
                     <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 500, color: '#111827' }}>{booking.name}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>{booking.email}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280' }}>{booking.phone}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {isUnread && (
+                          <span style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            backgroundColor: '#3b82f6',
+                            flexShrink: 0,
+                          }} />
+                        )}
+                        <div>
+                          <div style={{ fontWeight: isUnread ? 700 : 500, color: '#111827' }}>{booking.name}</div>
+                          <div style={{ fontSize: 12, color: '#6b7280', fontWeight: isUnread ? 500 : 400 }}>{booking.email}</div>
+                          <div style={{ fontSize: 12, color: '#6b7280' }}>{booking.phone}</div>
+                        </div>
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 500, color: '#111827' }}>{formatDate(booking.date)}</div>
+                      <div style={{ fontWeight: isUnread ? 700 : 500, color: '#111827' }}>{formatDate(booking.date)}</div>
                       <div style={{ fontSize: 13, color: '#6b7280' }}>{formatTime(booking.timeSlot)}</div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 500, color: '#111827' }}>{booking.companyName}</div>
+                      <div style={{ fontWeight: isUnread ? 700 : 500, color: '#111827' }}>{booking.companyName}</div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span
@@ -304,7 +596,7 @@ const BookingsView = () => {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <button
-                        onClick={() => setSelectedBooking(booking)}
+                        onClick={() => handleViewBooking(booking)}
                         style={{
                           padding: '6px 12px',
                           borderRadius: 6,
