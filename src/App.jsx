@@ -4,6 +4,7 @@ import ScrollToTop from './components/ScrollToTop';
 import PageVisibilityWrapper from './components/PageVisibilityWrapper';
 import { useThemeCode } from './context/ThemeCodeContext';
 import useSEO from './hooks/useSEO';
+import { BookingModalProvider } from './components/BookingModal';
 
 // ONLY import LandingPage3 eagerly (main page)
 import LandingPage3 from './themes/default/LandingPage3';
@@ -285,9 +286,10 @@ function App() {
 
   return (
     <Router>
-      <PageSlugsProvider>
-        <ScrollToTop />
-        <Routes>
+      <BookingModalProvider>
+        <PageSlugsProvider>
+          <ScrollToTop />
+          <Routes>
           {/* Public Routes - LandingPage3 loads instantly */}
           <Route path="/" element={<DefaultLandingRouter />} />
 
@@ -322,7 +324,8 @@ function App() {
           {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
           <Route path="/:slug" element={<DynamicPageRouter />} />
         </Routes>
-      </PageSlugsProvider>
+        </PageSlugsProvider>
+      </BookingModalProvider>
     </Router>
   );
 }

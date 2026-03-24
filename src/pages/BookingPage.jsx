@@ -234,10 +234,6 @@ const BookingPage = () => {
         'See if this is a good fit, if yes then take it forward!',
       ];
 
-  const priceDisplay = settings?.priceAmount === 0 || !settings?.priceAmount
-    ? 'FREE'
-    : `${settings?.currency || '₹'}${settings?.priceAmount}`;
-
   const nextAvailableSlot = availableDates.length > 0 && availableSlots.length > 0
     ? `${formatTime(availableSlots[0])}, ${formatDateLong(availableDates[0].date)}`
     : 'Loading...';
@@ -338,10 +334,12 @@ const BookingPage = () => {
   if (isMobile) {
     return (
       <div style={{
-        minHeight: '100vh',
+        height: '100vh',
+        maxHeight: '100vh',
         backgroundColor: styles.pageBackgroundColor,
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden'
       }}>
         {/* Step 1: Mobile Info + Date Selection */}
         {step === 1 && (
@@ -349,12 +347,15 @@ const BookingPage = () => {
             {/* Main Content Card */}
             <div style={{
               flex: 1,
+              minHeight: 0,
               backgroundColor: styles.cardBackgroundColor,
               borderRadius: '0 0 24px 24px',
               padding: '20px',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'auto',
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
               transform: pageAnimated ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(30px)',
               opacity: pageAnimated ? 1 : 0,
               transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease-out'
@@ -419,32 +420,22 @@ const BookingPage = () => {
                 {settings?.meetingTitle || "Book a Direct Call with Our Founder's Team"}
               </h1>
 
-              {/* Price & Duration */}
+              {/* Duration */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 20,
+                gap: 6,
                 paddingBottom: 16,
                 marginBottom: 16,
                 borderBottom: '1px solid #e5e5e5'
               }}>
-                <div style={{
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: styles.headingColor,
-                  padding: '8px 16px',
-                  backgroundColor: '#fef3c7',
-                  borderRadius: 8
-                }}>{priceDisplay}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <span style={{ fontSize: 14, color: styles.textColor }}>{settings?.slotDuration || 30} mins</span>
-                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                <span style={{ fontSize: 14, color: styles.textColor }}>{settings?.slotDuration || 30} mins</span>
               </div>
 
               {/* Description */}
@@ -619,6 +610,8 @@ const BookingPage = () => {
                   zIndex: 101,
                   maxHeight: '85vh',
                   overflow: 'auto',
+                  overscrollBehavior: 'contain',
+                  WebkitOverflowScrolling: 'touch',
                   animation: 'slideUp 0.3s ease-out'
                 }}>
                   {/* Handle */}
@@ -692,28 +685,37 @@ const BookingPage = () => {
                   ) : availableSlots.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 30, color: '#999' }}>No slots available</div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
-                      {availableSlots.map((slot) => {
-                        const isSelected = selectedSlot === slot;
-                        return (
-                          <button
-                            key={slot}
-                            onClick={() => setSelectedSlot(slot)}
-                            style={{
-                              padding: '14px 8px',
-                              borderRadius: 10,
-                              border: isSelected ? `2px solid ${styles.accentColor}` : '1px solid #e5e5e5',
-                              backgroundColor: isSelected ? `${styles.accentColor}15` : '#fff',
-                              cursor: 'pointer',
-                              fontSize: 13,
-                              fontWeight: 500,
-                              color: isSelected ? styles.accentColor : styles.textColor
-                            }}
-                          >
-                            {formatTime(slot)}
-                          </button>
-                        );
-                      })}
+                    <div style={{
+                      maxHeight: '180px',
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain',
+                      WebkitOverflowScrolling: 'touch',
+                      paddingRight: '5px',
+                      marginBottom: 20
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                        {availableSlots.map((slot) => {
+                          const isSelected = selectedSlot === slot;
+                          return (
+                            <button
+                              key={slot}
+                              onClick={() => setSelectedSlot(slot)}
+                              style={{
+                                padding: '14px 8px',
+                                borderRadius: 10,
+                                border: isSelected ? `2px solid ${styles.accentColor}` : '1px solid #e5e5e5',
+                                backgroundColor: isSelected ? `${styles.accentColor}15` : '#fff',
+                                cursor: 'pointer',
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: isSelected ? styles.accentColor : styles.textColor
+                              }}
+                            >
+                              {formatTime(slot)}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -769,9 +771,11 @@ const BookingPage = () => {
         {step === 2 && (
           <div style={{
             flex: 1,
+            minHeight: 0,
             backgroundColor: styles.cardBackgroundColor,
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflow: 'hidden'
           }}>
             {/* Header */}
             <div style={{
@@ -812,7 +816,7 @@ const BookingPage = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', padding: '20px' }}>
               {/* Title */}
               <h2 style={{ fontSize: 20, fontWeight: 700, color: styles.headingColor, marginBottom: 6, lineHeight: 1.3 }}>
                 {settings?.meetingTitle || "Book A Direct Call With Our Founder's Team"}
@@ -1017,10 +1021,9 @@ const BookingPage = () => {
               borderTop: '1px solid #f0f0f0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-end',
               backgroundColor: '#fff'
             }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: styles.headingColor }}>{priceDisplay}</div>
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
@@ -1163,29 +1166,24 @@ const BookingPage = () => {
               </div>
             </div>
 
-            {/* Price & Duration */}
+            {/* Duration */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 40,
+              gap: 10,
               paddingBottom: 28,
               marginBottom: 28,
               borderBottom: '1px solid #e5e5e5'
             }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: styles.headingColor }}>
-                {priceDisplay}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                <span style={{ fontSize: 17, color: styles.textColor }}>
-                  {settings?.slotDuration || 30} mins
-                </span>
-              </div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              <span style={{ fontSize: 17, color: styles.textColor }}>
+                {settings?.slotDuration || 30} mins
+              </span>
             </div>
 
             {/* Description Bullets */}
@@ -1739,10 +1737,9 @@ const BookingPage = () => {
               borderTop: '1px solid #f0f0f0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: 'flex-end',
               backgroundColor: '#fafafa'
             }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: styles.headingColor }}>{priceDisplay}</div>
               <button
                 onClick={handleSubmit}
                 disabled={submitting}

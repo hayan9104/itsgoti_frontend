@@ -6,9 +6,11 @@ import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
+import { useBookingModal } from '@/components/BookingModal';
 const LandingPage2 = () => {
   const { isMobile, isTablet } = useWindowSize();
   const navigate = useNavigate();
+  const { openBookingModal } = useBookingModal();
 
   // Initialize smooth scrolling
   useSmoothScroll(!isMobile);
@@ -1240,7 +1242,7 @@ const LandingPage2 = () => {
           </div>
           <button
             className="btn-hover"
-            onClick={() => navigate('/book')}
+            onClick={openBookingModal}
             style={{
               backgroundColor: '#fff',
               color: '#000',
@@ -1491,7 +1493,7 @@ const LandingPage2 = () => {
                   <button
                     className="btn-hover"
                     type="button"
-                    onClick={() => navigate('/book')}
+                    onClick={openBookingModal}
                     style={{
                       width: '240px',
                       height: '40px',

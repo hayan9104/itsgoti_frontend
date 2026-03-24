@@ -280,12 +280,12 @@ const BookingsView = () => {
       );
     }
 
-    // Sort
+    // Sort by when booking was created (createdAt), not meeting date
     filtered.sort((a, b) => {
       if (sortBy === 'date_desc') {
-        return new Date(b.date) - new Date(a.date);
+        return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date);
       } else if (sortBy === 'date_asc') {
-        return new Date(a.date) - new Date(b.date);
+        return new Date(a.createdAt || a.date) - new Date(b.createdAt || b.date);
       } else if (sortBy === 'name_asc') {
         return (a.name || '').localeCompare(b.name || '');
       } else if (sortBy === 'name_desc') {
@@ -299,6 +299,15 @@ const BookingsView = () => {
 
   const filteredBookings = getFilteredBookings();
 
+  // Calculate dynamic stats from filtered bookings
+  const today = new Date().toISOString().split('T')[0];
+  const filteredStats = {
+    total: filteredBookings.length,
+    pending: filteredBookings.filter(b => b.status === 'pending').length,
+    approved: filteredBookings.filter(b => b.status === 'approved').length,
+    todayBookings: filteredBookings.filter(b => b.date === today).length,
+  };
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>Loading...</div>;
   }
@@ -308,10 +317,10 @@ const BookingsView = () => {
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total Bookings', value: stats.total, color: '#6b7280' },
-          { label: 'Pending', value: stats.pending, color: '#f59e0b' },
-          { label: 'Approved', value: stats.approved, color: '#10b981' },
-          { label: 'Today', value: stats.todayBookings, color: '#3b82f6' },
+          { label: 'Total Bookings', value: filteredStats.total, color: '#6b7280' },
+          { label: 'Pending', value: filteredStats.pending, color: '#f59e0b' },
+          { label: 'Approved', value: filteredStats.approved, color: '#10b981' },
+          { label: 'Today', value: filteredStats.todayBookings, color: '#3b82f6' },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -451,8 +460,8 @@ const BookingsView = () => {
               backgroundSize: '16px',
             }}
           >
-            <option value="date_desc">Date (Newest)</option>
-            <option value="date_asc">Date (Oldest)</option>
+            <option value="date_desc">Booked (Newest)</option>
+            <option value="date_asc">Booked (Oldest)</option>
             <option value="name_asc">Name (A-Z)</option>
             <option value="name_desc">Name (Z-A)</option>
           </select>
@@ -1579,23 +1588,6 @@ const FormEditorView = () => {
                     </div>
                   </div>
 
-                  {/* Price */}
-                  <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>Pricing</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Price (0 = FREE)</label>
-                      <input type="number" min={0} value={settings.priceAmount || 0} onChange={(e) => setSettings(p => ({ ...p, priceAmount: parseInt(e.target.value) || 0 }))}
-                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, boxSizing: 'border-box' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Currency</label>
-                      <select value={settings.currency || '₹'} onChange={(e) => setSettings(p => ({ ...p, currency: e.target.value }))}
-                        style={{ width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}>
-                        <option value="₹">₹ INR</option><option value="$">$ USD</option><option value="€">€ EUR</option><option value="£">£ GBP</option>
-                      </select>
-                    </div>
-                  </div>
-
                   {/* Description Bullets */}
                   <h3 style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 10, textTransform: 'uppercase' }}>How We Help (Bullets)</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1774,11 +1766,6 @@ const FormEditorView = () => {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                     <span style={{ fontSize: 12, color: '#666' }}>{settings.slotDuration || 30} mins</span>
                   </div>
-                </div>
-
-                {/* Price */}
-                <div style={{ marginBottom: 20, padding: '12px 16px', backgroundColor: styles.accent + '20', borderRadius: 10, border: `1px solid ${styles.accent}` }}>
-                  <span style={{ fontSize: 24, fontWeight: 700, color: styles.heading }}>{settings.priceAmount === 0 ? 'FREE' : `${settings.currency || '₹'}${settings.priceAmount || 0}`}</span>
                 </div>
 
                 {/* Description Title */}
@@ -1964,13 +1951,6 @@ const FormEditorView = () => {
                   </label>
                 </div>
 
-                {/* Order Summary */}
-                <div style={{ marginTop: 24, border: '1px solid #e5e5e5', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>Order Summary</span>
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>{settings.priceAmount === 0 ? '₹0' : `₹${settings.priceAmount || 0}`}</span>
-                  </div>
-                </div>
               </div>
 
               {/* Footer */}
@@ -1979,10 +1959,9 @@ const FormEditorView = () => {
                 borderTop: '1px solid #f0f0f0',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-end',
                 backgroundColor: '#fafafa'
               }}>
-                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: styles.heading }}>{settings.priceAmount === 0 ? 'FREE' : `₹${settings.priceAmount || 0}`}</div>
                 <button style={{
                   padding: isMobile ? '10px 20px' : '14px 32px',
                   borderRadius: 10,
