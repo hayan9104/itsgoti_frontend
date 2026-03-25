@@ -938,6 +938,52 @@ const BookingsView = () => {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {(() => {
+                        // Template to message mapping
+                        const getTemplateMessage = (templateName, booking) => {
+                          const name = booking?.name || 'Customer';
+                          const date = booking?.date ? new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+                          const time = booking?.timeSlot || '';
+
+                          const templates = {
+                            'booking_received': {
+                              text: `Hi ${name}! 👋\n\nYour booking request:\n📅 ${date}\n⏰ ${time}\n\nPlease confirm or change your slot.`,
+                              buttons: ['Ok', 'Change Slot']
+                            },
+                            'booking_confirmed': {
+                              text: `Great news, ${name}! ✅\n\nYour booking is confirmed:\n📅 ${date}\n⏰ ${time}\n\nWe look forward to seeing you!`,
+                              buttons: ['Ok', 'Reschedule']
+                            },
+                            'booking_denied': {
+                              text: `Hi ${name},\n\nUnfortunately, your requested slot is not available.\n\nPlease select a new slot.`,
+                              buttons: ['Select New Slot']
+                            },
+                            'slot_change': {
+                              text: `Hi ${name},\n\nClick below to change your booking slot:\n📅 Current: ${date} at ${time}`,
+                              buttons: ['Change Slot']
+                            },
+                            'reschedule_approved': {
+                              text: `Your reschedule request has been approved! ✅\n\n📅 New Date: ${date}\n⏰ New Time: ${time}\n\nWe look forward to seeing you!`,
+                              buttons: ['Ok', 'Change Again']
+                            },
+                            'reschedule_denied': {
+                              text: `Hi ${name},\n\nYour reschedule request could not be approved.\n\nPlease select a different slot.`,
+                              buttons: ['Select New Slot']
+                            },
+                          };
+                          return templates[templateName] || null;
+                        };
+
+                        // Find next message to see which button was clicked
+                        const getNextButtonClick = (currentIndex) => {
+                          for (let i = currentIndex + 1; i < chatHistory.length; i++) {
+                            if (chatHistory[i].direction === 'inbound' && chatHistory[i].buttonClicked) {
+                              return chatHistory[i].buttonClicked;
+                            }
+                            if (chatHistory[i].direction === 'outbound') break;
+                          }
+                          return null;
+                        };
+
                         let lastDate = null;
                         return chatHistory.map((msg, index) => {
                           const msgDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
@@ -954,14 +1000,30 @@ const BookingsView = () => {
                           const timeStr = msgDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
                           const isOutbound = msg.direction === 'outbound';
 
-                          // Get display content
+                          // Get display content and buttons
                           let displayContent = msg.content || '';
-                          if (msg.buttonClicked && !displayContent) {
-                            displayContent = msg.buttonClicked;
+                          let buttons = [];
+                          let clickedButton = null;
+
+                          // Check if this is a template message
+                          const templateName = msg.templateName || (msg.content && msg.content.match(/^[a-z_]+$/) ? msg.content : null);
+                          if (isOutbound && templateName) {
+                            const templateData = getTemplateMessage(templateName, selectedBooking);
+                            if (templateData) {
+                              displayContent = templateData.text;
+                              buttons = templateData.buttons;
+                              clickedButton = getNextButtonClick(index);
+                            }
                           }
-                          if (!displayContent && msg.templateName) {
-                            displayContent = msg.templateName;
+
+                          // For inbound button clicks, just show the button text
+                          if (!isOutbound && msg.buttonClicked) {
+                            // Skip showing individual button clicks as separate messages
+                            // They are shown as highlighted buttons on the outbound message
+                            return null;
                           }
+
+                          if (!displayContent) return null;
 
                           return (
                             <div key={index}>
@@ -985,44 +1047,78 @@ const BookingsView = () => {
                               <div style={{
                                 display: 'flex',
                                 justifyContent: isOutbound ? 'flex-end' : 'flex-start',
-                                marginBottom: 2,
+                                marginBottom: 4,
                               }}>
-                                <div style={{
-                                  maxWidth: '80%',
-                                  padding: '8px 12px',
-                                  borderRadius: 8,
-                                  backgroundColor: isOutbound ? '#005c4b' : '#202c33',
-                                  borderTopRightRadius: isOutbound ? 0 : 8,
-                                  borderTopLeftRadius: isOutbound ? 8 : 0,
-                                  position: 'relative',
-                                }}>
+                                <div style={{ maxWidth: '80%' }}>
+                                  {/* Message Bubble */}
                                   <div style={{
-                                    fontSize: 14,
-                                    color: '#e9edef',
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word',
+                                    padding: '8px 12px',
+                                    borderRadius: 8,
+                                    backgroundColor: isOutbound ? '#005c4b' : '#202c33',
+                                    borderTopRightRadius: isOutbound ? 0 : 8,
+                                    borderTopLeftRadius: isOutbound ? 8 : 0,
+                                    borderBottomLeftRadius: buttons.length > 0 ? 0 : 8,
+                                    borderBottomRightRadius: buttons.length > 0 ? 0 : 8,
                                   }}>
-                                    {displayContent || 'Message'}
+                                    <div style={{
+                                      fontSize: 14,
+                                      color: '#e9edef',
+                                      whiteSpace: 'pre-wrap',
+                                      wordBreak: 'break-word',
+                                    }}>
+                                      {displayContent || 'Message'}
+                                    </div>
+                                    <div style={{
+                                      display: 'flex',
+                                      justifyContent: 'flex-end',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      marginTop: 4,
+                                    }}>
+                                      <span style={{ fontSize: 11, color: '#8696a0' }}>
+                                        {timeStr}
+                                      </span>
+                                      {isOutbound && (
+                                        <span style={{ color: '#53bdeb', fontSize: 14 }}>✓✓</span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                    marginTop: 4,
-                                  }}>
-                                    <span style={{ fontSize: 11, color: '#8696a0' }}>
-                                      {timeStr}
-                                    </span>
-                                    {isOutbound && (
-                                      <span style={{ color: '#53bdeb', fontSize: 14 }}>✓✓</span>
-                                    )}
-                                  </div>
+                                  {/* Buttons */}
+                                  {buttons.length > 0 && (
+                                    <div style={{
+                                      display: 'flex',
+                                      borderTop: '1px solid #0b141a',
+                                    }}>
+                                      {buttons.map((btn, btnIndex) => {
+                                        const isClicked = clickedButton && btn.toLowerCase().includes(clickedButton.toLowerCase().split(' ')[0]);
+                                        return (
+                                          <div
+                                            key={btnIndex}
+                                            style={{
+                                              flex: 1,
+                                              padding: '10px 8px',
+                                              textAlign: 'center',
+                                              backgroundColor: isClicked ? '#25d366' : '#1f2c33',
+                                              color: isClicked ? '#fff' : '#00a884',
+                                              fontSize: 14,
+                                              fontWeight: 500,
+                                              borderLeft: btnIndex > 0 ? '1px solid #0b141a' : 'none',
+                                              borderBottomLeftRadius: btnIndex === 0 ? 8 : 0,
+                                              borderBottomRightRadius: btnIndex === buttons.length - 1 ? 8 : 0,
+                                            }}
+                                          >
+                                            {btn}
+                                            {isClicked && ' ✓'}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
                           );
-                        });
+                        }).filter(Boolean);
                       })()}
                     </div>
                   )}
