@@ -90,6 +90,9 @@ const BookingsView = () => {
   const [showCustomDate, setShowCustomDate] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [drawerTab, setDrawerTab] = useState('details'); // 'details' or 'chats'
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const fetchBookings = async () => {
     try {
@@ -122,14 +125,40 @@ const BookingsView = () => {
     }
   };
 
+  const fetchChatHistory = async (bookingId) => {
+    setChatLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/whatsapp/conversation/booking/${bookingId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setChatHistory(data.data.history || []);
+      } else {
+        setChatHistory([]);
+      }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+      setChatHistory([]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   useEffect(() => {
     Promise.all([fetchBookings(), fetchStats()]).finally(() => setLoading(false));
   }, [filter]);
 
-  // Mark booking as viewed and open modal
+  // Mark booking as viewed and open drawer
   const handleViewBooking = async (booking) => {
-    // Open modal immediately
+    // Open drawer immediately and reset to details tab
     setSelectedBooking(booking);
+    setDrawerTab('details');
+    setChatHistory([]);
+
+    // Fetch chat history in background
+    fetchChatHistory(booking._id);
 
     // If not viewed, mark as viewed in background
     if (!booking.isViewed) {
@@ -627,149 +656,318 @@ const BookingsView = () => {
         </table>
       </div>
 
-      {/* Booking Detail Modal */}
+      {/* Booking Detail Drawer */}
       {selectedBooking && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
             backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             zIndex: 1000,
           }}
           onClick={() => setSelectedBooking(null)}
         >
           <div
             style={{
-              backgroundColor: '#fff',
-              borderRadius: 12,
-              padding: 24,
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
               width: '100%',
-              maxWidth: 500,
-              maxHeight: '90vh',
-              overflow: 'auto',
+              maxWidth: 600,
+              backgroundColor: '#fff',
+              boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'slideIn 0.2s ease-out',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Booking Details</h2>
-
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Customer</div>
-              <div style={{ fontWeight: 500 }}>{selectedBooking.name}</div>
-              <div style={{ fontSize: 14, color: '#6b7280' }}>{selectedBooking.email}</div>
-              <div style={{ fontSize: 14, color: '#6b7280' }}>{selectedBooking.phone}</div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Date & Time</div>
-              <div style={{ fontWeight: 500 }}>{formatDate(selectedBooking.date)} at {formatTime(selectedBooking.timeSlot)}</div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Company</div>
-              <div style={{ fontWeight: 500 }}>{selectedBooking.companyName}</div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>About Brand</div>
-              <div style={{ fontSize: 14 }}>{selectedBooking.brandDetails}</div>
-            </div>
-
-            {selectedBooking.challenge && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Challenge</div>
-                <div style={{ fontSize: 14 }}>{selectedBooking.challenge}</div>
-              </div>
-            )}
-
-            {selectedBooking.meetLink && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Meet Link</div>
-                <a href={selectedBooking.meetLink} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: 14 }}>
-                  {selectedBooking.meetLink}
-                </a>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Status</div>
-              <span
+            {/* Drawer Header */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e5e7eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Booking Details</h2>
+              <button
+                onClick={() => setSelectedBooking(null)}
                 style={{
-                  display: 'inline-block',
-                  padding: '4px 10px',
-                  borderRadius: 12,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  backgroundColor: getStatusColor(selectedBooking.status).bg,
-                  color: getStatusColor(selectedBooking.status).color,
-                  textTransform: 'capitalize',
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 24,
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  lineHeight: 1,
                 }}
               >
-                {selectedBooking.status}
-              </span>
+                &times;
+              </button>
             </div>
 
-            {/* Action Buttons */}
-            {selectedBooking.status === 'pending' && (
-              <div style={{ display: 'flex', gap: 12 }}>
-                <button
-                  onClick={() => handleApprove(selectedBooking._id)}
-                  disabled={actionLoading}
-                  style={{
-                    flex: 1,
-                    padding: '10px 16px',
-                    borderRadius: 8,
-                    border: 'none',
-                    backgroundColor: '#10b981',
-                    color: '#fff',
-                    fontWeight: 600,
-                    cursor: actionLoading ? 'not-allowed' : 'pointer',
-                    opacity: actionLoading ? 0.7 : 1,
-                  }}
-                >
-                  {actionLoading ? 'Processing...' : 'Approve & Create Meet'}
-                </button>
-                <button
-                  onClick={() => {
-                    const reason = prompt('Reason for denial (optional):');
-                    handleDeny(selectedBooking._id, reason || '');
-                  }}
-                  disabled={actionLoading}
-                  style={{
-                    flex: 1,
-                    padding: '10px 16px',
-                    borderRadius: 8,
-                    border: 'none',
-                    backgroundColor: '#ef4444',
-                    color: '#fff',
-                    fontWeight: 600,
-                    cursor: actionLoading ? 'not-allowed' : 'pointer',
-                    opacity: actionLoading ? 0.7 : 1,
-                  }}
-                >
-                  Deny
-                </button>
-              </div>
-            )}
+            {/* Tabs */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid #e5e7eb',
+              backgroundColor: '#f9fafb',
+            }}>
+              <button
+                onClick={() => setDrawerTab('details')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: drawerTab === 'details' ? '#fff' : 'transparent',
+                  borderBottom: drawerTab === 'details' ? '2px solid #2563eb' : '2px solid transparent',
+                  color: drawerTab === 'details' ? '#2563eb' : '#6b7280',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                Details
+              </button>
+              <button
+                onClick={() => setDrawerTab('chats')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: drawerTab === 'chats' ? '#fff' : 'transparent',
+                  borderBottom: drawerTab === 'chats' ? '2px solid #2563eb' : '2px solid transparent',
+                  color: drawerTab === 'chats' ? '#2563eb' : '#6b7280',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}
+              >
+                Chats
+                {chatHistory.length > 0 && (
+                  <span style={{
+                    backgroundColor: '#dbeafe',
+                    color: '#2563eb',
+                    padding: '2px 6px',
+                    borderRadius: 10,
+                    fontSize: 11,
+                  }}>
+                    {chatHistory.length}
+                  </span>
+                )}
+              </button>
+            </div>
 
-            <button
-              onClick={() => setSelectedBooking(null)}
-              style={{
-                width: '100%',
-                marginTop: 12,
-                padding: '10px 16px',
-                borderRadius: 8,
-                border: '1px solid #e5e7eb',
-                backgroundColor: '#fff',
-                color: '#374151',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
+            {/* Content Area */}
+            <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
+              {/* Details Tab */}
+              {drawerTab === 'details' && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Customer</div>
+                    <div style={{ fontWeight: 500 }}>{selectedBooking.name}</div>
+                    <div style={{ fontSize: 14, color: '#6b7280' }}>{selectedBooking.email}</div>
+                    <div style={{ fontSize: 14, color: '#6b7280' }}>{selectedBooking.phone}</div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Date & Time</div>
+                    <div style={{ fontWeight: 500 }}>{formatDate(selectedBooking.date)} at {formatTime(selectedBooking.timeSlot)}</div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Company</div>
+                    <div style={{ fontWeight: 500 }}>{selectedBooking.companyName}</div>
+                  </div>
+
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>About Brand</div>
+                    <div style={{ fontSize: 14 }}>{selectedBooking.brandDetails}</div>
+                  </div>
+
+                  {selectedBooking.challenge && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Challenge</div>
+                      <div style={{ fontSize: 14 }}>{selectedBooking.challenge}</div>
+                    </div>
+                  )}
+
+                  {selectedBooking.meetLink && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Meet Link</div>
+                      <a href={selectedBooking.meetLink} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: 14 }}>
+                        {selectedBooking.meetLink}
+                      </a>
+                    </div>
+                  )}
+
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Status</div>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '4px 10px',
+                        borderRadius: 12,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        backgroundColor: getStatusColor(selectedBooking.status).bg,
+                        color: getStatusColor(selectedBooking.status).color,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {selectedBooking.status}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  {selectedBooking.status === 'pending' && (
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button
+                        onClick={() => handleApprove(selectedBooking._id)}
+                        disabled={actionLoading}
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          borderRadius: 8,
+                          border: 'none',
+                          backgroundColor: '#10b981',
+                          color: '#fff',
+                          fontWeight: 600,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          opacity: actionLoading ? 0.7 : 1,
+                        }}
+                      >
+                        {actionLoading ? 'Processing...' : 'Approve & Create Meet'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const reason = prompt('Reason for denial (optional):');
+                          handleDeny(selectedBooking._id, reason || '');
+                        }}
+                        disabled={actionLoading}
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          borderRadius: 8,
+                          border: 'none',
+                          backgroundColor: '#ef4444',
+                          color: '#fff',
+                          fontWeight: 600,
+                          cursor: actionLoading ? 'not-allowed' : 'pointer',
+                          opacity: actionLoading ? 0.7 : 1,
+                        }}
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Chats Tab */}
+              {drawerTab === 'chats' && (
+                <div>
+                  {chatLoading ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                      Loading chat history...
+                    </div>
+                  ) : chatHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                      <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
+                      <div>No chat history found</div>
+                      <div style={{ fontSize: 12, marginTop: 4 }}>WhatsApp messages will appear here</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {chatHistory.map((msg, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: msg.direction === 'outbound' ? 'flex-end' : 'flex-start',
+                          }}
+                        >
+                          <div
+                            style={{
+                              maxWidth: '85%',
+                              padding: '10px 14px',
+                              borderRadius: 12,
+                              backgroundColor: msg.direction === 'outbound' ? '#dcfce7' : '#f3f4f6',
+                              borderBottomRightRadius: msg.direction === 'outbound' ? 4 : 12,
+                              borderBottomLeftRadius: msg.direction === 'inbound' ? 4 : 12,
+                            }}
+                          >
+                            <div style={{
+                              fontSize: 11,
+                              color: msg.direction === 'outbound' ? '#16a34a' : '#6b7280',
+                              marginBottom: 4,
+                              fontWeight: 600,
+                            }}>
+                              {msg.direction === 'outbound' ? '→ Sent' : '← Received'}
+                              {msg.messageType && ` (${msg.messageType})`}
+                            </div>
+                            <div style={{ fontSize: 14, color: '#111827', whiteSpace: 'pre-wrap' }}>
+                              {msg.content || msg.templateName || msg.buttonClicked || 'Message'}
+                            </div>
+                            {msg.buttonClicked && msg.content !== msg.buttonClicked && (
+                              <div style={{
+                                fontSize: 12,
+                                color: '#2563eb',
+                                marginTop: 4,
+                                fontWeight: 500,
+                              }}>
+                                Button: {msg.buttonClicked}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{
+                            fontSize: 10,
+                            color: '#9ca3af',
+                            marginTop: 4,
+                            paddingX: 4,
+                          }}>
+                            {msg.timestamp ? new Date(msg.timestamp).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }) : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer with Close Button */}
+            <div style={{
+              padding: '12px 20px',
+              borderTop: '1px solid #e5e7eb',
+              backgroundColor: '#f9fafb',
+            }}>
+              <button
+                onClick={() => setSelectedBooking(null)}
+                style={{
+                  width: '100%',
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: '#fff',
+                  color: '#374151',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
