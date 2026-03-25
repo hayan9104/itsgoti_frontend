@@ -710,8 +710,36 @@ const BookingsView = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              backgroundColor: drawerTab === 'chats' ? '#075e54' : '#fff',
             }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Booking Details</h2>
+              {drawerTab === 'chats' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: '#25d366',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: 16,
+                  }}>
+                    {selectedBooking?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#fff', fontSize: 16 }}>
+                      {selectedBooking?.name || 'User'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#d1fae5' }}>
+                      {selectedBooking?.phone || ''}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Booking Details</h2>
+              )}
               <button
                 onClick={() => setSelectedBooking(null)}
                 style={{
@@ -719,7 +747,7 @@ const BookingsView = () => {
                   border: 'none',
                   fontSize: 24,
                   cursor: 'pointer',
-                  color: '#6b7280',
+                  color: drawerTab === 'chats' ? '#fff' : '#6b7280',
                   lineHeight: 1,
                 }}
               >
@@ -888,78 +916,114 @@ const BookingsView = () => {
                 </div>
               )}
 
-              {/* Chats Tab */}
+              {/* Chats Tab - WhatsApp Style */}
               {drawerTab === 'chats' && (
-                <div>
+                <div style={{
+                  backgroundColor: '#0b141a',
+                  backgroundImage: 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAABfSURBVHgB7dAxAQAACAOgaWP/zjACBIkHAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYOoBLGUAATXl7+8AAAAASUVORK5CYII=")',
+                  minHeight: '100%',
+                  margin: -20,
+                  padding: 16,
+                }}>
                   {chatLoading ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                    <div style={{ textAlign: 'center', padding: 40, color: '#8696a0' }}>
                       Loading chat history...
                     </div>
                   ) : chatHistory.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                    <div style={{ textAlign: 'center', padding: 40, color: '#8696a0' }}>
                       <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
                       <div>No chat history found</div>
                       <div style={{ fontSize: 12, marginTop: 4 }}>WhatsApp messages will appear here</div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {chatHistory.map((msg, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: msg.direction === 'outbound' ? 'flex-end' : 'flex-start',
-                          }}
-                        >
-                          <div
-                            style={{
-                              maxWidth: '85%',
-                              padding: '10px 14px',
-                              borderRadius: 12,
-                              backgroundColor: msg.direction === 'outbound' ? '#dcfce7' : '#f3f4f6',
-                              borderBottomRightRadius: msg.direction === 'outbound' ? 4 : 12,
-                              borderBottomLeftRadius: msg.direction === 'inbound' ? 4 : 12,
-                            }}
-                          >
-                            <div style={{
-                              fontSize: 11,
-                              color: msg.direction === 'outbound' ? '#16a34a' : '#6b7280',
-                              marginBottom: 4,
-                              fontWeight: 600,
-                            }}>
-                              {msg.direction === 'outbound' ? '→ Sent' : '← Received'}
-                              {msg.messageType && ` (${msg.messageType})`}
-                            </div>
-                            <div style={{ fontSize: 14, color: '#111827', whiteSpace: 'pre-wrap' }}>
-                              {msg.content || msg.templateName || msg.buttonClicked || 'Message'}
-                            </div>
-                            {msg.buttonClicked && msg.content !== msg.buttonClicked && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {(() => {
+                        let lastDate = null;
+                        return chatHistory.map((msg, index) => {
+                          const msgDate = msg.timestamp ? new Date(msg.timestamp) : new Date();
+                          const dateStr = msgDate.toDateString();
+                          const showDateSeparator = dateStr !== lastDate;
+                          lastDate = dateStr;
+
+                          const today = new Date().toDateString();
+                          const yesterday = new Date(Date.now() - 86400000).toDateString();
+                          let dateLabel = msgDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                          if (dateStr === today) dateLabel = 'Today';
+                          else if (dateStr === yesterday) dateLabel = 'Yesterday';
+
+                          const timeStr = msgDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                          const isOutbound = msg.direction === 'outbound';
+
+                          // Get display content
+                          let displayContent = msg.content || '';
+                          if (msg.buttonClicked && !displayContent) {
+                            displayContent = msg.buttonClicked;
+                          }
+                          if (!displayContent && msg.templateName) {
+                            displayContent = msg.templateName;
+                          }
+
+                          return (
+                            <div key={index}>
+                              {showDateSeparator && (
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  margin: '12px 0',
+                                }}>
+                                  <span style={{
+                                    backgroundColor: '#182229',
+                                    color: '#8696a0',
+                                    padding: '6px 12px',
+                                    borderRadius: 8,
+                                    fontSize: 12,
+                                  }}>
+                                    {dateLabel}
+                                  </span>
+                                </div>
+                              )}
                               <div style={{
-                                fontSize: 12,
-                                color: '#2563eb',
-                                marginTop: 4,
-                                fontWeight: 500,
+                                display: 'flex',
+                                justifyContent: isOutbound ? 'flex-end' : 'flex-start',
+                                marginBottom: 2,
                               }}>
-                                Button: {msg.buttonClicked}
+                                <div style={{
+                                  maxWidth: '80%',
+                                  padding: '8px 12px',
+                                  borderRadius: 8,
+                                  backgroundColor: isOutbound ? '#005c4b' : '#202c33',
+                                  borderTopRightRadius: isOutbound ? 0 : 8,
+                                  borderTopLeftRadius: isOutbound ? 8 : 0,
+                                  position: 'relative',
+                                }}>
+                                  <div style={{
+                                    fontSize: 14,
+                                    color: '#e9edef',
+                                    whiteSpace: 'pre-wrap',
+                                    wordBreak: 'break-word',
+                                  }}>
+                                    {displayContent || 'Message'}
+                                  </div>
+                                  <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'flex-end',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    marginTop: 4,
+                                  }}>
+                                    <span style={{ fontSize: 11, color: '#8696a0' }}>
+                                      {timeStr}
+                                    </span>
+                                    {isOutbound && (
+                                      <span style={{ color: '#53bdeb', fontSize: 14 }}>✓✓</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                          </div>
-                          <div style={{
-                            fontSize: 10,
-                            color: '#9ca3af',
-                            marginTop: 4,
-                            paddingX: 4,
-                          }}>
-                            {msg.timestamp ? new Date(msg.timestamp).toLocaleString('en-IN', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }) : ''}
-                          </div>
-                        </div>
-                      ))}
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   )}
                 </div>
