@@ -431,6 +431,7 @@ const BookingsView = () => {
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
+            <option value="rescheduled">Rescheduled</option>
             <option value="denied">Denied</option>
             <option value="completed">Completed</option>
           </select>
