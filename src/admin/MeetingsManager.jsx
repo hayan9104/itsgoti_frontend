@@ -252,7 +252,16 @@ const BookingsView = () => {
       case 'approved': return { bg: '#d1fae5', color: '#065f46' };
       case 'denied': return { bg: '#fee2e2', color: '#991b1b' };
       case 'completed': return { bg: '#e0e7ff', color: '#3730a3' };
+      case 'rescheduled': return { bg: '#dbeafe', color: '#1e40af' };
+      case 'reschedule_denied': return { bg: '#fce7f3', color: '#9d174d' };
       default: return { bg: '#f3f4f6', color: '#374151' };
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'reschedule_denied': return 'Reschedule Denied';
+      default: return status;
     }
   };
 
@@ -432,6 +441,7 @@ const BookingsView = () => {
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rescheduled">Rescheduled</option>
+            <option value="reschedule_denied">Reschedule Denied</option>
             <option value="denied">Denied</option>
             <option value="completed">Completed</option>
           </select>
@@ -630,7 +640,7 @@ const BookingsView = () => {
                           textTransform: 'capitalize',
                         }}
                       >
-                        {booking.status}
+                        {getStatusLabel(booking.status)}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -820,7 +830,7 @@ const BookingsView = () => {
                         textTransform: 'capitalize',
                       }}
                     >
-                      {selectedBooking.status}
+                      {getStatusLabel(selectedBooking.status)}
                     </span>
                   </div>
 
