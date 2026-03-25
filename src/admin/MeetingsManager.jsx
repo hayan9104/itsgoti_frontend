@@ -265,13 +265,21 @@ const BookingsView = () => {
     }
   };
 
+  // Get display status - shows "Rescheduled" if booking was rescheduled
+  const getDisplayStatus = (booking) => {
+    if (booking.rescheduledFrom && booking.status === 'approved') {
+      return 'rescheduled';
+    }
+    return booking.status;
+  };
+
   // Filter and sort bookings
   const getFilteredBookings = () => {
     let filtered = [...bookings];
 
-    // Status filter
+    // Status filter - use display status for filtering
     if (filter !== 'all') {
-      filtered = filtered.filter(b => b.status === filter);
+      filtered = filtered.filter(b => getDisplayStatus(b) === filter);
     }
 
     // Date range filter
@@ -591,7 +599,8 @@ const BookingsView = () => {
               </tr>
             ) : (
               filteredBookings.map((booking) => {
-                const statusStyle = getStatusColor(booking.status);
+                const displayStatus = getDisplayStatus(booking);
+                const statusStyle = getStatusColor(displayStatus);
                 const isUnread = !booking.isViewed;
                 return (
                   <tr
@@ -640,7 +649,7 @@ const BookingsView = () => {
                           textTransform: 'capitalize',
                         }}
                       >
-                        {getStatusLabel(booking.status)}
+                        {getStatusLabel(displayStatus)}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
@@ -825,12 +834,12 @@ const BookingsView = () => {
                         borderRadius: 12,
                         fontSize: 12,
                         fontWeight: 600,
-                        backgroundColor: getStatusColor(selectedBooking.status).bg,
-                        color: getStatusColor(selectedBooking.status).color,
+                        backgroundColor: getStatusColor(getDisplayStatus(selectedBooking)).bg,
+                        color: getStatusColor(getDisplayStatus(selectedBooking)).color,
                         textTransform: 'capitalize',
                       }}
                     >
-                      {getStatusLabel(selectedBooking.status)}
+                      {getStatusLabel(getDisplayStatus(selectedBooking))}
                     </span>
                   </div>
 
