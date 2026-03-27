@@ -135,9 +135,20 @@ const LandingPage3 = () => {
   // Initialize smooth scrolling and scroll animations (disabled on mobile for performance)
   useSmoothScroll(!isMobile);
   useScrollAnimations(!isMobile);
-  const [pageContent, setPageContent] = useState({});
-  const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for clients
-  const [loading, setLoading] = useState(false); // Show content immediately
+  // Load cached content instantly from localStorage (10-50ms), then refresh from DB
+  const [pageContent, setPageContent] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lp3_content');
+      return cached ? JSON.parse(cached) : {};
+    } catch { return {}; }
+  });
+  const [lp2Content, setLp2Content] = useState(() => {
+    try {
+      const cached = localStorage.getItem('lp2_content');
+      return cached ? JSON.parse(cached) : {};
+    } catch { return {}; }
+  });
+  const [loading, setLoading] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -335,11 +346,8 @@ const LandingPage3 = () => {
   };
 
   useEffect(() => {
-    // Defer API calls - let page render first with defaults
-    const timer = setTimeout(() => {
-      fetchPageContent();
-    }, 100);
-    return () => clearTimeout(timer);
+    // Fetch immediately - cached content already showing from localStorage
+    fetchPageContent();
   }, []);
 
   // Editor mode: Listen for updates from parent
@@ -443,20 +451,25 @@ const LandingPage3 = () => {
 
   const fetchPageContent = async () => {
     try {
-      // Fetch both LP3 and LP2 content in background
+      // Fetch both LP3 and LP2 content
       const [lp3Response, lp2Response] = await Promise.all([
         pagesAPI.getOne('landing-page-3'),
         pagesAPI.getOne('landing-page-2'),
       ]);
 
       if (lp3Response.data?.data?.content) {
-        setPageContent(lp3Response.data.data.content);
+        const lp3Data = lp3Response.data.data.content;
+        setPageContent(lp3Data);
+        // Cache for instant load on next visit
+        try { localStorage.setItem('lp3_content', JSON.stringify(lp3Data)); } catch {}
       }
       if (lp2Response.data?.data?.content) {
-        setLp2Content(lp2Response.data.data.content);
+        const lp2Data = lp2Response.data.data.content;
+        setLp2Content(lp2Data);
+        try { localStorage.setItem('lp2_content', JSON.stringify(lp2Data)); } catch {}
       }
     } catch {
-      // Silent fail - using default content
+      // Silent fail - using cached/default content
     }
   };
 
