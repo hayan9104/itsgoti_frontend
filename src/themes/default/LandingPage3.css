@@ -1,5 +1,37 @@
 /* LandingPage3 Styles - Extracted for performance */
 
+/* ========== SMOOTH PAGE LOAD ========== */
+.lp3-page {
+  opacity: 0;
+  animation: pageLoad 0.4s ease-out forwards;
+}
+
+@keyframes pageLoad {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.lp3-loading {
+  min-height: 100vh;
+  background-color: #fffdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp3-loading-text {
+  font-family: 'Gabarito', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #666;
+  animation: loadingPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
 /* ========== PREMIUM SCROLL ANIMATIONS ========== */
 html {
   scroll-behavior: smooth;

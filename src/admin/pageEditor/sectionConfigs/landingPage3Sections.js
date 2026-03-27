@@ -14,6 +14,7 @@ export const landingPage3Sections = [
     description: 'Main headline, checkmarks, CTA button',
     fields: [
       { key: 'heroTitle', type: 'text', label: 'Hero Title', hint: 'e.g. "Your Shopify Website Design Agency"' },
+      { key: 'heroHighlightText', type: 'text', label: 'Highlight Text', hint: 'Text to highlight in green (must exist in title). e.g. "Shopify Website"' },
       { key: 'heroSubtitle', type: 'text', label: 'Hero Subtitle', hint: 'e.g. "We specialise in Shopify design and development"' },
       { key: 'heroDescription', type: 'textarea', label: 'Hero Description', hint: 'Main tagline below subtitle' },
       { key: 'heroButtonText', type: 'text', label: 'CTA Button Text', hint: 'e.g. "GET A WEB DESIGN QUOTE"' },

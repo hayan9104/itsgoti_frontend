@@ -504,6 +504,7 @@ const LandingPage3 = () => {
 
     // Hero
     heroTitle: 'Your Shopify Website Design Agency',
+    heroHighlightText: 'Shopify Website', // Text to highlight in green
     heroSubtitle: 'We specialise in Shopify deign and developement',
     heroDescription: "Let's design, optimise, and launch your shopify store with guaranteed result or you don't pay",
     heroButtonText: 'GET STARTED',
@@ -945,33 +946,22 @@ const LandingPage3 = () => {
   // Show loading screen while waiting for DB content (only on first visit without cache)
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        backgroundColor: '#fffdf8',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{
-          fontFamily: "'Gabarito', sans-serif",
-          fontSize: '24px',
-          fontWeight: 600,
-          color: '#000',
-        }}>
-          Loading...
-        </div>
+      <div className="lp3-loading">
+        <div className="lp3-loading-text">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: isMobile && mobileBackgroundColor ? mobileBackgroundColor : (heroColors.backgroundColor || '#fffdf8'),
-      fontFamily: "'Barlow', 'Inter', sans-serif",
-      overflowX: 'hidden',
-      scrollBehavior: 'smooth',
-    }}>
+    <div
+      className="lp3-page"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: isMobile && mobileBackgroundColor ? mobileBackgroundColor : (heroColors.backgroundColor || '#fffdf8'),
+        fontFamily: "'Barlow', 'Inter', sans-serif",
+        overflowX: 'hidden',
+        scrollBehavior: 'smooth',
+      }}>
       {/* Get Started Modal */}
       {isModalOpen && (
         <div
@@ -1332,20 +1322,33 @@ const LandingPage3 = () => {
                 position: 'relative',
                 zIndex: 1,
               }}>
-                <span style={{ verticalAlign: 'baseline' }}>Your</span>{' '}
-                <span style={{
-                  color: heroColors.headingColor || '#000',
-                  backgroundColor: heroColors.accentColor || '#E1FFA0',
-                  padding: isMobile ? '0 10px' : '0 15px',
-                  borderRadius: '0',
-                  display: 'inline',
-                  verticalAlign: 'baseline',
-                  fontSize: isMobile ? '32px' : 'inherit',
-                }}>
-                  Shopify Website
-                </span>
-                <br />
-                Design Agency
+                {(() => {
+                  // Parse heroTitle and highlight "Shopify Website" or custom highlight text
+                  const title = content.heroTitle || 'Your Shopify Website Design Agency';
+                  const highlightText = content.heroHighlightText || 'Shopify Website';
+
+                  if (!highlightText || !title.includes(highlightText)) {
+                    return title;
+                  }
+
+                  const parts = title.split(highlightText);
+                  return (
+                    <>
+                      {parts[0]}
+                      <span style={{
+                        color: heroColors.headingColor || '#000',
+                        backgroundColor: heroColors.accentColor || '#E1FFA0',
+                        padding: isMobile ? '0 10px' : '0 15px',
+                        borderRadius: '0',
+                        display: 'inline',
+                        verticalAlign: 'baseline',
+                      }}>
+                        {highlightText}
+                      </span>
+                      {parts[1]}
+                    </>
+                  );
+                })()}
               </h1>
             </div>
 
