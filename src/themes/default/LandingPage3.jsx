@@ -135,20 +135,13 @@ const LandingPage3 = () => {
   // Initialize smooth scrolling and scroll animations (disabled on mobile for performance)
   useSmoothScroll(!isMobile);
   useScrollAnimations(!isMobile);
-  // Load cached content instantly from localStorage (10-50ms), then refresh from DB
-  const [pageContent, setPageContent] = useState(() => {
-    try {
-      const cached = localStorage.getItem('lp3_content');
-      return cached ? JSON.parse(cached) : {};
-    } catch { return {}; }
-  });
-  const [lp2Content, setLp2Content] = useState(() => {
-    try {
-      const cached = localStorage.getItem('lp2_content');
-      return cached ? JSON.parse(cached) : {};
-    } catch { return {}; }
-  });
-  const [loading, setLoading] = useState(false);
+  // Load cached content instantly from localStorage, then refresh from DB
+  const cachedLp3 = (() => { try { const c = localStorage.getItem('lp3_content'); return c ? JSON.parse(c) : null; } catch { return null; } })();
+  const cachedLp2 = (() => { try { const c = localStorage.getItem('lp2_content'); return c ? JSON.parse(c) : null; } catch { return null; } })();
+
+  const [pageContent, setPageContent] = useState(cachedLp3 || {});
+  const [lp2Content, setLp2Content] = useState(cachedLp2 || {});
+  const [loading, setLoading] = useState(!cachedLp3); // Show loading only if no cache
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -469,7 +462,9 @@ const LandingPage3 = () => {
         try { localStorage.setItem('lp2_content', JSON.stringify(lp2Data)); } catch {}
       }
     } catch {
-      // Silent fail - using cached/default content
+      // Silent fail - using cached content
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -679,7 +674,8 @@ const LandingPage3 = () => {
     siteUseLink: '#',
   };
 
-  const content = { ...defaultContent, ...pageContent };
+  // Use DB content directly (pageContent), fallback to defaults only for missing fields
+  const content = Object.keys(pageContent).length > 0 ? { ...defaultContent, ...pageContent } : defaultContent;
 
   // Auto-rotate features groups - starts when section first enters view, runs continuously after
   const rotationTimerRef = useRef(null);
@@ -945,6 +941,28 @@ const LandingPage3 = () => {
 
   // Get mobile background color from global colors
   const mobileBackgroundColor = themeColors?.globalColors?.mobileBackgroundColor;
+
+  // Show loading screen while waiting for DB content (only on first visit without cache)
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#fffdf8',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          fontFamily: "'Gabarito', sans-serif",
+          fontSize: '24px',
+          fontWeight: 600,
+          color: '#000',
+        }}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
