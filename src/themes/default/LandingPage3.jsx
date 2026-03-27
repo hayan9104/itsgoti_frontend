@@ -1314,15 +1314,14 @@ const LandingPage3 = () => {
                 position: 'relative',
                 zIndex: 1,
               }}>
-                Your{' '}
+                <span style={{ verticalAlign: 'baseline' }}>Your</span>{' '}
                 <span style={{
                   color: heroColors.headingColor || '#000',
                   backgroundColor: heroColors.accentColor || '#E1FFA0',
                   padding: isMobile ? '0 10px' : '0 15px',
                   borderRadius: '0',
-                  display: 'inline-block',
-                  lineHeight: isMobile ? '38.4px' : '72px',
-                  verticalAlign: 'middle',
+                  display: 'inline',
+                  verticalAlign: 'baseline',
                   fontSize: isMobile ? '32px' : 'inherit',
                 }}>
                   Shopify Website
