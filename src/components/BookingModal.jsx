@@ -15,24 +15,59 @@ export const useBookingModal = () => {
 
 export const BookingModalProvider = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [preloadedData, setPreloadedData] = useState(null);
+
+  // Pre-fetch booking data when page loads
+  useEffect(() => {
+    const prefetchData = async () => {
+      try {
+        // Fetch available dates
+        const datesRes = await fetch(`${API_BASE}/bookings/available-dates`);
+        const datesData = await datesRes.json();
+
+        if (datesData.success && datesData.data.length > 0) {
+          const firstDate = datesData.data[0].date;
+
+          // Fetch slots for first date
+          const slotsRes = await fetch(`${API_BASE}/bookings/slots/${firstDate}`);
+          const slotsData = await slotsRes.json();
+
+          // Cache the data
+          const cachedData = {
+            dates: datesData.data,
+            settings: datesData.settings || {},
+            firstDateSlots: slotsData.success ? slotsData.data : [],
+            timestamp: Date.now(),
+          };
+
+          sessionStorage.setItem('bookingData', JSON.stringify(cachedData));
+          setPreloadedData(cachedData);
+        }
+      } catch (error) {
+        console.error('Error prefetching booking data:', error);
+      }
+    };
+
+    prefetchData();
+  }, []);
 
   const openBookingModal = () => setIsOpen(true);
   const closeBookingModal = () => setIsOpen(false);
 
   return (
-    <BookingModalContext.Provider value={{ isOpen, openBookingModal, closeBookingModal }}>
+    <BookingModalContext.Provider value={{ isOpen, openBookingModal, closeBookingModal, preloadedData }}>
       {children}
-      {isOpen && <BookingModal onClose={closeBookingModal} />}
+      {isOpen && <BookingModal onClose={closeBookingModal} preloadedData={preloadedData} />}
     </BookingModalContext.Provider>
   );
 };
 
-const BookingModal = ({ isOpen: propIsOpen, onClose }) => {
+const BookingModal = ({ isOpen: propIsOpen, onClose, preloadedData }) => {
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState(null);
-  const [availableDates, setAvailableDates] = useState([]);
-  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loading, setLoading] = useState(!preloadedData);
+  const [settings, setSettings] = useState(preloadedData?.settings || null);
+  const [availableDates, setAvailableDates] = useState(preloadedData?.dates || []);
+  const [availableSlots, setAvailableSlots] = useState(preloadedData?.firstDateSlots || []);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(null);
@@ -115,11 +150,27 @@ const BookingModal = ({ isOpen: propIsOpen, onClose }) => {
   };
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    // If preloaded data exists, use it immediately
+    if (preloadedData) {
+      setAvailableDates(preloadedData.dates);
+      setSettings(preloadedData.settings);
+      setAvailableSlots(preloadedData.firstDateSlots || []);
+      if (preloadedData.dates.length > 0) {
+        setSelectedDate(preloadedData.dates[0].date);
+        // Auto-select first slot if available
+        if (preloadedData.firstDateSlots?.length > 0) {
+          setSelectedSlot(preloadedData.firstDateSlots[0]);
+        }
+      }
+      setLoading(false);
+    } else {
+      fetchInitialData();
+    }
+  }, [preloadedData]);
 
   useEffect(() => {
-    if (selectedDate) {
+    // Only fetch slots if date changed and it's not the first date (which is preloaded)
+    if (selectedDate && preloadedData?.dates?.[0]?.date !== selectedDate) {
       fetchAvailableSlots(selectedDate);
     }
   }, [selectedDate]);
@@ -128,12 +179,16 @@ const BookingModal = ({ isOpen: propIsOpen, onClose }) => {
     try {
       const cached = sessionStorage.getItem('bookingData');
       if (cached) {
-        const { dates, settings: cachedSettings, timestamp } = JSON.parse(cached);
+        const { dates, settings: cachedSettings, firstDateSlots, timestamp } = JSON.parse(cached);
         if (Date.now() - timestamp < 5 * 60 * 1000) {
           setAvailableDates(dates);
           setSettings(cachedSettings || {});
+          setAvailableSlots(firstDateSlots || []);
           if (dates.length > 0) {
             setSelectedDate(dates[0].date);
+            if (firstDateSlots?.length > 0) {
+              setSelectedSlot(firstDateSlots[0]);
+            }
           }
           setLoading(false);
           return;
