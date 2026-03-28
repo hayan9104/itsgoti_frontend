@@ -1348,6 +1348,229 @@ const MeetingSettingsView = () => {
         </div>
       </div>
 
+      {/* Media Follow-up Settings */}
+      <div style={{ backgroundColor: '#fff', borderRadius: 8, padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Media Follow-up</h3>
+            <p style={{ fontSize: 13, color: '#6b7280' }}>Send brochures, videos, or documents to users after they answer questions</p>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={settings.mediaFollowup?.enabled || false}
+              onChange={(e) => setSettings((prev) => ({
+                ...prev,
+                mediaFollowup: { ...prev.mediaFollowup, enabled: e.target.checked }
+              }))}
+              style={{ width: 18, height: 18, marginRight: 8 }}
+            />
+            <span style={{ fontSize: 14 }}>Enable</span>
+          </label>
+        </div>
+
+        {settings.mediaFollowup?.enabled && (
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16 }}>
+            {/* Delay Hours */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, display: 'block', marginBottom: 6 }}>
+                Send after (hours)
+              </label>
+              <select
+                value={settings.mediaFollowup?.delayHours ?? 2}
+                onChange={(e) => setSettings((prev) => ({
+                  ...prev,
+                  mediaFollowup: { ...prev.mediaFollowup, delayHours: parseInt(e.target.value) }
+                }))}
+                style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14, width: 150 }}
+              >
+                <option value={0}>Immediately</option>
+                <option value={1}>1 hour</option>
+                <option value={2}>2 hours</option>
+                <option value={4}>4 hours</option>
+                <option value={6}>6 hours</option>
+                <option value={12}>12 hours</option>
+                <option value={24}>24 hours</option>
+              </select>
+            </div>
+
+            {/* Question Text */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, display: 'block', marginBottom: 6 }}>
+                Question to ask user
+              </label>
+              <input
+                type="text"
+                value={settings.mediaFollowup?.questionText || 'Would you like me to share our brochure/documents with you?'}
+                onChange={(e) => setSettings((prev) => ({
+                  ...prev,
+                  mediaFollowup: { ...prev.mediaFollowup, questionText: e.target.value }
+                }))}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+              />
+            </div>
+
+            {/* Media Items */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <label style={{ fontSize: 14, fontWeight: 500 }}>Media Items</label>
+                <button
+                  onClick={() => {
+                    const newItem = {
+                      name: '',
+                      type: 'document',
+                      url: '',
+                      caption: '',
+                      filename: ''
+                    };
+                    setSettings((prev) => ({
+                      ...prev,
+                      mediaFollowup: {
+                        ...prev.mediaFollowup,
+                        mediaItems: [...(prev.mediaFollowup?.mediaItems || []), newItem]
+                      }
+                    }));
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Add Media
+                </button>
+              </div>
+
+              {(settings.mediaFollowup?.mediaItems || []).length === 0 ? (
+                <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: 20, backgroundColor: '#f9fafb', borderRadius: 6 }}>
+                  No media items added. Click "+ Add Media" to add images, videos, or documents.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {(settings.mediaFollowup?.mediaItems || []).map((item, index) => (
+                    <div key={index} style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: 16, border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                        {/* Type */}
+                        <select
+                          value={item.type}
+                          onChange={(e) => {
+                            const updated = [...settings.mediaFollowup.mediaItems];
+                            updated[index] = { ...item, type: e.target.value };
+                            setSettings((prev) => ({
+                              ...prev,
+                              mediaFollowup: { ...prev.mediaFollowup, mediaItems: updated }
+                            }));
+                          }}
+                          style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                        >
+                          <option value="document">Document (PDF)</option>
+                          <option value="image">Image</option>
+                          <option value="video">Video</option>
+                        </select>
+
+                        {/* Name */}
+                        <input
+                          type="text"
+                          placeholder="Name (e.g., Company Brochure)"
+                          value={item.name}
+                          onChange={(e) => {
+                            const updated = [...settings.mediaFollowup.mediaItems];
+                            updated[index] = { ...item, name: e.target.value };
+                            setSettings((prev) => ({
+                              ...prev,
+                              mediaFollowup: { ...prev.mediaFollowup, mediaItems: updated }
+                            }));
+                          }}
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                        />
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => {
+                            const updated = settings.mediaFollowup.mediaItems.filter((_, i) => i !== index);
+                            setSettings((prev) => ({
+                              ...prev,
+                              mediaFollowup: { ...prev.mediaFollowup, mediaItems: updated }
+                            }));
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 6,
+                            fontSize: 13,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      {/* URL */}
+                      <input
+                        type="text"
+                        placeholder="URL (https://example.com/file.pdf)"
+                        value={item.url}
+                        onChange={(e) => {
+                          const updated = [...settings.mediaFollowup.mediaItems];
+                          updated[index] = { ...item, url: e.target.value };
+                          setSettings((prev) => ({
+                            ...prev,
+                            mediaFollowup: { ...prev.mediaFollowup, mediaItems: updated }
+                          }));
+                        }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, marginBottom: 8 }}
+                      />
+
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        {/* Filename (for documents) */}
+                        {item.type === 'document' && (
+                          <input
+                            type="text"
+                            placeholder="Filename (e.g., Brochure.pdf)"
+                            value={item.filename}
+                            onChange={(e) => {
+                              const updated = [...settings.mediaFollowup.mediaItems];
+                              updated[index] = { ...item, filename: e.target.value };
+                              setSettings((prev) => ({
+                                ...prev,
+                                mediaFollowup: { ...prev.mediaFollowup, mediaItems: updated }
+                              }));
+                            }}
+                            style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                          />
+                        )}
+
+                        {/* Caption */}
+                        <input
+                          type="text"
+                          placeholder="Caption (optional)"
+                          value={item.caption}
+                          onChange={(e) => {
+                            const updated = [...settings.mediaFollowup.mediaItems];
+                            updated[index] = { ...item, caption: e.target.value };
+                            setSettings((prev) => ({
+                              ...prev,
+                              mediaFollowup: { ...prev.mediaFollowup, mediaItems: updated }
+                            }));
+                          }}
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Weekly Schedule */}
       <div style={{ backgroundColor: '#fff', borderRadius: 8, padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Weekly Hours</h3>
