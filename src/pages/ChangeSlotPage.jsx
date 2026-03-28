@@ -77,14 +77,14 @@ const ChangeSlotPage = () => {
       }
 
       setBooking(bookingData.data);
+      setSettings(bookingData.settings || {});
 
-      // Fetch available dates
-      const datesRes = await fetch(`${API_BASE}/bookings/available-dates`);
+      // Fetch available dates specifically for slot change (limited by slotChangeDays setting)
+      const datesRes = await fetch(`${API_BASE}/bookings/change/${token}/dates`);
       const datesData = await datesRes.json();
 
       if (datesData.success) {
         setAvailableDates(datesData.data);
-        setSettings(datesData.settings || {});
         if (datesData.data.length > 0) {
           setSelectedDate(datesData.data[0].date);
         }

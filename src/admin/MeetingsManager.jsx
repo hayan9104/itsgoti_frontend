@@ -1263,6 +1263,14 @@ const MeetingSettingsView = () => {
 
   return (
     <div>
+      {/* Save Button - Top (right aligned, smaller) */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <button onClick={handleSave} disabled={saving || !hasChanges()} style={{
+          padding: '10px 24px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: (saving || !hasChanges()) ? 'not-allowed' : 'pointer',
+          backgroundColor: hasChanges() ? '#2563eb' : '#9ca3af', color: '#fff', opacity: (saving || !hasChanges()) ? 0.6 : 1
+        }}>{saving ? 'Saving...' : hasChanges() ? 'Save Changes' : 'No Changes'}</button>
+      </div>
+
       {/* Booking Status Toggle */}
       <div style={{ backgroundColor: '#fff', borderRadius: 8, padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1308,6 +1316,36 @@ const MeetingSettingsView = () => {
           <option value={45}>45 minutes</option>
           <option value={60}>60 minutes</option>
         </select>
+      </div>
+
+      {/* Slot Change Days - How many days visible when user changes slot */}
+      <div style={{ backgroundColor: '#fff', borderRadius: 8, padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Slot Change Days</h3>
+            <p style={{ fontSize: 13, color: '#6b7280' }}>How many days to show when user wants to change/reschedule their booking</p>
+          </div>
+          <select
+            value={settings.slotChangeDays ?? 7}
+            onChange={(e) => setSettings((prev) => ({ ...prev, slotChangeDays: parseInt(e.target.value) }))}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 6,
+              border: '1px solid #e5e7eb',
+              fontSize: 14,
+              width: 150,
+            }}
+          >
+            <option value={0}>Same day only</option>
+            <option value={1}>1 day</option>
+            <option value={2}>2 days</option>
+            <option value={3}>3 days</option>
+            <option value={5}>5 days</option>
+            <option value={7}>7 days</option>
+            <option value={14}>14 days</option>
+            <option value={30}>30 days</option>
+          </select>
+        </div>
       </div>
 
       {/* Weekly Schedule */}
