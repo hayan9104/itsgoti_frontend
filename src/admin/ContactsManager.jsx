@@ -419,7 +419,7 @@ const ContactsManager = () => {
                   </button>
                 </div>
                 <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '12px' }}>
-                  Add WhatsApp numbers with country code (e.g., 919876543210)
+                  Add 10-digit WhatsApp numbers (country code 91 will be added automatically)
                 </p>
 
                 {(notificationSettings.adminNumbers || []).length === 0 ? (
@@ -428,12 +428,15 @@ const ContactsManager = () => {
                   </p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
-                    {(notificationSettings.adminNumbers || []).map((number, index) => (
+                    {(notificationSettings.adminNumbers || []).map((number, index) => {
+                      const isValid = number.length === 10 || number.length === 12;
+                      return (
                       <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ fontSize: '13px', color: '#6b7280', minWidth: '24px' }}>{index + 1}.</span>
                         <input
                           type="text"
-                          placeholder="e.g., 919876543210"
+                          placeholder="Enter 10-digit number"
+                          maxLength={12}
                           value={number}
                           onChange={(e) => {
                             const updated = [...(notificationSettings.adminNumbers || [])];
@@ -444,7 +447,7 @@ const ContactsManager = () => {
                             flex: 1,
                             padding: '10px 12px',
                             borderRadius: '6px',
-                            border: '1px solid #e5e7eb',
+                            border: number.length > 0 && !isValid ? '1px solid #ef4444' : '1px solid #e5e7eb',
                             fontSize: '14px',
                           }}
                         />
@@ -467,7 +470,7 @@ const ContactsManager = () => {
                           </svg>
                         </button>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 )}
               </div>
