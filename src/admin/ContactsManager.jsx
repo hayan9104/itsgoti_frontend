@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { contactsAPI } from '../services/api';
 
+const API_BASE = '/api';
+
 const ContactsManager = () => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,10 +12,68 @@ const ContactsManager = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [mainTab, setMainTab] = useState('all'); // all, lp1, lp2, lp3, contact
   const [lp3SubTab, setLp3SubTab] = useState('all'); // all, hero, plan1, plan2, contactForm
+  const [showSettings, setShowSettings] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState(null);
+  const [initialNotificationSettings, setInitialNotificationSettings] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // Check if settings have changed
+  const hasSettingsChanged = () => {
+    if (!notificationSettings || !initialNotificationSettings) return false;
+    return JSON.stringify(notificationSettings) !== JSON.stringify(initialNotificationSettings);
+  };
 
   useEffect(() => {
     fetchContacts();
+    fetchNotificationSettings();
   }, []);
+
+  const fetchNotificationSettings = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/meeting-settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        const settings = data.data.contactNotification || {
+          enabled: false,
+          adminNumbers: [],
+          reminderInterval: 5,
+          maxReminders: 0,
+        };
+        setNotificationSettings(settings);
+        setInitialNotificationSettings(JSON.parse(JSON.stringify(settings)));
+      }
+    } catch (error) {
+      console.error('Error fetching notification settings:', error);
+    }
+  };
+
+  const saveNotificationSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/meeting-settings`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contactNotification: notificationSettings }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInitialNotificationSettings(JSON.parse(JSON.stringify(notificationSettings)));
+        alert('Settings saved successfully!');
+      } else {
+        alert('Error saving settings');
+      }
+    } catch (error) {
+      alert('Error saving settings');
+    }
+    setSavingSettings(false);
+  };
 
   const fetchContacts = async () => {
     try {
@@ -224,57 +284,317 @@ const ContactsManager = () => {
           </p>
         </div>
 
-        {/* Search */}
-        <div style={{ position: 'relative', width: '300px' }}>
-          <input
-            type="text"
-            placeholder="Search messages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Search and Settings */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: '300px' }}>
+            <input
+              type="text"
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 16px 10px 40px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb',
+                fontSize: '14px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            <svg
+              style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}
+              width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+          </div>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
             style={{
-              width: '100%',
-              padding: '10px 16px 10px 40px',
+              padding: '10px 16px',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb',
+              border: showSettings ? '2px solid #2563eb' : '1px solid #e5e7eb',
+              backgroundColor: showSettings ? '#EFF6FF' : '#fff',
+              color: showSettings ? '#2563eb' : '#374151',
               fontSize: '14px',
-              outline: 'none',
-              boxSizing: 'border-box',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
-          />
-          <svg
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}
-            width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           >
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+            Settings
+          </button>
         </div>
       </div>
 
-      {/* Main Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '12px',
-        borderBottom: '1px solid #e5e7eb',
-        paddingBottom: '12px',
-      }}>
-        {[
-          { value: 'all', label: 'All', count: mainTabCounts.all },
-          { value: 'lp1', label: 'Landing Page 1', count: mainTabCounts.lp1 },
-          { value: 'lp2', label: 'Landing Page 2', count: mainTabCounts.lp2 },
-          { value: 'lp3', label: 'Landing Page 3', count: mainTabCounts.lp3 },
-          { value: 'contact', label: 'Contact Page', count: mainTabCounts.contact },
-        ].map(tab => (
-          <button
-            key={tab.value}
-            onClick={() => {
-              setMainTab(tab.value);
-              setLp3SubTab('all');
-              setSourceFilter('all');
-            }}
-            style={{
-              padding: '8px 16px',
+      {/* Settings Panel */}
+      {showSettings && notificationSettings && (
+        <div style={{
+          backgroundColor: '#fff',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '20px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          border: '1px solid #e5e7eb',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#111827', marginBottom: '4px' }}>
+                WhatsApp Notification Settings
+              </h2>
+              <p style={{ fontSize: '13px', color: '#6b7280' }}>
+                Send WhatsApp notifications to admins when contact form is submitted
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={notificationSettings.enabled || false}
+                  onChange={(e) => setNotificationSettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                  style={{ width: 18, height: 18 }}
+                />
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>Enable</span>
+              </label>
+              <button
+                onClick={saveNotificationSettings}
+                disabled={savingSettings || !hasSettingsChanged()}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: hasSettingsChanged() ? '#2563eb' : '#9ca3af',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: (savingSettings || !hasSettingsChanged()) ? 'not-allowed' : 'pointer',
+                  opacity: (savingSettings || !hasSettingsChanged()) ? 0.7 : 1,
+                }}
+              >
+                {savingSettings ? 'Saving...' : hasSettingsChanged() ? 'Save Settings' : 'Saved'}
+              </button>
+            </div>
+          </div>
+
+          {notificationSettings.enabled && (
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+              {/* Admin WhatsApp Numbers */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                    Admin WhatsApp Numbers (Max 10)
+                  </label>
+                  <button
+                    onClick={() => {
+                      if ((notificationSettings.adminNumbers || []).length >= 10) {
+                        alert('Maximum 10 admin numbers allowed');
+                        return;
+                      }
+                      setNotificationSettings(prev => ({
+                        ...prev,
+                        adminNumbers: [...(prev.adminNumbers || []), '']
+                      }));
+                    }}
+                    disabled={(notificationSettings.adminNumbers || []).length >= 10}
+                    style={{
+                      padding: '8px 14px',
+                      backgroundColor: (notificationSettings.adminNumbers || []).length >= 10 ? '#9ca3af' : '#10b981',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: (notificationSettings.adminNumbers || []).length >= 10 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    + Add Number
+                  </button>
+                </div>
+                <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '12px' }}>
+                  Add WhatsApp numbers with country code (e.g., 919876543210)
+                </p>
+
+                {(notificationSettings.adminNumbers || []).length === 0 ? (
+                  <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                    No admin numbers added. Click "+ Add Number" to add WhatsApp numbers.
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                    {(notificationSettings.adminNumbers || []).map((number, index) => (
+                      <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', color: '#6b7280', minWidth: '24px' }}>{index + 1}.</span>
+                        <input
+                          type="text"
+                          placeholder="e.g., 919876543210"
+                          value={number}
+                          onChange={(e) => {
+                            const updated = [...(notificationSettings.adminNumbers || [])];
+                            updated[index] = e.target.value.replace(/\D/g, ''); // Only allow digits
+                            setNotificationSettings(prev => ({ ...prev, adminNumbers: updated }));
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '14px',
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const updated = (notificationSettings.adminNumbers || []).filter((_, i) => i !== index);
+                            setNotificationSettings(prev => ({ ...prev, adminNumbers: updated }));
+                          }}
+                          style={{
+                            padding: '10px',
+                            backgroundColor: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Reminder Settings */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                {/* Reminder Interval */}
+                <div>
+                  <label style={{ fontSize: '14px', fontWeight: 600, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                    Reminder Interval
+                  </label>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px' }}>
+                    Send reminders until admin clicks "Ok"
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <select
+                      value={
+                        [0, 2, 5, 10].includes(notificationSettings.reminderInterval)
+                          ? notificationSettings.reminderInterval ?? 5
+                          : 'custom'
+                      }
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val !== 'custom') {
+                          setNotificationSettings(prev => ({ ...prev, reminderInterval: parseInt(val) }));
+                        } else {
+                          setNotificationSettings(prev => ({ ...prev, reminderInterval: 3 }));
+                        }
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '6px',
+                        border: '1px solid #e5e7eb',
+                        fontSize: '14px',
+                        minWidth: '160px',
+                      }}
+                    >
+                      <option value={0}>No reminders</option>
+                      <option value={2}>Every 2 minutes</option>
+                      <option value={5}>Every 5 minutes</option>
+                      <option value={10}>Every 10 minutes</option>
+                      <option value="custom">Custom</option>
+                    </select>
+
+                    {![0, 2, 5, 10].includes(notificationSettings.reminderInterval) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="number"
+                          min={1}
+                          value={notificationSettings.reminderInterval ?? 5}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 1;
+                            setNotificationSettings(prev => ({ ...prev, reminderInterval: Math.max(1, val) }));
+                          }}
+                          style={{
+                            width: '70px',
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '14px',
+                          }}
+                        />
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>min</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Max Reminders */}
+                <div>
+                  <label style={{ fontSize: '14px', fontWeight: 600, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                    Maximum Reminders
+                  </label>
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '10px' }}>
+                    Limit reminders (0 = unlimited)
+                  </p>
+                  <select
+                    value={notificationSettings.maxReminders ?? 0}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, maxReminders: parseInt(e.target.value) }))}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '14px',
+                      minWidth: '160px',
+                    }}
+                  >
+                    <option value={0}>Unlimited</option>
+                    <option value={3}>3 reminders</option>
+                    <option value={5}>5 reminders</option>
+                    <option value={10}>10 reminders</option>
+                    <option value={20}>20 reminders</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main Content - Hidden when settings is open */}
+      {!showSettings && (
+        <>
+          {/* Main Tabs */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '12px',
+            borderBottom: '1px solid #e5e7eb',
+            paddingBottom: '12px',
+          }}>
+            {[
+              { value: 'all', label: 'All', count: mainTabCounts.all },
+              { value: 'lp1', label: 'Landing Page 1', count: mainTabCounts.lp1 },
+              { value: 'lp2', label: 'Landing Page 2', count: mainTabCounts.lp2 },
+              { value: 'lp3', label: 'Landing Page 3', count: mainTabCounts.lp3 },
+              { value: 'contact', label: 'Contact Page', count: mainTabCounts.contact },
+            ].map(tab => (
+              <button
+                key={tab.value}
+                onClick={() => {
+                  setMainTab(tab.value);
+                  setLp3SubTab('all');
+                  setSourceFilter('all');
+                }}
+                style={{
+                  padding: '8px 16px',
               borderRadius: '8px',
               border: mainTab === tab.value ? '2px solid #2563eb' : '1px solid #e5e7eb',
               fontSize: '13px',
@@ -779,6 +1099,8 @@ const ContactsManager = () => {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };
