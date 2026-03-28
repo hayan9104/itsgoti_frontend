@@ -419,7 +419,7 @@ const ContactsManager = () => {
                   </button>
                 </div>
                 <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '12px' }}>
-                  Add 10-digit WhatsApp numbers (country code 91 will be added automatically)
+                  Enter 10-digit mobile numbers (91 country code added automatically)
                 </p>
 
                 {(notificationSettings.adminNumbers || []).length === 0 ? (
@@ -429,28 +429,32 @@ const ContactsManager = () => {
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
                     {(notificationSettings.adminNumbers || []).map((number, index) => {
-                      const isValid = number.length === 10 || number.length === 12;
+                      const isValid = number.length === 10;
                       return (
                       <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ fontSize: '13px', color: '#6b7280', minWidth: '24px' }}>{index + 1}.</span>
-                        <input
-                          type="text"
-                          placeholder="Enter 10-digit number"
-                          maxLength={12}
-                          value={number}
+                        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                          <span style={{ padding: '10px 12px', backgroundColor: '#f3f4f6', border: '1px solid #e5e7eb', borderRight: 'none', borderRadius: '6px 0 0 6px', fontSize: '14px', color: '#6b7280' }}>+91</span>
+                          <input
+                            type="text"
+                            placeholder="Enter number"
+                            maxLength={10}
+                            value={number}
                           onChange={(e) => {
                             const updated = [...(notificationSettings.adminNumbers || [])];
                             updated[index] = e.target.value.replace(/\D/g, ''); // Only allow digits
                             setNotificationSettings(prev => ({ ...prev, adminNumbers: updated }));
                           }}
                           style={{
-                            flex: 1,
-                            padding: '10px 12px',
-                            borderRadius: '6px',
-                            border: number.length > 0 && !isValid ? '1px solid #ef4444' : '1px solid #e5e7eb',
-                            fontSize: '14px',
-                          }}
-                        />
+                              flex: 1,
+                              padding: '10px 12px',
+                              borderRadius: '0 6px 6px 0',
+                              border: number.length > 0 && !isValid ? '1px solid #ef4444' : '1px solid #e5e7eb',
+                              fontSize: '14px',
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
                         <button
                           onClick={() => {
                             const updated = (notificationSettings.adminNumbers || []).filter((_, i) => i !== index);
