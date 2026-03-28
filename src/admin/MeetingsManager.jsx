@@ -254,6 +254,7 @@ const BookingsView = () => {
       case 'completed': return { bg: '#e0e7ff', color: '#3730a3' };
       case 'rescheduled': return { bg: '#dbeafe', color: '#1e40af' };
       case 'reschedule_denied': return { bg: '#fce7f3', color: '#9d174d' };
+      case 'cancelled': return { bg: '#f3f4f6', color: '#6b7280' };
       default: return { bg: '#f3f4f6', color: '#374151' };
     }
   };
@@ -261,6 +262,7 @@ const BookingsView = () => {
   const getStatusLabel = (status) => {
     switch (status) {
       case 'reschedule_denied': return 'Reschedule Denied';
+      case 'cancelled': return 'Cancelled';
       default: return status;
     }
   };
@@ -451,6 +453,7 @@ const BookingsView = () => {
             <option value="rescheduled">Rescheduled</option>
             <option value="reschedule_denied">Reschedule Denied</option>
             <option value="denied">Denied</option>
+            <option value="cancelled">Cancelled</option>
             <option value="completed">Completed</option>
           </select>
         </div>
