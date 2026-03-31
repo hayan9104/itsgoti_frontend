@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { reviewsAPI, uploadAPI } from '../services/api';
+import quoteIcon from '../assets/Screenshot 2026-02-17 185830.png';
 
 const AVAILABLE_PAGES = [
   { id: 'home', label: 'Home Page', color: '#2563eb' },
@@ -20,13 +21,6 @@ const renderTitleWithItalics = (text) => {
     return part;
   });
 };
-
-// Quote icon SVG
-const QuoteIcon = () => (
-  <svg width="60" height="48" viewBox="0 0 60 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M0 48V28.8C0 23.4667 0.933333 18.6667 2.8 14.4C4.66667 10.1333 7.46667 6.4 11.2 3.2C14.9333 0 19.6 -2.13333 25.2 -3.2V8C21.7333 8.53333 18.8 9.86667 16.4 12C14 14.1333 12.8 17.0667 12.8 20.8V48H0ZM34.8 48V28.8C34.8 23.4667 35.7333 18.6667 37.6 14.4C39.4667 10.1333 42.2667 6.4 46 3.2C49.7333 0 54.4 -2.13333 60 -3.2V8C56.5333 8.53333 53.6 9.86667 51.2 12C48.8 14.1333 47.6 17.0667 47.6 20.8V48H34.8Z" fill="#000"/>
-  </svg>
-);
 
 const ReviewsManager = () => {
   const [reviews, setReviews] = useState([]);
@@ -675,7 +669,7 @@ const ReviewsManager = () => {
           <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
             {/* Left - Quote */}
             <div style={{ flex: 1 }}>
-              <QuoteIcon />
+              <img src={quoteIcon} alt="quote" style={{ width: 60, height: 'auto' }} />
               <p style={{
                 fontSize: 16,
                 lineHeight: 1.6,
