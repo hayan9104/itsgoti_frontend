@@ -94,6 +94,25 @@ const BookingsView = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
 
+  // Chat input state
+  const [messageInput, setMessageInput] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [windowStatus, setWindowStatus] = useState({ windowOpen: false });
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Lock body scroll when sidebar is open
+  useEffect(() => {
+    if (selectedBooking) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedBooking]);
+
   const fetchBookings = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -146,6 +165,123 @@ const BookingsView = () => {
     }
   };
 
+  // Check 24hr window status
+  const checkWindowStatus = async (phone) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/whatsapp/window-status/${encodeURIComponent(phone)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWindowStatus(data);
+      }
+    } catch (error) {
+      console.error('Error checking window status:', error);
+    }
+  };
+
+  // Send message to user
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedBooking?.phone) return;
+
+    setSendingMessage(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/whatsapp/send-message`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: selectedBooking.phone,
+          message: messageInput.trim(),
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setMessageInput('');
+        // Refresh chat history
+        fetchChatHistory(selectedBooking._id);
+      } else {
+        alert(data.error || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Send media to user
+  const handleSendMedia = async (mediaType, mediaUrl, caption = '', filename = '') => {
+    if (!selectedBooking?.phone) return;
+
+    setSendingMessage(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/whatsapp/send-message`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: selectedBooking.phone,
+          mediaType,
+          mediaUrl,
+          caption,
+          filename,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setShowAttachMenu(false);
+        fetchChatHistory(selectedBooking._id);
+      } else {
+        alert(data.error || 'Failed to send media');
+      }
+    } catch (error) {
+      console.error('Error sending media:', error);
+      alert('Failed to send media');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e, mediaType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Upload file first
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const token = localStorage.getItem('token');
+      const uploadRes = await fetch(`${API_BASE}/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+
+      if (uploadData.success && uploadData.url) {
+        await handleSendMedia(mediaType, uploadData.url, '', file.name);
+      } else {
+        alert('Failed to upload file');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file');
+    }
+  };
+
   useEffect(() => {
     Promise.all([fetchBookings(), fetchStats()]).finally(() => setLoading(false));
   }, [filter]);
@@ -156,9 +292,14 @@ const BookingsView = () => {
     setSelectedBooking(booking);
     setDrawerTab('details');
     setChatHistory([]);
+    setMessageInput('');
+    setWindowStatus({ windowOpen: false });
 
-    // Fetch chat history in background
+    // Fetch chat history and window status in background
     fetchChatHistory(booking._id);
+    if (booking.phone) {
+      checkWindowStatus(booking.phone);
+    }
 
     // If not viewed, mark as viewed in background
     if (!booking.isViewed) {
@@ -922,12 +1063,20 @@ const BookingsView = () => {
               {/* Chats Tab - WhatsApp Style */}
               {drawerTab === 'chats' && (
                 <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
                   backgroundColor: '#0b141a',
                   backgroundImage: 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAABfSURBVHgB7dAxAQAACAOgaWP/zjACBIkHAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYOoBLGUAATXl7+8AAAAASUVORK5CYII=")',
-                  minHeight: '100%',
                   margin: -20,
-                  padding: 16,
+                  marginBottom: -20,
+                  height: 'calc(100% + 40px)',
                 }}>
+                  {/* Messages Area */}
+                  <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: 16,
+                  }}>
                   {chatLoading ? (
                     <div style={{ textAlign: 'center', padding: 40, color: '#8696a0' }}>
                       Loading chat history...
@@ -942,10 +1091,13 @@ const BookingsView = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {(() => {
                         // Template to message mapping
-                        const getTemplateMessage = (templateName, booking) => {
+                        const getTemplateMessage = (templateName, booking, msg) => {
                           const name = booking?.name || 'Customer';
                           const date = booking?.date ? new Date(booking.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
                           const time = booking?.timeSlot || '';
+                          const meetLink = booking?.meetLink || '';
+                          const phone = booking?.phone || '';
+                          const companyName = booking?.companyName || '';
 
                           const templates = {
                             'booking_received': {
@@ -971,6 +1123,26 @@ const BookingsView = () => {
                             'reschedule_denied': {
                               text: `Hi ${name},\n\nYour reschedule request could not be approved.\n\nPlease select a different slot.`,
                               buttons: ['Select New Slot']
+                            },
+                            'contact_inquiry': {
+                              text: `Hi ${name}! 👋\n\nThank you for contacting It's Goti.\n\nWe've received your inquiry and will get back to you shortly.\n\nCompany: ${companyName}`,
+                              buttons: []
+                            },
+                            'meeting_reminder': {
+                              text: `Hi ${name}! ⏰\n\nReminder: Your meeting is coming up!\n\n📅 ${date}\n⏰ ${time}\n🔗 ${meetLink || 'Meeting link will be shared'}\n\nSee you soon!`,
+                              buttons: ['Cancel Meeting', 'Reschedule']
+                            },
+                            'meeting_reminder_admin': {
+                              text: `📋 Meeting Reminder\n\nClient: ${name}\n📅 ${date}\n⏰ ${time}\n📞 ${phone}`,
+                              buttons: ['Cancel Meeting', 'Reschedule']
+                            },
+                            'follow_up': {
+                              text: `Hi ${name}! 👋\n\nWe wanted to follow up on your recent booking inquiry.\n\nAre you still interested in scheduling a meeting with us?`,
+                              buttons: ['Yes, Continue', 'Reschedule', 'Cancel']
+                            },
+                            'booking_cancelled': {
+                              text: `Hi ${name},\n\nYour booking has been cancelled.\n\n📅 ${date}\n⏰ ${time}\n\nFeel free to book again anytime!`,
+                              buttons: []
                             },
                           };
                           return templates[templateName] || null;
@@ -1007,23 +1179,43 @@ const BookingsView = () => {
                           let displayContent = msg.content || '';
                           let buttons = [];
                           let clickedButton = null;
+                          let templateLabel = null;
 
-                          // Check if this is a template message
-                          const templateName = msg.templateName || (msg.content && msg.content.match(/^[a-z_]+$/) ? msg.content : null);
+                          // Check if this is a template message (outbound)
+                          const templateName = msg.templateName || (msg.content && /^[a-z_]+$/.test(msg.content) ? msg.content : null);
                           if (isOutbound && templateName) {
-                            const templateData = getTemplateMessage(templateName, selectedBooking);
+                            const templateData = getTemplateMessage(templateName, selectedBooking, msg);
                             if (templateData) {
                               displayContent = templateData.text;
-                              buttons = templateData.buttons;
+                              buttons = templateData.buttons || [];
                               clickedButton = getNextButtonClick(index);
+                            } else {
+                              // Unknown template - show a friendly label
+                              const friendlyNames = {
+                                'contact_inquiry': 'Contact Form Acknowledgment',
+                                'meeting_reminder': 'Meeting Reminder',
+                                'meeting_reminder_admin': 'Admin Meeting Reminder',
+                                'follow_up': 'Follow-up Message',
+                                'booking_received': 'Booking Confirmation',
+                                'booking_confirmed': 'Booking Approved',
+                                'booking_denied': 'Booking Denied',
+                              };
+                              templateLabel = friendlyNames[templateName] || templateName.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                              displayContent = `📨 ${templateLabel}\n\nTemplate message sent to ${selectedBooking?.name || 'customer'}`;
                             }
                           }
 
-                          // For inbound button clicks, just show the button text
-                          if (!isOutbound && msg.buttonClicked) {
-                            // Skip showing individual button clicks as separate messages
-                            // They are shown as highlighted buttons on the outbound message
-                            return null;
+                          // For inbound messages (from user)
+                          if (!isOutbound) {
+                            // If it's a button click, show it as user's response
+                            if (msg.buttonClicked) {
+                              displayContent = `"${msg.buttonClicked}"`;
+                            } else if (msg.content) {
+                              // Regular text message from user
+                              displayContent = msg.content;
+                            } else {
+                              return null;
+                            }
                           }
 
                           if (!displayContent) return null;
@@ -1063,6 +1255,17 @@ const BookingsView = () => {
                                     borderBottomLeftRadius: buttons.length > 0 ? 0 : 8,
                                     borderBottomRightRadius: buttons.length > 0 ? 0 : 8,
                                   }}>
+                                    {/* Sender Label */}
+                                    {!isOutbound && (
+                                      <div style={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        color: '#25d366',
+                                        marginBottom: 4,
+                                      }}>
+                                        {selectedBooking?.name || 'Customer'}
+                                      </div>
+                                    )}
                                     <div style={{
                                       fontSize: 14,
                                       color: '#e9edef',
@@ -1125,6 +1328,189 @@ const BookingsView = () => {
                       })()}
                     </div>
                   )}
+                  </div>
+
+                  {/* Message Input Bar */}
+                  <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#202c33',
+                    borderTop: '1px solid #2a3942',
+                  }}>
+                    {/* Window Status Warning */}
+                    {!windowStatus.windowOpen && (
+                      <div style={{
+                        fontSize: 11,
+                        color: '#f59e0b',
+                        marginBottom: 8,
+                        textAlign: 'center',
+                        padding: '4px 8px',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderRadius: 4,
+                      }}>
+                        ⚠️ 24-hour window closed. Only template messages can be sent.
+                      </div>
+                    )}
+
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}>
+                      {/* Attachment Button */}
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={() => setShowAttachMenu(!showAttachMenu)}
+                          disabled={!windowStatus.windowOpen}
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: windowStatus.windowOpen ? '#8696a0' : '#4a5568',
+                            fontSize: 22,
+                            cursor: windowStatus.windowOpen ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          +
+                        </button>
+
+                        {/* Attachment Menu */}
+                        {showAttachMenu && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: 50,
+                            left: 0,
+                            backgroundColor: '#233138',
+                            borderRadius: 12,
+                            padding: 8,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            minWidth: 180,
+                          }}>
+                            <label style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              borderRadius: 8,
+                              color: '#e9edef',
+                            }}>
+                              <span style={{ fontSize: 20 }}>🖼️</span>
+                              <span>Photo</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => handleFileUpload(e, 'image')}
+                              />
+                            </label>
+                            <label style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              borderRadius: 8,
+                              color: '#e9edef',
+                            }}>
+                              <span style={{ fontSize: 20 }}>🎬</span>
+                              <span>Video</span>
+                              <input
+                                type="file"
+                                accept="video/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => handleFileUpload(e, 'video')}
+                              />
+                            </label>
+                            <label style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              borderRadius: 8,
+                              color: '#e9edef',
+                            }}>
+                              <span style={{ fontSize: 20 }}>📄</span>
+                              <span>Document</span>
+                              <input
+                                type="file"
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                                style={{ display: 'none' }}
+                                onChange={(e) => handleFileUpload(e, 'document')}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Emoji Button */}
+                      <button
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#8696a0',
+                          fontSize: 22,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        😊
+                      </button>
+
+                      {/* Text Input */}
+                      <input
+                        type="text"
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                        placeholder={windowStatus.windowOpen ? 'Type a message' : 'Window closed - use templates'}
+                        disabled={!windowStatus.windowOpen || sendingMessage}
+                        style={{
+                          flex: 1,
+                          padding: '10px 16px',
+                          borderRadius: 24,
+                          border: 'none',
+                          backgroundColor: '#2a3942',
+                          color: '#e9edef',
+                          fontSize: 14,
+                          outline: 'none',
+                          opacity: windowStatus.windowOpen ? 1 : 0.5,
+                        }}
+                      />
+
+                      {/* Send Button */}
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!messageInput.trim() || !windowStatus.windowOpen || sendingMessage}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          border: 'none',
+                          backgroundColor: messageInput.trim() && windowStatus.windowOpen ? '#00a884' : 'transparent',
+                          color: messageInput.trim() && windowStatus.windowOpen ? '#fff' : '#8696a0',
+                          fontSize: 18,
+                          cursor: messageInput.trim() && windowStatus.windowOpen ? 'pointer' : 'not-allowed',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {sendingMessage ? '...' : '➤'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1906,6 +2292,216 @@ const MeetingSettingsView = () => {
             How far in advance users can book (1-90 days)
           </p>
         </div>
+      </div>
+
+      {/* Auto Messages - Scheduled WhatsApp messages after booking */}
+      <div style={{ backgroundColor: '#fff', borderRadius: 8, padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Auto Messages</h3>
+            <p style={{ fontSize: 13, color: '#6b7280' }}>Send scheduled WhatsApp messages (videos, images, PDFs) to users after booking</p>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={settings.autoMessages?.enabled || false}
+              onChange={(e) => setSettings((prev) => ({
+                ...prev,
+                autoMessages: { ...prev.autoMessages, enabled: e.target.checked }
+              }))}
+              style={{ width: 18, height: 18, marginRight: 8 }}
+            />
+            <span style={{ fontSize: 14 }}>Enable</span>
+          </label>
+        </div>
+
+        {settings.autoMessages?.enabled && (
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16 }}>
+            {/* Time Window */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, display: 'block', marginBottom: 6 }}>
+                Send messages between
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input
+                  type="time"
+                  value={settings.autoMessages?.startTime || '19:00'}
+                  onChange={(e) => setSettings((prev) => ({
+                    ...prev,
+                    autoMessages: { ...prev.autoMessages, startTime: e.target.value }
+                  }))}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                />
+                <span style={{ color: '#6b7280' }}>to</span>
+                <input
+                  type="time"
+                  value={settings.autoMessages?.endTime || '21:00'}
+                  onChange={(e) => setSettings((prev) => ({
+                    ...prev,
+                    autoMessages: { ...prev.autoMessages, endTime: e.target.value }
+                  }))}
+                  style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                />
+              </div>
+              <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
+                Messages will only be sent during this time window (IST)
+              </p>
+            </div>
+
+            {/* Message Items */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <label style={{ fontSize: 14, fontWeight: 500 }}>Messages to Send</label>
+                <button
+                  onClick={() => {
+                    const currentItems = settings.autoMessages?.items || [];
+                    const newItem = {
+                      text: '',
+                      mediaType: 'none',
+                      mediaUrl: '',
+                      filename: '',
+                      order: currentItems.length
+                    };
+                    setSettings((prev) => ({
+                      ...prev,
+                      autoMessages: {
+                        ...prev.autoMessages,
+                        items: [...(prev.autoMessages?.items || []), newItem]
+                      }
+                    }));
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    cursor: 'pointer'
+                  }}
+                >
+                  + Add Message
+                </button>
+              </div>
+
+              {(settings.autoMessages?.items || []).length === 0 ? (
+                <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: 20, backgroundColor: '#f9fafb', borderRadius: 6 }}>
+                  No messages added. Click "+ Add Message" to add text, videos, images, or documents.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {(settings.autoMessages?.items || []).map((item, index) => (
+                    <div key={index} style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: 16, border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Message #{index + 1}</span>
+                        <button
+                          onClick={() => {
+                            const updated = settings.autoMessages.items.filter((_, i) => i !== index);
+                            setSettings((prev) => ({
+                              ...prev,
+                              autoMessages: { ...prev.autoMessages, items: updated }
+                            }));
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            backgroundColor: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                        {/* Media Type */}
+                        <select
+                          value={item.mediaType || 'none'}
+                          onChange={(e) => {
+                            const updated = [...settings.autoMessages.items];
+                            updated[index] = { ...item, mediaType: e.target.value };
+                            setSettings((prev) => ({
+                              ...prev,
+                              autoMessages: { ...prev.autoMessages, items: updated }
+                            }));
+                          }}
+                          style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14, width: 140 }}
+                        >
+                          <option value="none">Text Only</option>
+                          <option value="image">Image</option>
+                          <option value="video">Video</option>
+                          <option value="document">Document</option>
+                        </select>
+
+                        {/* Media URL (if media type selected) */}
+                        {item.mediaType && item.mediaType !== 'none' && (
+                          <input
+                            type="text"
+                            placeholder="Media URL (https://...)"
+                            value={item.mediaUrl || ''}
+                            onChange={(e) => {
+                              const updated = [...settings.autoMessages.items];
+                              updated[index] = { ...item, mediaUrl: e.target.value };
+                              setSettings((prev) => ({
+                                ...prev,
+                                autoMessages: { ...prev.autoMessages, items: updated }
+                              }));
+                            }}
+                            style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                          />
+                        )}
+
+                        {/* Filename (for documents) */}
+                        {item.mediaType === 'document' && (
+                          <input
+                            type="text"
+                            placeholder="Filename"
+                            value={item.filename || ''}
+                            onChange={(e) => {
+                              const updated = [...settings.autoMessages.items];
+                              updated[index] = { ...item, filename: e.target.value };
+                              setSettings((prev) => ({
+                                ...prev,
+                                autoMessages: { ...prev.autoMessages, items: updated }
+                              }));
+                            }}
+                            style={{ width: 150, padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Text/Caption */}
+                      <textarea
+                        placeholder={item.mediaType === 'none' ? 'Message text...' : 'Caption for media (optional)'}
+                        value={item.text || ''}
+                        onChange={(e) => {
+                          const updated = [...settings.autoMessages.items];
+                          updated[index] = { ...item, text: e.target.value };
+                          setSettings((prev) => ({
+                            ...prev,
+                            autoMessages: { ...prev.autoMessages, items: updated }
+                          }));
+                        }}
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          borderRadius: 6,
+                          border: '1px solid #e5e7eb',
+                          fontSize: 14,
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Save Button */}

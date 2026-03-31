@@ -3,6 +3,8 @@ import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
 import { whatsappFlowsAPI } from '../services/api';
 import FlowBuilder from './whatsappBot/FlowBuilder';
 
+const API_BASE = '/api';
+
 // Trigger type labels
 const triggerLabels = {
   new_booking: 'New Booking',
@@ -37,9 +39,23 @@ const FlowsList = ({ basePath }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Meeting Reminders state
+  const [showReminders, setShowReminders] = useState(false);
+  const [reminders, setReminders] = useState({
+    reminder1: { enabled: true, minutesBefore: 120, messageToUser: '', messageToAdmin: '', showButtons: true },
+    reminder2: { enabled: true, minutesBefore: 30, messageToUser: '', messageToAdmin: '', showButtons: true },
+    reminder3: { enabled: false, minutesBefore: 10, messageToUser: '', messageToAdmin: '', showButtons: false },
+  });
+  const [initialReminders, setInitialReminders] = useState(null);
+  const [savingReminders, setSavingReminders] = useState(false);
+
+  // Check if reminders have unsaved changes
+  const hasReminderChanges = initialReminders && JSON.stringify(reminders) !== JSON.stringify(initialReminders);
+
   useEffect(() => {
     fetchFlows();
     fetchTemplates();
+    fetchReminders();
   }, []);
 
   const fetchFlows = async () => {
@@ -100,6 +116,49 @@ const FlowsList = ({ basePath }) => {
       navigate(`${basePath}/${res.data.data._id}/edit`);
     } catch (error) {
       console.error('Error creating from template:', error);
+    }
+  };
+
+  const fetchReminders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/meeting-settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data?.meetingReminders) {
+        setReminders(data.data.meetingReminders);
+        setInitialReminders(data.data.meetingReminders);
+      }
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    }
+  };
+
+  const saveReminders = async () => {
+    setSavingReminders(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/meeting-settings`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ meetingReminders: reminders }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInitialReminders(reminders);
+        alert('Reminders saved successfully!');
+      } else {
+        alert('Failed to save reminders');
+      }
+    } catch (error) {
+      console.error('Error saving reminders:', error);
+      alert('Failed to save reminders');
+    } finally {
+      setSavingReminders(false);
     }
   };
 
@@ -367,6 +426,200 @@ const FlowsList = ({ basePath }) => {
           ))}
         </div>
       )}
+
+      {/* Meeting Reminders Section */}
+      <div style={{ marginTop: 32 }}>
+        <div
+          onClick={() => setShowReminders(!showReminders)}
+          style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 20,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                backgroundColor: '#fef3c7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
+                  Meeting Reminders
+                </h3>
+                <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                  Send reminder messages before confirmed meetings
+                </p>
+              </div>
+            </div>
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="#9ca3af"
+              viewBox="0 0 24 24"
+              style={{ transform: showReminders ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {showReminders && (
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '0 0 12px 12px',
+            padding: 20,
+            marginTop: -10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
+            borderTop: 'none',
+          }}>
+            {/* Reminder 1 */}
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: 16, marginBottom: 12, border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reminders.reminder1?.enabled ?? true}
+                    onChange={(e) => setReminders(prev => ({
+                      ...prev,
+                      reminder1: { ...prev.reminder1, enabled: e.target.checked }
+                    }))}
+                    style={{ width: 16, height: 16, marginRight: 8 }}
+                  />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>Reminder 1</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number"
+                    value={reminders.reminder1?.minutesBefore ?? 120}
+                    onChange={(e) => setReminders(prev => ({
+                      ...prev,
+                      reminder1: { ...prev.reminder1, minutesBefore: parseInt(e.target.value) }
+                    }))}
+                    min={1}
+                    style={{ width: 80, padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  />
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>min before</span>
+                </div>
+              </div>
+              {reminders.reminder1?.enabled !== false && (
+                <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                  Uses template: <code style={{ backgroundColor: '#e5e7eb', padding: '2px 6px', borderRadius: 4 }}>meeting_reminder</code>
+                </p>
+              )}
+            </div>
+
+            {/* Reminder 2 */}
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: 16, marginBottom: 12, border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reminders.reminder2?.enabled ?? true}
+                    onChange={(e) => setReminders(prev => ({
+                      ...prev,
+                      reminder2: { ...prev.reminder2, enabled: e.target.checked }
+                    }))}
+                    style={{ width: 16, height: 16, marginRight: 8 }}
+                  />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>Reminder 2</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number"
+                    value={reminders.reminder2?.minutesBefore ?? 30}
+                    onChange={(e) => setReminders(prev => ({
+                      ...prev,
+                      reminder2: { ...prev.reminder2, minutesBefore: parseInt(e.target.value) }
+                    }))}
+                    min={1}
+                    style={{ width: 80, padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  />
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>min before</span>
+                </div>
+              </div>
+              {reminders.reminder2?.enabled !== false && (
+                <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                  Uses template: <code style={{ backgroundColor: '#e5e7eb', padding: '2px 6px', borderRadius: 4 }}>meeting_reminder</code>
+                </p>
+              )}
+            </div>
+
+            {/* Reminder 3 */}
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: 16, marginBottom: 16, border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reminders.reminder3?.enabled ?? false}
+                    onChange={(e) => setReminders(prev => ({
+                      ...prev,
+                      reminder3: { ...prev.reminder3, enabled: e.target.checked }
+                    }))}
+                    style={{ width: 16, height: 16, marginRight: 8 }}
+                  />
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>Reminder 3</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number"
+                    value={reminders.reminder3?.minutesBefore ?? 10}
+                    onChange={(e) => setReminders(prev => ({
+                      ...prev,
+                      reminder3: { ...prev.reminder3, minutesBefore: parseInt(e.target.value) }
+                    }))}
+                    min={1}
+                    style={{ width: 80, padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  />
+                  <span style={{ fontSize: 13, color: '#6b7280' }}>min before</span>
+                </div>
+              </div>
+              {reminders.reminder3?.enabled && (
+                <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
+                  Uses template: <code style={{ backgroundColor: '#e5e7eb', padding: '2px 6px', borderRadius: 4 }}>meeting_reminder</code>
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
+                Buttons: Reschedule | Cancel Meeting
+              </p>
+              <button
+                onClick={saveReminders}
+                disabled={savingReminders || !hasReminderChanges}
+                style={{
+                  padding: '8px 20px',
+                  backgroundColor: hasReminderChanges ? '#25D366' : '#9ca3af',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: savingReminders || !hasReminderChanges ? 'not-allowed' : 'pointer',
+                  opacity: savingReminders || !hasReminderChanges ? 0.7 : 1,
+                }}
+              >
+                {savingReminders ? 'Saving...' : 'Save Reminders'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Template Modal */}
       {showTemplateModal && (
