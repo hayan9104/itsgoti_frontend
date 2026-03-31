@@ -197,6 +197,7 @@ const BookingsView = () => {
         body: JSON.stringify({
           phone: selectedBooking.phone,
           message: messageInput.trim(),
+          forceOpen: true,
         }),
       });
       const data = await res.json();
@@ -206,7 +207,8 @@ const BookingsView = () => {
         // Refresh chat history
         fetchChatHistory(selectedBooking._id);
       } else {
-        alert(data.error || 'Failed to send message');
+        const errMsg = typeof data.error === 'object' ? JSON.stringify(data.error) : (data.error || 'Failed to send message');
+        alert(errMsg);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -235,6 +237,7 @@ const BookingsView = () => {
           mediaUrl,
           caption,
           filename,
+          forceOpen: true,
         }),
       });
       const data = await res.json();
@@ -243,7 +246,8 @@ const BookingsView = () => {
         setShowAttachMenu(false);
         fetchChatHistory(selectedBooking._id);
       } else {
-        alert(data.error || 'Failed to send media');
+        const errMsg = typeof data.error === 'object' ? JSON.stringify(data.error) : (data.error || 'Failed to send media');
+        alert(errMsg);
       }
     } catch (error) {
       console.error('Error sending media:', error);
@@ -258,13 +262,20 @@ const BookingsView = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Close attach menu
+    setShowAttachMenu(false);
+
+    // Ask for optional caption
+    const caption = prompt(`Add a caption (optional):`) || '';
+
     // Upload file first
     const formData = new FormData();
     formData.append('file', file);
 
+    setSendingMessage(true);
     try {
       const token = localStorage.getItem('token');
-      const uploadRes = await fetch(`${API_BASE}/upload`, {
+      const uploadRes = await fetch(`${API_BASE}/upload/file`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -272,14 +283,19 @@ const BookingsView = () => {
       const uploadData = await uploadRes.json();
 
       if (uploadData.success && uploadData.url) {
-        await handleSendMedia(mediaType, uploadData.url, '', file.name);
+        await handleSendMedia(mediaType, uploadData.url, caption, file.name);
       } else {
-        alert('Failed to upload file');
+        alert(uploadData.message || 'Failed to upload file');
       }
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('Failed to upload file');
+    } finally {
+      setSendingMessage(false);
     }
+
+    // Reset file input
+    e.target.value = '';
   };
 
   useEffect(() => {
@@ -1336,7 +1352,7 @@ const BookingsView = () => {
                     backgroundColor: '#202c33',
                     borderTop: '1px solid #2a3942',
                   }}>
-                    {/* Window Status Warning */}
+                    {/* Window Status Info */}
                     {!windowStatus.windowOpen && (
                       <div style={{
                         fontSize: 11,
@@ -1347,7 +1363,7 @@ const BookingsView = () => {
                         backgroundColor: 'rgba(245, 158, 11, 0.1)',
                         borderRadius: 4,
                       }}>
-                        ⚠️ 24-hour window closed. Only template messages can be sent.
+                        ⚠️ 24-hour window may be closed. Messages will be force-sent.
                       </div>
                     )}
 
@@ -1360,16 +1376,15 @@ const BookingsView = () => {
                       <div style={{ position: 'relative' }}>
                         <button
                           onClick={() => setShowAttachMenu(!showAttachMenu)}
-                          disabled={!windowStatus.windowOpen}
                           style={{
                             width: 40,
                             height: 40,
                             borderRadius: '50%',
                             border: 'none',
                             backgroundColor: 'transparent',
-                            color: windowStatus.windowOpen ? '#8696a0' : '#4a5568',
+                            color: '#8696a0',
                             fontSize: 22,
-                            cursor: windowStatus.windowOpen ? 'pointer' : 'not-allowed',
+                            cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1474,8 +1489,8 @@ const BookingsView = () => {
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                        placeholder={windowStatus.windowOpen ? 'Type a message' : 'Window closed - use templates'}
-                        disabled={!windowStatus.windowOpen || sendingMessage}
+                        placeholder={'Type a message'}
+                        disabled={sendingMessage}
                         style={{
                           flex: 1,
                           padding: '10px 16px',
@@ -1485,23 +1500,23 @@ const BookingsView = () => {
                           color: '#e9edef',
                           fontSize: 14,
                           outline: 'none',
-                          opacity: windowStatus.windowOpen ? 1 : 0.5,
+                          opacity: 1,
                         }}
                       />
 
                       {/* Send Button */}
                       <button
                         onClick={handleSendMessage}
-                        disabled={!messageInput.trim() || !windowStatus.windowOpen || sendingMessage}
+                        disabled={!messageInput.trim() || sendingMessage}
                         style={{
                           width: 40,
                           height: 40,
                           borderRadius: '50%',
                           border: 'none',
-                          backgroundColor: messageInput.trim() && windowStatus.windowOpen ? '#00a884' : 'transparent',
-                          color: messageInput.trim() && windowStatus.windowOpen ? '#fff' : '#8696a0',
+                          backgroundColor: messageInput.trim() ? '#00a884' : 'transparent',
+                          color: messageInput.trim() ? '#fff' : '#8696a0',
                           fontSize: 18,
-                          cursor: messageInput.trim() && windowStatus.windowOpen ? 'pointer' : 'not-allowed',
+                          cursor: messageInput.trim() ? 'pointer' : 'not-allowed',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
