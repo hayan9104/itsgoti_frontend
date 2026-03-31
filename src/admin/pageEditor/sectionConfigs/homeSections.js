@@ -14,11 +14,10 @@ export const homeSections = [
   {
     id: 'partners',
     label: 'Partner Brands',
-    description: 'Logo showcase of partner brands',
+    description: 'Logo showcase of partner brands (Logos managed from Pages → Client Logos)',
     fields: [
       { key: 'partnerTitle', type: 'textarea', label: 'Partner Section Title' },
-      { key: 'partnerLogos', type: 'imageArray', label: 'Partner Logos (Desktop)', maxItems: 15, useObjectFormat: true, hint: 'Upload partner brand logos for desktop view' },
-      { key: 'partnerLogosMobile', type: 'imageArray', label: 'Partner Logos (Mobile)', maxItems: 15, useObjectFormat: true, hint: 'Upload partner brand logos for mobile view' },
+      { key: '_clientLogosNote', type: 'note', label: 'Partner Logos', hint: 'Partner/Client logos are now managed centrally. Go to Pages → Client Logos to add/edit logos.' },
     ]
   },
   {

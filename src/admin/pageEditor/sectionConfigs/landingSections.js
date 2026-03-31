@@ -183,12 +183,12 @@ export const landingSections = [
   {
     id: 'testimonials',
     label: 'Testimonials Section',
-    description: 'Client reviews and stats (used on Landing, About, and Case Study pages)',
+    description: 'Client reviews and stats (Reviews managed from Pages → Reviews)',
     fields: [
       { key: 'testimonialTitle', type: 'text', label: 'Title', hint: 'e.g. "Don\'t Just Take"' },
       { key: 'testimonialTitleHighlight', type: 'text', label: 'Highlighted Title', hint: 'e.g. "Our Word For It"' },
       { key: 'testimonialSubtitle', type: 'textarea', label: 'Subtitle' },
-      { key: 'testimonials', type: 'testimonialsArray', label: 'Testimonials', maxItems: 10, hint: 'Add multiple testimonials with quotes, author info, and stats' },
+      { key: '_reviewsNote', type: 'note', label: 'Testimonials/Reviews', hint: 'Reviews are now managed centrally. Go to Pages → Reviews to add/edit testimonials.' },
     ]
   },
   {

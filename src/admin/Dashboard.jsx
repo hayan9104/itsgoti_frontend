@@ -12,6 +12,8 @@ import ThemesManager from './ThemesManager';
 import VisualPageEditor from './pageEditor/VisualPageEditor';
 import MeetingsManager from './MeetingsManager';
 import WhatsAppBotManager from './WhatsAppBotManager';
+import ClientLogosManager from './ClientLogosManager';
+import ReviewsManager from './ReviewsManager';
 
 // Icon components
 const ThemesIcon = () => (
@@ -79,6 +81,12 @@ const WhatsAppIcon = () => (
 const BackIcon = () => (
   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 12H5M12 19l-7-7 7-7" />
+  </svg>
+);
+
+const ClientLogosIcon = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
   </svg>
 );
 
@@ -317,6 +325,8 @@ const ThemeAdminPanel = () => {
           <Routes>
             <Route path="/themes/:themeId" element={<ThemeDashboardHome />} />
             <Route path="/themes/:themeId/pages/:pageName/edit" element={<VisualPageEditor />} />
+            <Route path="/themes/:themeId/pages/client-logos" element={<ClientLogosManager />} />
+            <Route path="/themes/:themeId/pages/reviews" element={<ReviewsManager />} />
             <Route path="/themes/:themeId/pages" element={<ThemePagesWrapper />} />
             <Route path="/themes/:themeId/works/*" element={<ThemedWorksManager />} />
             <Route path="/themes/:themeId/case-studies/*" element={<ThemedCaseStudiesManager />} />
@@ -424,14 +434,18 @@ const ThemePagesWrapper = () => {
     { name: 'work', label: 'Our Work' },
     { name: 'contact', label: 'Contact' },
     { name: 'footer', label: 'Footer' },
+    { name: 'client-logos', label: 'Client Logos', isSpecial: true, note: 'Logos are dynamically fetched and displayed across multiple pages' },
+    { name: 'reviews', label: 'Reviews', isSpecial: true, note: 'Testimonials are dynamically fetched with live preview editor' },
   ];
 
   const defaultPages = getDefaultPages();
 
   // Pages that use the visual editor
   const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
+  // Special pages that have their own manager
+  const specialPages = ['client-logos', 'reviews'];
   // All editable pages
-  const editablePages = visualEditorPages;
+  const editablePages = [...visualEditorPages, ...specialPages];
 
   const fetchTheme = async () => {
     try {
@@ -606,14 +620,15 @@ const ThemePagesWrapper = () => {
           const isEditable = editablePages.includes(page.name);
           const isPublished = pageData?.published !== false;
           const isToggling = togglingPage === page.name;
+          const isSpecialPage = page.isSpecial;
 
           return (
             <div
               key={page.name}
               style={{
-                backgroundColor: isPublished ? '#fff' : '#f9fafb',
+                backgroundColor: isSpecialPage ? '#fefce8' : (isPublished ? '#fff' : '#f9fafb'),
                 borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: 24,
-                border: !isPublished ? '2px solid #ef4444' : isEditable ? '2px solid #2563eb' : '1px solid transparent',
+                border: isSpecialPage ? '2px solid #eab308' : (!isPublished ? '2px solid #ef4444' : isEditable ? '2px solid #2563eb' : '1px solid transparent'),
                 opacity: isPublished ? 1 : 0.7,
                 transition: 'all 0.2s ease',
               }}
@@ -628,53 +643,60 @@ const ThemePagesWrapper = () => {
                   }}>
                     {page.label}
                   </h3>
-                  {isEditable && isPublished && (
+                  {isSpecialPage ? (
+                    <span style={{ fontSize: 10, backgroundColor: '#eab308', color: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
+                      Dynamic
+                    </span>
+                  ) : isEditable && isPublished ? (
                     <span style={{ fontSize: 10, backgroundColor: '#2563eb', color: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
                       Editable
                     </span>
-                  )}
-                  {!isPublished && (
+                  ) : null}
+                  {!isPublished && !isSpecialPage && (
                     <span style={{ fontSize: 10, backgroundColor: '#ef4444', color: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
                       Hidden
                     </span>
                   )}
                 </div>
 
-                {/* Toggle Switch */}
-                <button
-                  onClick={() => togglePageVisibility(page.name, pageData?.published)}
-                  disabled={isToggling}
-                  title={isPublished ? 'Click to hide this page' : 'Click to show this page'}
-                  style={{
-                    width: 44, height: 24, borderRadius: 12,
-                    backgroundColor: isToggling ? '#d1d5db' : isPublished ? '#22c55e' : '#e5e7eb',
-                    border: 'none', cursor: isToggling ? 'wait' : 'pointer',
-                    position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff',
-                    position: 'absolute', top: 3, left: isPublished ? 23 : 3,
-                    transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {isToggling && (
-                      <div style={{
-                        width: 10, height: 10, border: '2px solid #d1d5db',
-                        borderTopColor: '#2563eb', borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                      }} />
-                    )}
-                  </div>
-                </button>
+                {/* Toggle Switch - Hide for special pages */}
+                {!isSpecialPage && (
+                  <button
+                    onClick={() => togglePageVisibility(page.name, pageData?.published)}
+                    disabled={isToggling}
+                    title={isPublished ? 'Click to hide this page' : 'Click to show this page'}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12,
+                      backgroundColor: isToggling ? '#d1d5db' : isPublished ? '#22c55e' : '#e5e7eb',
+                      border: 'none', cursor: isToggling ? 'wait' : 'pointer',
+                      position: 'relative', transition: 'background-color 0.2s ease', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff',
+                      position: 'absolute', top: 3, left: isPublished ? 23 : 3,
+                      transition: 'left 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {isToggling && (
+                        <div style={{
+                          width: 10, height: 10, border: '2px solid #d1d5db',
+                          borderTopColor: '#2563eb', borderRadius: '50%',
+                          animation: 'spin 1s linear infinite',
+                        }} />
+                      )}
+                    </div>
+                  </button>
+                )}
               </div>
 
+              {/* Description - for special pages show note, otherwise show last updated */}
               <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 8 }}>
-                {pageData ? `Last updated: ${new Date(theme.updatedAt).toLocaleDateString()}` : 'Not configured yet'}
+                {isSpecialPage ? page.note : (pageData ? `Last updated: ${new Date(theme.updatedAt).toLocaleDateString()}` : 'Not configured yet')}
               </p>
 
               {/* Redirect info for hidden pages */}
-              {!isPublished && pageData?.redirectTo && (
+              {!isPublished && !isSpecialPage && pageData?.redirectTo && (
                 <p style={{ fontSize: 12, color: '#ef4444', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -687,7 +709,10 @@ const ThemePagesWrapper = () => {
 
               <button
                 onClick={() => {
-                  if (visualEditorPages.includes(page.name)) {
+                  if (isSpecialPage) {
+                    // Navigate to special page manager
+                    navigate(`/goti/admin/themes/${themeId}/pages/${page.name}`);
+                  } else if (visualEditorPages.includes(page.name)) {
                     navigate(`/goti/admin/themes/${themeId}/pages/${page.name}/edit`);
                   }
                 }}
@@ -699,7 +724,7 @@ const ThemePagesWrapper = () => {
                 }}
                 disabled={!isEditable}
               >
-                {isEditable ? 'Edit Content' : 'Coming Soon'}
+                {isSpecialPage ? (page.name === 'reviews' ? 'Manage Reviews' : 'Manage Logos') : (isEditable ? 'Edit Content' : 'Coming Soon')}
               </button>
             </div>
           );

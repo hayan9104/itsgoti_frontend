@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { pagesAPI, worksAPI } from '@/services/api';
+import { pagesAPI, worksAPI, clientLogosAPI, reviewsAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
@@ -53,6 +53,7 @@ const Home = () => {
   const sliderRef = useRef(null); // Ref for GSAP project slider animation
   const servicesSliderRef = useRef(null); // Ref for GSAP services slider animation
   const [lp2Content, setLp2Content] = useState({}); // Landing Page 2 content for client logos
+  const [centralizedClientLogos, setCentralizedClientLogos] = useState([]); // Centralized client logos from API
 
   // Refs for GSAP animation
   const heroSectionRef = useRef(null);
@@ -236,10 +237,11 @@ const Home = () => {
 
   const fetchPageContent = async () => {
     try {
-      // Fetch both Home and LP2 content (for client logos)
-      const [homeResponse, lp2Response] = await Promise.all([
+      // Fetch Home content, LP2 content (fallback), and centralized client logos
+      const [homeResponse, lp2Response, clientLogosResponse] = await Promise.all([
         pagesAPI.getOne('home'),
         pagesAPI.getOne('landing-page-2'),
+        clientLogosAPI.getByPage('home').catch(() => ({ data: { data: [] } })),
       ]);
 
       if (homeResponse.data.data?.content) {
@@ -251,9 +253,14 @@ const Home = () => {
         fetchWorks([]);
       }
 
-      // Store LP2 content for client logos
+      // Store LP2 content for client logos (fallback)
       if (lp2Response.data?.data?.content) {
         setLp2Content(lp2Response.data.data.content);
+      }
+
+      // Store centralized client logos (priority)
+      if (clientLogosResponse.data?.data) {
+        setCentralizedClientLogos(clientLogosResponse.data.data);
       }
     } catch (error) {
       console.log('Using default content for home page');
@@ -263,8 +270,14 @@ const Home = () => {
 
   const fetchTestimonialData = async () => {
     try {
-      // Fetch heading from About page
-      const aboutResponse = await pagesAPI.getOne('about');
+      // Fetch heading from About page and centralized reviews in parallel
+      const [aboutResponse, reviewsResponse, landingResponse] = await Promise.all([
+        pagesAPI.getOne('about'),
+        reviewsAPI.getByPage('home').catch(() => ({ data: { data: [] } })),
+        pagesAPI.getOne('landing'),
+      ]);
+
+      // Set heading from About page
       if (aboutResponse.data.data?.content) {
         const aboutContent = aboutResponse.data.data.content;
         setTestimonialHeading(prev => ({
@@ -274,8 +287,13 @@ const Home = () => {
         }));
       }
 
-      // Fetch testimonials from Landing page
-      const landingResponse = await pagesAPI.getOne('landing');
+      // Priority 1: Centralized reviews from API
+      if (reviewsResponse.data?.data && reviewsResponse.data.data.length > 0) {
+        setTestimonials(reviewsResponse.data.data);
+        return;
+      }
+
+      // Fallback: Fetch testimonials from Landing page
       if (landingResponse.data.data?.content) {
         const landingContent = landingResponse.data.data.content;
         if (landingContent.testimonials && Array.isArray(landingContent.testimonials) && landingContent.testimonials.length > 0) {
@@ -775,10 +793,18 @@ const Home = () => {
             {pageContent.partnerTitle}
           </p>
 
-          {/* Marquee Rows - Fetches logos from Landing Page 2 */}
+          {/* Marquee Rows - Fetches logos from centralized Client Logos API */}
           {(() => {
-            // Parse client logos from LP2 content
+            // Parse client logos - Priority: Centralized API > LP2 Content > Default
             const parseClientLogos = () => {
+              // Priority 1: Centralized client logos from API
+              if (centralizedClientLogos && centralizedClientLogos.length > 0) {
+                return centralizedClientLogos.map((logo) => ({
+                  image: logo.logo,
+                  name: logo.name,
+                }));
+              }
+              // Fallback: LP2 content logos
               const logos = lp2Content.clientLogos;
               if (logos && Array.isArray(logos) && logos.length > 0) {
                 return logos.map((logo, index) => {

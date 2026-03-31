@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
-import { pagesAPI } from '@/services/api';
+import { pagesAPI, clientLogosAPI, reviewsAPI } from '@/services/api';
 import arrowLeft from '@/assets/arrow-left.png';
 import arrowRight from '@/assets/arrow-right.png';
 import vectorIcon from '@/assets/Vector.png';
@@ -169,8 +169,10 @@ const About = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, [isEditorMode]);
 
-  // State for Home page partner logos
+  // State for Home page partner logos (fallback)
   const [homePartnerLogos, setHomePartnerLogos] = useState({ desktop: [], mobile: [] });
+  // State for centralized client logos (priority)
+  const [centralizedClientLogos, setCentralizedClientLogos] = useState([]);
 
   // Fetch content from API (skip if in editor mode - data comes via postMessage)
   useEffect(() => {
@@ -196,12 +198,24 @@ const About = () => {
     }
   };
 
-  // Fetch testimonial content from Landing page (array of testimonials)
+  // Fetch testimonial content - Priority: Centralized API > Landing page
   const fetchTestimonialContent = async () => {
     try {
-      const response = await pagesAPI.getOne('landing');
-      if (response.data.data && response.data.data.content) {
-        const content = response.data.data.content;
+      // Fetch centralized reviews and landing page testimonials in parallel
+      const [reviewsResponse, landingResponse] = await Promise.all([
+        reviewsAPI.getByPage('about').catch(() => ({ data: { data: [] } })),
+        pagesAPI.getOne('landing'),
+      ]);
+
+      // Priority 1: Centralized reviews from API
+      if (reviewsResponse.data?.data && reviewsResponse.data.data.length > 0) {
+        setTestimonials(reviewsResponse.data.data);
+        return;
+      }
+
+      // Fallback: Landing page testimonials
+      if (landingResponse.data.data && landingResponse.data.data.content) {
+        const content = landingResponse.data.data.content;
         if (content.testimonials && Array.isArray(content.testimonials) && content.testimonials.length > 0) {
           setTestimonials(content.testimonials);
         }
@@ -211,12 +225,23 @@ const About = () => {
     }
   };
 
-  // Fetch partner logos from Home page
+  // Fetch partner logos from centralized API and Home page (fallback)
   const fetchHomePartnerLogos = async () => {
     try {
-      const response = await pagesAPI.getOne('home');
-      if (response.data.data && response.data.data.content) {
-        const content = response.data.data.content;
+      // Fetch both centralized logos and home page logos in parallel
+      const [clientLogosResponse, homeResponse] = await Promise.all([
+        clientLogosAPI.getByPage('about').catch(() => ({ data: { data: [] } })),
+        pagesAPI.getOne('home'),
+      ]);
+
+      // Set centralized client logos (priority)
+      if (clientLogosResponse.data?.data) {
+        setCentralizedClientLogos(clientLogosResponse.data.data);
+      }
+
+      // Set home page logos (fallback)
+      if (homeResponse.data.data && homeResponse.data.data.content) {
+        const content = homeResponse.data.data.content;
         setHomePartnerLogos({
           desktop: content.partnerLogos || [],
           mobile: content.partnerLogosMobile || [],
@@ -289,11 +314,16 @@ const About = () => {
     return logo.id || index;
   };
 
-  // Split logos into two rows - use Home page partner logos (priority) or fallback to About page logos
+  // Split logos into two rows - Priority: Centralized API > Home page > About page
   const homeLogos = isMobile ? homePartnerLogos.mobile : homePartnerLogos.desktop;
   const aboutLogos = isMobile ? (pageContent.logosMobile || pageContent.logos) : pageContent.logos;
-  // Use Home page logos if available, otherwise fallback to About page logos
-  const allLogos = homeLogos.length > 0 ? homeLogos : aboutLogos;
+  // Convert centralized logos to the same format
+  const centralizedLogosFormatted = centralizedClientLogos.map(logo => ({
+    image: logo.logo,
+    name: logo.name,
+  }));
+  // Use centralized logos if available, then Home page logos, then About page logos
+  const allLogos = centralizedLogosFormatted.length > 0 ? centralizedLogosFormatted : (homeLogos.length > 0 ? homeLogos : aboutLogos);
   const logos = allLogos.slice(0, 6);
   const logos2 = isMobile ? [] : allLogos.slice(6, 10);
 

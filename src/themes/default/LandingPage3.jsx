@@ -6,7 +6,7 @@ import useWindowSize from '@/hooks/useWindowSize';
 import useThemeColors from '@/hooks/useThemeColors';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
-import { pagesAPI, contactsAPI } from '@/services/api';
+import { pagesAPI, contactsAPI, clientLogosAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
 import TickMark from '@/assets/Tick mark.png';
@@ -141,6 +141,7 @@ const LandingPage3 = () => {
 
   const [pageContent, setPageContent] = useState(cachedLp3 || {});
   const [lp2Content, setLp2Content] = useState(cachedLp2 || {});
+  const [centralizedClientLogos, setCentralizedClientLogos] = useState([]);
   const [loading, setLoading] = useState(!cachedLp3); // Show loading only if no cache
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -444,10 +445,11 @@ const LandingPage3 = () => {
 
   const fetchPageContent = async () => {
     try {
-      // Fetch both LP3 and LP2 content
-      const [lp3Response, lp2Response] = await Promise.all([
+      // Fetch LP3, LP2 content, and centralized client logos
+      const [lp3Response, lp2Response, clientLogosResponse] = await Promise.all([
         pagesAPI.getOne('landing-page-3'),
         pagesAPI.getOne('landing-page-2'),
+        clientLogosAPI.getByPage('landing-page-3').catch(() => ({ data: { data: [] } })),
       ]);
 
       if (lp3Response.data?.data?.content) {
@@ -460,6 +462,10 @@ const LandingPage3 = () => {
         const lp2Data = lp2Response.data.data.content;
         setLp2Content(lp2Data);
         try { localStorage.setItem('lp2_content', JSON.stringify(lp2Data)); } catch {}
+      }
+      // Set centralized client logos
+      if (clientLogosResponse.data?.data) {
+        setCentralizedClientLogos(clientLogosResponse.data.data);
       }
     } catch {
       // Silent fail - using cached content
@@ -2620,14 +2626,28 @@ const LandingPage3 = () => {
         </div>
       )}
 
-      {/* Clients Marquee Section - Fetches logos from Landing Page 2 */}
+      {/* Clients Marquee Section - Priority: Centralized API > LP2 > Default */}
       {shouldRenderSection('clients') && (() => {
-        // Get client logos from LP2, fallback to LP3 or default
+        // Priority 1: Centralized client logos from API
+        const hasCentralizedLogos = centralizedClientLogos && centralizedClientLogos.length > 0;
+        // Fallback: LP2 content logos
         const lp2ClientLogos = lp2Content.clientLogos || [];
         const lp2HasLogos = lp2ClientLogos.length > 0;
 
         // Default client names for fallback
         const defaultClientNames = ['Tomattic', 'Wealthsimple', 'SpaceX', 'Gusto', 'Attentive', 'Square', 'Dribbble', 'Drips', 'Dropbox', 'Sonic'];
+
+        // Determine which logos to use (priority order)
+        const getLogoItems = () => {
+          if (hasCentralizedLogos) {
+            return centralizedClientLogos.map(logo => ({ image: logo.logo, name: logo.name }));
+          }
+          if (lp2HasLogos) {
+            return lp2ClientLogos;
+          }
+          return defaultClientNames;
+        };
+        const logoItems = getLogoItems();
 
         return (
           <div className="scroll-reveal">
@@ -2658,7 +2678,7 @@ const LandingPage3 = () => {
             {/* Two Row Marquee */}
             {[0, 1].map((rowIndex) => {
               // For row 1, use first half; for row 2, use second half or shift
-              const items = lp2HasLogos ? lp2ClientLogos : defaultClientNames;
+              const items = logoItems;
               const repeatedItems = [...items, ...items, ...items, ...items];
 
               return (

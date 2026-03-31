@@ -38,10 +38,10 @@ export const landingPage2Sections = [
   {
     id: 'clients',
     label: 'Clients Section',
-    description: 'Client logos with marquee animation',
+    description: 'Client logos with marquee animation (Logos managed from Pages → Client Logos)',
     fields: [
       { key: 'clientsTitle', type: 'text', label: 'Section Title', hint: 'e.g. "Our Shopify Clients"' },
-      { key: 'clientLogos', type: 'imageArray', label: 'Client Logos (Marquee)', maxItems: 15, hint: 'Upload multiple logos for marquee animation (recommended: 6-12 logos)' },
+      { key: '_clientLogosNote', type: 'note', label: 'Client Logos', hint: 'Client logos are now managed centrally. Go to Pages → Client Logos to add/edit logos.' },
     ]
   },
   {

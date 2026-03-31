@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import useWindowSize from '@/hooks/useWindowSize';
-import { pagesAPI, contactsAPI } from '@/services/api';
+import { pagesAPI, contactsAPI, clientLogosAPI } from '@/services/api';
 import EditableSection from '@/components/EditableSection';
 
 const LandingPage2 = () => {
   const { isMobile, isTablet } = useWindowSize();
   const [pageContent, setPageContent] = useState({});
+  const [centralizedClientLogos, setCentralizedClientLogos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -165,9 +166,19 @@ const LandingPage2 = () => {
 
   const fetchPageContent = async () => {
     try {
-      const response = await pagesAPI.getOne('landing-page-2');
+      // Fetch page content and centralized client logos in parallel
+      const [response, clientLogosResponse] = await Promise.all([
+        pagesAPI.getOne('landing-page-2'),
+        clientLogosAPI.getByPage('landing-page-2').catch(() => ({ data: { data: [] } })),
+      ]);
+
       if (response.data?.data?.content) {
         setPageContent(response.data.data.content);
+      }
+
+      // Set centralized client logos
+      if (clientLogosResponse.data?.data) {
+        setCentralizedClientLogos(clientLogosResponse.data.data);
       }
     } catch (error) {
       console.log('Using default content');
@@ -284,8 +295,16 @@ const LandingPage2 = () => {
     '/api/placeholder/200/300',
   ];
 
-  // Client logos - parse from content or use defaults
+  // Client logos - Priority: Centralized API > content > defaults
   const parseClientLogos = () => {
+    // Priority 1: Centralized client logos from API
+    if (centralizedClientLogos && centralizedClientLogos.length > 0) {
+      return centralizedClientLogos.map((logo) => ({
+        image: logo.logo,
+        name: logo.name,
+      }));
+    }
+    // Fallback: Content client logos
     if (content.clientLogos && Array.isArray(content.clientLogos) && content.clientLogos.length > 0) {
       return content.clientLogos.map((logo, index) => {
         if (typeof logo === 'string') {

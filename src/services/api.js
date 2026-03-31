@@ -164,6 +164,31 @@ export const whatsappFlowsAPI = {
   }),
 };
 
+// Client Logos API (Centralized Client Logos)
+export const clientLogosAPI = {
+  getAll: (params) => api.get('/client-logos', { params }),
+  getOne: (id) => api.get(`/client-logos/${id}`),
+  create: (data) => api.post('/client-logos', data),
+  update: (id, data) => api.put(`/client-logos/${id}`, data),
+  delete: (id) => api.delete(`/client-logos/${id}`),
+  reorder: (orderedIds) => api.put('/client-logos/reorder', { orderedIds }),
+  bulkAssign: (logoIds, pages, action) => api.put('/client-logos/bulk-assign', { logoIds, pages, action }),
+  // Get logos for a specific page (public)
+  getByPage: (page) => api.get('/client-logos', { params: { page, active: true } }),
+};
+
+// Reviews API (Centralized Testimonials/Reviews)
+export const reviewsAPI = {
+  getAll: (params) => api.get('/reviews', { params }),
+  getOne: (id) => api.get(`/reviews/${id}`),
+  create: (data) => api.post('/reviews', data),
+  update: (id, data) => api.put(`/reviews/${id}`, data),
+  delete: (id) => api.delete(`/reviews/${id}`),
+  reorder: (orderedIds) => api.put('/reviews/reorder', { orderedIds }),
+  // Get reviews for a specific page (public)
+  getByPage: (page) => api.get('/reviews', { params: { page, active: true } }),
+};
+
 // Theme Colors API (Color Styling System)
 export const themeColorsAPI = {
   // Get all theme color configurations

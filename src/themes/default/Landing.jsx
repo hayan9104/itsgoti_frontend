@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { pagesAPI, contactsAPI } from '@/services/api';
+import { pagesAPI, contactsAPI, reviewsAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
@@ -269,10 +269,21 @@ const Landing = () => {
 
   const fetchPageContent = async () => {
     try {
-      // Fetch landing page content
-      const response = await pagesAPI.getOne('landing');
+      // Fetch landing page content and centralized reviews in parallel
+      const [response, reviewsResponse] = await Promise.all([
+        pagesAPI.getOne('landing'),
+        reviewsAPI.getByPage('landing').catch(() => ({ data: { data: [] } })),
+      ]);
+
       if (response.data.data?.content) {
-        setPageContent(prev => ({ ...prev, ...response.data.data.content }));
+        const content = { ...response.data.data.content };
+
+        // Priority: Centralized reviews > Page content testimonials
+        if (reviewsResponse.data?.data && reviewsResponse.data.data.length > 0) {
+          content.testimonials = reviewsResponse.data.data;
+        }
+
+        setPageContent(prev => ({ ...prev, ...content }));
       }
     } catch (error) {
       console.log('Using default content for landing page');
