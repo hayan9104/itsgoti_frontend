@@ -123,6 +123,24 @@ const About = () => {
     },
   ]);
 
+  // Review settings from centralized API
+  const [reviewSettings, setReviewSettings] = useState({
+    sectionTitle: '*Look* what our client said..',
+    showHeadingOnPages: ['home', 'about', 'landing', 'landing-page-2', 'landing-page-3'],
+  });
+
+  // Helper to render title with *italic* syntax
+  const renderTitleWithItalics = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(\*[^*]+\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return <em key={i} style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', 'Inter', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+  };
+
   // Helper to check if section is visible
   const isSectionVisible = (sectionId) => {
     const visibilityKey = `${sectionId}Visible`;
@@ -201,11 +219,20 @@ const About = () => {
   // Fetch testimonial content - Priority: Centralized API > Landing page
   const fetchTestimonialContent = async () => {
     try {
-      // Fetch centralized reviews and landing page testimonials in parallel
-      const [reviewsResponse, landingResponse] = await Promise.all([
+      // Fetch centralized reviews, landing page testimonials, and settings in parallel
+      const [reviewsResponse, landingResponse, settingsResponse] = await Promise.all([
         reviewsAPI.getByPage('about').catch(() => ({ data: { data: [] } })),
         pagesAPI.getOne('landing'),
+        reviewsAPI.getSettings().catch(() => ({ data: { data: null } })),
       ]);
+
+      // Set review settings if available
+      if (settingsResponse.data?.data) {
+        setReviewSettings({
+          sectionTitle: settingsResponse.data.data.sectionTitle || '*Look* what our client said..',
+          showHeadingOnPages: settingsResponse.data.data.showHeadingOnPages || [],
+        });
+      }
 
       // Priority 1: Centralized reviews from API
       if (reviewsResponse.data?.data && reviewsResponse.data.data.length > 0) {
@@ -1285,8 +1312,7 @@ const About = () => {
               marginBottom: isMobile ? '40px' : '60px',
             }}
           >
-            <em style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', 'Inter', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{pageContent.clientLabelItalic}</em>
-            {pageContent.clientLabelNormal}
+            {renderTitleWithItalics(reviewSettings.sectionTitle)}
           </h3>
 
           {/* Testimonial Content */}

@@ -187,6 +187,9 @@ export const reviewsAPI = {
   reorder: (orderedIds) => api.put('/reviews/reorder', { orderedIds }),
   // Get reviews for a specific page (public)
   getByPage: (page) => api.get('/reviews', { params: { page, active: true } }),
+  // Settings (section title, heading visibility)
+  getSettings: () => api.get('/reviews/settings'),
+  updateSettings: (data) => api.put('/reviews/settings', data),
 };
 
 // Theme Colors API (Color Styling System)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { caseStudiesAPI, pagesAPI } from '@/services/api';
+import { caseStudiesAPI, pagesAPI, reviewsAPI } from '@/services/api';
 import useWindowSize from '@/hooks/useWindowSize';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
@@ -362,6 +362,24 @@ const CaseStudyDetail = () => {
     },
   ]);
 
+  // Review settings from centralized API
+  const [reviewSettings, setReviewSettings] = useState({
+    sectionTitle: '*Look* what our client said..',
+    showHeadingOnPages: ['home', 'about', 'landing', 'landing-page-2', 'landing-page-3'],
+  });
+
+  // Helper to render title with *italic* syntax
+  const renderTitleWithItalics = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(\*[^*]+\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return <em key={i} style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+  };
+
   // Listen for editor updates from admin panel
   useEffect(() => {
     if (!isEditorMode) return;
@@ -448,12 +466,24 @@ const CaseStudyDetail = () => {
     }
   };
 
-  // Fetch testimonial content from Landing page (array of testimonials)
+  // Fetch testimonial content from Landing page (array of testimonials) and review settings
   const fetchTestimonialContent = async () => {
     try {
-      const response = await pagesAPI.getOne('landing');
-      if (response.data.data && response.data.data.content) {
-        const content = response.data.data.content;
+      const [landingResponse, settingsResponse] = await Promise.all([
+        pagesAPI.getOne('landing'),
+        reviewsAPI.getSettings().catch(() => ({ data: { data: null } })),
+      ]);
+
+      // Set review settings if available
+      if (settingsResponse.data?.data) {
+        setReviewSettings({
+          sectionTitle: settingsResponse.data.data.sectionTitle || '*Look* what our client said..',
+          showHeadingOnPages: settingsResponse.data.data.showHeadingOnPages || [],
+        });
+      }
+
+      if (landingResponse.data.data && landingResponse.data.data.content) {
+        const content = landingResponse.data.data.content;
         if (content.testimonials && Array.isArray(content.testimonials) && content.testimonials.length > 0) {
           setTestimonials(content.testimonials);
         }
@@ -1804,7 +1834,7 @@ const CaseStudyDetail = () => {
               color: '#000',
               marginBottom: isMobile ? '80px' : '60px',
             }}>
-              <em style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{aboutContent.clientLabelItalic}</em>{aboutContent.clientLabelNormal}
+              {renderTitleWithItalics(reviewSettings.sectionTitle)}
             </h3>
 
             {isMobile ? (

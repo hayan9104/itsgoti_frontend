@@ -9,6 +9,18 @@ const AVAILABLE_PAGES = [
   { id: 'landing-page-3', label: 'Landing Page 3', color: '#dc2626' },
 ];
 
+// Render text with *italic* syntax
+const renderTitleWithItalics = (text) => {
+  if (!text) return null;
+  const parts = text.split(/(\*[^*]+\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+};
+
 // Quote icon SVG
 const QuoteIcon = () => (
   <svg width="60" height="48" viewBox="0 0 60 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -24,6 +36,14 @@ const ReviewsManager = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [originalFormData, setOriginalFormData] = useState(null); // Track original data for change detection
+
+  // Settings state
+  const [settings, setSettings] = useState({
+    sectionTitle: 'Looks what our client said..',
+    showHeadingOnPages: ['home', 'about', 'landing', 'landing-page-2', 'landing-page-3'],
+  });
+  const [originalSettings, setOriginalSettings] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const [formData, setFormData] = useState({
     authorName: '',
@@ -51,8 +71,15 @@ const ReviewsManager = () => {
     return JSON.stringify(formData) !== JSON.stringify(originalFormData);
   };
 
+  // Check if settings have changed
+  const hasSettingsChanges = () => {
+    if (!originalSettings) return false;
+    return JSON.stringify(settings) !== JSON.stringify(originalSettings);
+  };
+
   useEffect(() => {
     fetchReviews();
+    fetchSettings();
   }, []);
 
   const fetchReviews = async () => {
@@ -69,6 +96,34 @@ const ReviewsManager = () => {
       console.error('Error fetching reviews:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const res = await reviewsAPI.getSettings();
+      const settingsData = res.data.data || {};
+      const newSettings = {
+        sectionTitle: settingsData.sectionTitle || 'Looks what our client said..',
+        showHeadingOnPages: settingsData.showHeadingOnPages || [],
+      };
+      setSettings(newSettings);
+      setOriginalSettings(newSettings);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await reviewsAPI.updateSettings(settings);
+      setOriginalSettings({ ...settings });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Failed to save settings');
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -181,6 +236,15 @@ const ReviewsManager = () => {
     });
   };
 
+  const handleHeadingPageToggle = (pageId) => {
+    setSettings(prev => {
+      const newPages = prev.showHeadingOnPages.includes(pageId)
+        ? prev.showHeadingOnPages.filter(p => p !== pageId)
+        : [...prev.showHeadingOnPages, pageId];
+      return { ...prev, showHeadingOnPages: newPages };
+    });
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
@@ -191,8 +255,8 @@ const ReviewsManager = () => {
 
   return (
     <div style={{ display: 'flex', gap: 24, height: 'calc(100vh - 150px)', minHeight: 600 }}>
-      {/* Left Side - Review List & Form */}
-      <div style={{ width: '45%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Left Side - Review List & Form (entire left side scrolls) */}
+      <div style={{ width: '45%', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', paddingRight: 8 }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -224,13 +288,68 @@ const ReviewsManager = () => {
           </button>
         </div>
 
+        {/* Section Settings */}
+        <div style={{
+          backgroundColor: '#fefce8',
+          borderRadius: 12,
+          border: '1px solid #fef08a',
+          padding: 16,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <svg width="16" height="16" fill="none" stroke="#ca8a04" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#854d0e' }}>Section Settings</span>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#713f12', marginBottom: 4 }}>
+              Section Heading
+            </label>
+            <input
+              type="text"
+              value={settings.sectionTitle}
+              onChange={(e) => setSettings(prev => ({ ...prev, sectionTitle: e.target.value }))}
+              placeholder="Looks what our client said.."
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: '1px solid #fde047',
+                fontSize: 14,
+                backgroundColor: '#fff',
+                boxSizing: 'border-box',
+              }}
+            />
+            <p style={{ fontSize: 11, color: '#a16207', marginTop: 4, fontStyle: 'italic' }}>
+              Use *text* for italic styling (e.g., "*Looks* what our client said..")
+            </p>
+          </div>
+
+          <button
+            onClick={saveSettings}
+            disabled={savingSettings || !hasSettingsChanges()}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: savingSettings || !hasSettingsChanges() ? '#fef08a' : '#eab308',
+              color: savingSettings || !hasSettingsChanges() ? '#a16207' : '#fff',
+              border: 'none',
+              borderRadius: 6,
+              cursor: savingSettings || !hasSettingsChanges() ? 'not-allowed' : 'pointer',
+              fontWeight: 500,
+              fontSize: 13,
+            }}
+          >
+            {savingSettings ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+
         {/* Review List */}
         <div style={{
           backgroundColor: '#f9fafb',
           borderRadius: 12,
           padding: 12,
-          maxHeight: 180,
-          overflowY: 'auto',
         }}>
           {reviews.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#6b7280', padding: 20 }}>
@@ -290,12 +409,10 @@ const ReviewsManager = () => {
 
         {/* Edit Form */}
         <div style={{
-          flex: 1,
           backgroundColor: '#fff',
           borderRadius: 12,
           border: '1px solid #e5e7eb',
           padding: 20,
-          overflowY: 'auto',
         }}>
           <form onSubmit={handleSubmit}>
             <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', marginBottom: 16 }}>
@@ -551,7 +668,7 @@ const ReviewsManager = () => {
             textAlign: 'center',
             marginBottom: 40,
           }}>
-            <em>Looks</em> what our client said..
+            {renderTitleWithItalics(settings.sectionTitle)}
           </h2>
 
           {/* Review Content */}

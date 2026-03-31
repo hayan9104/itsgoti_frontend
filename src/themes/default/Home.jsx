@@ -185,6 +185,24 @@ const Home = () => {
     clientLabelNormal: 'what our client said..',
   });
 
+  // Review settings from centralized API
+  const [reviewSettings, setReviewSettings] = useState({
+    sectionTitle: '*Look* what our client said..',
+    showHeadingOnPages: ['home', 'about', 'landing', 'landing-page-2', 'landing-page-3'],
+  });
+
+  // Helper to render title with *italic* syntax
+  const renderTitleWithItalics = (text) => {
+    if (!text) return null;
+    const parts = text.split(/(\*[^*]+\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('*') && part.endsWith('*')) {
+        return <em key={i} style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+  };
+
   const [testimonials, setTestimonials] = useState([
     {
       id: 1,
@@ -270,15 +288,22 @@ const Home = () => {
 
   const fetchTestimonialData = async () => {
     try {
-      // Fetch heading from About page and centralized reviews in parallel
-      const [aboutResponse, reviewsResponse, landingResponse] = await Promise.all([
+      // Fetch heading from About page, centralized reviews, and settings in parallel
+      const [aboutResponse, reviewsResponse, landingResponse, settingsResponse] = await Promise.all([
         pagesAPI.getOne('about'),
         reviewsAPI.getByPage('home').catch(() => ({ data: { data: [] } })),
         pagesAPI.getOne('landing'),
+        reviewsAPI.getSettings().catch(() => ({ data: { data: null } })),
       ]);
 
-      // Set heading from About page
-      if (aboutResponse.data.data?.content) {
+      // Set heading settings from centralized settings (priority) or fallback to About page
+      if (settingsResponse.data?.data) {
+        setReviewSettings({
+          sectionTitle: settingsResponse.data.data.sectionTitle || '*Look* what our client said..',
+          showHeadingOnPages: settingsResponse.data.data.showHeadingOnPages || [],
+        });
+      } else if (aboutResponse.data.data?.content) {
+        // Fallback: Set heading from About page
         const aboutContent = aboutResponse.data.data.content;
         setTestimonialHeading(prev => ({
           ...prev,
@@ -2023,7 +2048,7 @@ const Home = () => {
               color: '#000',
               marginBottom: isMobile ? '40px' : '60px',
             }}>
-              <em style={{ fontFamily: "'Plus Jakarta Sans-SemiBoldItalic', 'Plus Jakarta Sans', sans-serif", fontStyle: 'italic', marginRight: '0.25em' }}>{testimonialHeading.clientLabelItalic}</em>{testimonialHeading.clientLabelNormal}
+              {renderTitleWithItalics(reviewSettings.sectionTitle)}
             </h3>
 
             {isMobile ? (
