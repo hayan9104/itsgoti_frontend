@@ -12,11 +12,35 @@ const ServicesArrayEditor = ({ field, value = [], onChange }) => {
   const services = Array.isArray(value) ? value : [];
   const maxItems = field.maxItems || 6;
   const [uploadingIndex, setUploadingIndex] = useState(null);
+  const [expandedIndex, setExpandedIndex] = useState(null);
 
   const handleAdd = () => {
     if (services.length >= maxItems) return;
-    const newServices = [...services, { icon: 'design', text: '', iconImage: '' }];
+    const newServices = [...services, {
+      icon: 'design',
+      text: '',
+      iconImage: '',
+      pointsTitle: '',
+      points: ['', '', '', ''],
+      highlightPoint: ''
+    }];
     onChange(newServices);
+  };
+
+  const handlePointChange = (serviceIndex, pointIndex, newValue) => {
+    const newServices = services.map((item, i) => {
+      if (i === serviceIndex) {
+        const newPoints = [...(item.points || ['', '', '', ''])];
+        newPoints[pointIndex] = newValue;
+        return { ...item, points: newPoints };
+      }
+      return item;
+    });
+    onChange(newServices);
+  };
+
+  const toggleExpanded = (index) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   const handleRemove = (index) => {
@@ -257,6 +281,143 @@ const ServicesArrayEditor = ({ field, value = [], onChange }) => {
                 onFocus={(e) => e.target.style.borderColor = '#2563eb'}
                 onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
               />
+            </div>
+
+            {/* Points Section - Expandable */}
+            <div style={{ marginTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => toggleExpanded(index)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  backgroundColor: '#e5e7eb',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: '#374151',
+                }}
+              >
+                <span>Feature Points (shown when active)</span>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  style={{
+                    transform: expandedIndex === index ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s',
+                  }}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+
+              {expandedIndex === index && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '12px',
+                  backgroundColor: '#fff',
+                  borderRadius: '4px',
+                  border: '1px solid #d1d5db',
+                }}>
+                  {/* Points Title */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: '#6b7280',
+                      marginBottom: '4px',
+                    }}>
+                      Section Title (e.g., "DESIGN:")
+                    </label>
+                    <input
+                      type="text"
+                      value={item.pointsTitle || ''}
+                      onChange={(e) => handleChange(index, 'pointsTitle', e.target.value)}
+                      placeholder={`${item.text?.toUpperCase() || 'TITLE'}:`}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        fontSize: '14px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  {/* Feature Points */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: '#6b7280',
+                      marginBottom: '6px',
+                    }}>
+                      Feature Points (4 points)
+                    </label>
+                    {[0, 1, 2, 3].map((pointIdx) => (
+                      <input
+                        key={pointIdx}
+                        type="text"
+                        value={(item.points || [])[pointIdx] || ''}
+                        onChange={(e) => handlePointChange(index, pointIdx, e.target.value)}
+                        placeholder={`Point ${pointIdx + 1}`}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          fontSize: '13px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '4px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          marginBottom: '6px',
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Highlight Point */}
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      color: '#6b7280',
+                      marginBottom: '4px',
+                    }}>
+                      Highlight Point (shown with orange background)
+                    </label>
+                    <input
+                      type="text"
+                      value={item.highlightPoint || ''}
+                      onChange={(e) => handleChange(index, 'highlightPoint', e.target.value)}
+                      placeholder="e.g., Money Saved: 20K INR"
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        fontSize: '14px',
+                        border: '1px solid #FFA562',
+                        borderRadius: '4px',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        backgroundColor: '#FFF7ED',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}

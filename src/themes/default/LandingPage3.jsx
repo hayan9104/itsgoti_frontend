@@ -541,14 +541,69 @@ const LandingPage3 = () => {
     // Solution Section
     solutionTitle: 'Design a Shopify store that actually sells.',
     services: [
-      { icon: 'design', text: 'Design' },
-      { icon: 'development', text: 'Developement' },
-      { icon: 'support', text: 'Support' },
-      { icon: 'apps', text: 'Third-Party Apps' },
-      { icon: 'copywriting', text: 'Copywriting' },
+      {
+        icon: 'design',
+        text: 'Custom Design',
+        pointsTitle: 'DESIGN:',
+        points: [
+          'Improve layouts and product pages',
+          'customer flow to reduce friction',
+          '30+ pre-built UI components & animated sections',
+          '20+ flexible themes powered by daisyUI',
+        ],
+        highlightPoint: 'Money Saved: 20K INR + Time Saved: 20Hrs',
+      },
+      {
+        icon: 'development',
+        text: 'Ad ROI',
+        pointsTitle: 'DEVELOPMENT:',
+        points: [
+          'Custom Shopify theme development',
+          'Speed optimization & performance',
+          'Third-party app integrations',
+          'Mobile-first responsive design',
+        ],
+        highlightPoint: 'Money Saved: 30K INR + Time Saved: 40Hrs',
+      },
+      {
+        icon: 'support',
+        text: 'Speed',
+        pointsTitle: 'SUPPORT:',
+        points: [
+          '24/7 technical assistance',
+          'Bug fixes and troubleshooting',
+          'Regular maintenance updates',
+          'Priority response for critical issues',
+        ],
+        highlightPoint: 'Response Time: Under 2 Hours',
+      },
+      {
+        icon: 'apps',
+        text: 'App Freedom',
+        pointsTitle: 'THIRD-PARTY APPS:',
+        points: [
+          'Expert app recommendations',
+          'Seamless integration setup',
+          'Custom app configurations',
+          'Performance monitoring',
+        ],
+        highlightPoint: 'Apps Integrated: 50+ Popular Shopify Apps',
+      },
+      {
+        icon: 'copywriting',
+        text: 'More',
+        pointsTitle: 'COPYWRITING:',
+        points: [
+          'Conversion-focused product descriptions',
+          'SEO-optimized content',
+          'Brand voice development',
+          'Email marketing templates',
+        ],
+        highlightPoint: 'Conversion Boost: +35% Average',
+      },
     ],
 
-    // Features Groups (auto-rotating) - matches services icons order
+    // Features Groups (auto-rotating) - matches services icons order (legacy fallback)
     featureGroups: [
       {
         title: 'DESIGN:',
@@ -689,11 +744,11 @@ const LandingPage3 = () => {
   const rotationStartedRef = useRef(false);
   const featureGroupsLengthRef = useRef(5); // Default to 5, will be updated
 
-  // Update the length ref when content changes
+  // Update the length ref when content changes (use services length, not featureGroups)
   useEffect(() => {
-    const featureGroups = content.featureGroups || defaultContent.featureGroups || [];
-    featureGroupsLengthRef.current = featureGroups.length;
-  }, [content.featureGroups]);
+    const services = content.services || defaultContent.services || [];
+    featureGroupsLengthRef.current = services.length || 5;
+  }, [content.services]);
 
   useEffect(() => {
     const startRotation = () => {
@@ -1880,8 +1935,18 @@ const LandingPage3 = () => {
       {/* Solution Section - Combined with Features (auto-rotating) */}
       {shouldRenderSection('solution') && (() => {
         const featureGroups = content.featureGroups || defaultContent.featureGroups || [];
-        const currentGroup = featureGroups[currentFeatureGroup] || featureGroups[0];
         const services = ensureArray(content.services, defaultContent.services);
+        const currentService = services[currentFeatureGroup] || services[0];
+
+        // Use service's own points if available, otherwise fall back to featureGroups
+        const hasServicePoints = currentService && currentService.points && currentService.points.some(p => p && p.trim());
+        const currentGroup = hasServicePoints
+          ? {
+              title: currentService.pointsTitle || `${currentService.text?.toUpperCase()}:`,
+              points: currentService.points?.filter(p => p && p.trim()) || [],
+              highlightPoint: currentService.highlightPoint || ''
+            }
+          : (featureGroups[currentFeatureGroup] || featureGroups[0]);
 
         return (
           <div ref={featuresSectionRef} className="scroll-reveal-scale">
