@@ -74,9 +74,9 @@ export const landingPage3Sections = [
   {
     id: 'clients',
     label: 'Clients Marquee',
-    description: '⚠️ Client logos are fetched from Landing Page 2. Edit them in Landing Page 2 settings.',
+    description: 'Client logos from centralized Client Logos management',
     fields: [
-      { key: '_info', type: 'text', label: 'ℹ️ Note', hint: 'This section displays client logos from Landing Page 2. To add/edit logos, go to Landing Page 2 editor.' },
+      { key: '_info', type: 'text', label: 'ℹ️ Note', hint: 'This section displays client logos from Client Logos management. Go to Pages → Client Logos to add/edit logos.' },
     ]
   },
   {
@@ -88,23 +88,26 @@ export const landingPage3Sections = [
       { key: 'pricingTitle', type: 'text', label: 'Pricing Title', hint: 'e.g. "Stuck at 7 figures/year?"' },
       { key: 'pricingSubtitle', type: 'text', label: 'Pricing Subtitle', hint: 'e.g. "Not for long"' },
       { key: 'pricingDescription', type: 'textarea', label: 'Pricing Description' },
+      // Most Popular Badge
+      { key: 'mostPopularLine1', type: 'text', label: 'Arrow Badge Line 1', hint: 'e.g. "MOST POPULAR"' },
+      { key: 'mostPopularLine2', type: 'text', label: 'Arrow Badge Line 2', hint: 'e.g. "FOR GROWING STORES"' },
       // Plan 1 - Green Card
+      { key: 'plan1StartsFrom', type: 'text', label: 'Plan 1 "Starts From" Label', hint: 'e.g. "Starts from" or "Starting at"' },
       { key: 'plan1Price', type: 'text', label: 'Plan 1 Price', hint: 'e.g. "$XX / MONTH"' },
       { key: 'plan1Subtitle', type: 'text', label: 'Plan 1 Subtitle', hint: 'e.g. "Everything you need to scale faster."' },
-      { key: 'plan1BusinessTitle', type: 'text', label: 'Plan 1 Business Title', hint: 'e.g. "If your business"' },
+      { key: 'plan1FeaturesHeading', type: 'text', label: 'Plan 1 Features Heading', hint: 'e.g. "What do you receive"' },
+      { key: 'plan1Features', type: 'textarea', label: 'Plan 1 Features (one per line)', hint: 'Features list. Use **text** for bold. e.g. "Custom Shopify Theme Development"' },
+      { key: 'plan1BoxHeading', type: 'text', label: 'Plan 1 Inner Box Heading', hint: 'e.g. "HOW IS THIS RIGHT FOR YOU?"' },
       { key: 'plan1Criteria', type: 'textarea', label: 'Plan 1 Criteria (one per line)', hint: 'Business criteria for this plan' },
-      { key: 'plan1MeansTitle', type: 'text', label: 'Plan 1 "What This Means" Title' },
-      { key: 'plan1MeansDescription', type: 'textarea', label: 'Plan 1 "What This Means" Description' },
-      { key: 'plan1Conclusion', type: 'text', label: 'Plan 1 Conclusion', hint: 'Bold text at bottom' },
       { key: 'plan1ButtonText', type: 'text', label: 'Plan 1 Button Text', hint: 'e.g. "GET STARTED"' },
       // Plan 2 - White Card
+      { key: 'plan2StartsFrom', type: 'text', label: 'Plan 2 "Starts From" Label', hint: 'e.g. "Starts from" or "Starting at"' },
       { key: 'plan2Price', type: 'text', label: 'Plan 2 Price', hint: 'e.g. "$XX / MONTH"' },
       { key: 'plan2Subtitle', type: 'text', label: 'Plan 2 Subtitle' },
-      { key: 'plan2BusinessTitle', type: 'text', label: 'Plan 2 Business Title' },
+      { key: 'plan2FeaturesHeading', type: 'text', label: 'Plan 2 Features Heading', hint: 'e.g. "What do you receive"' },
+      { key: 'plan2Features', type: 'textarea', label: 'Plan 2 Features (one per line)', hint: 'Features list. Use **text** for bold. e.g. "Pre-built Shopify Theme **(No Custom Development)**"' },
+      { key: 'plan2BoxHeading', type: 'text', label: 'Plan 2 Inner Box Heading', hint: 'e.g. "HOW IS THIS RIGHT FOR YOU?"' },
       { key: 'plan2Criteria', type: 'textarea', label: 'Plan 2 Criteria (one per line)' },
-      { key: 'plan2MeansTitle', type: 'text', label: 'Plan 2 "What This Means" Title' },
-      { key: 'plan2MeansDescription', type: 'textarea', label: 'Plan 2 "What This Means" Description' },
-      { key: 'plan2Conclusion', type: 'text', label: 'Plan 2 Conclusion' },
       { key: 'plan2ButtonText', type: 'text', label: 'Plan 2 Button Text', hint: 'e.g. "GET STARTED"' },
     ]
   },

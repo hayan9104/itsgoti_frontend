@@ -682,9 +682,24 @@ const LandingPage3 = () => {
     pricingSubtitle: 'Not for long',
     pricingDescription: "You need a design system that's built for performance—one that improves user experience, increases conversions, and helps your brand grow consistently.",
 
+    // Most Popular Badge (arrow text)
+    mostPopularLine1: 'MOST POPULAR',
+    mostPopularLine2: 'FOR GROWING STORES',
+
     // Plan 1 (Green card)
+    plan1StartsFrom: 'Starts from',
     plan1Price: '$XX / MONTH',
     plan1Subtitle: 'Everything you need to scale faster.',
+    plan1FeaturesHeading: 'What do you receive',
+    plan1Features: [
+      'Custom Shopify Theme Development',
+      'Responsive Mobile Optimization',
+      'SEO Setup & Optimization',
+      'Product Page Templates',
+      'Shopping Cart & Checkout Customization',
+      '30 Days Post-Launch Support',
+    ],
+    plan1BoxHeading: 'HOW IS THIS RIGHT FOR YOU?',
     plan1BusinessTitle: 'If your business',
     plan1Criteria: [
       'Generates $50K+ in monthly revenue',
@@ -697,8 +712,19 @@ const LandingPage3 = () => {
     plan1ButtonText: 'GET STARTED',
 
     // Plan 2 (White card)
+    plan2StartsFrom: 'Starts from',
     plan2Price: '$XX / MONTH',
     plan2Subtitle: 'Perfect for businesses getting started with growth.',
+    plan2FeaturesHeading: 'What do you receive',
+    plan2Features: [
+      'Pre-built Shopify Theme **(No Custom Development)**',
+      'Standard Mobile Responsiveness **(Theme Default)**',
+      'Basic Shopify SEO Settings Only',
+      'Standard Cart & Checkout',
+      'No Post-Launch Support Included',
+      'Theme-Based Design Only **(No Custom Features)**',
+    ],
+    plan2BoxHeading: 'HOW IS THIS RIGHT FOR YOU?',
     plan2BusinessTitle: 'If your business',
     plan2Criteria: [
       'Businesses with under < $20K monthly revenue',
@@ -2718,7 +2744,7 @@ const LandingPage3 = () => {
           <div className="scroll-reveal">
           <EditableSection
             sectionId="clients"
-            label="Clients Section (Data from Landing Page 2)"
+            label="Clients Section"
             isEditorMode={isEditorMode}
             isSelected={selectedSection === 'clients'}
             isHidden={isSectionHidden('clients')}
@@ -2760,60 +2786,51 @@ const LandingPage3 = () => {
                     animation: `marquee${rowIndex === 0 ? '' : 'Reverse'} ${25 + rowIndex * 5}s linear infinite`,
                     width: 'fit-content',
                   }}>
-                    {repeatedItems.map((item, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          padding: isMobile ? '8px' : '12px',
-                        }}
-                      >
-                        {lp2HasLogos && typeof item === 'string' && item.includes('/uploads/') ? (
-                          <img
-                            src={item.startsWith('http') ? item : `${import.meta.env.VITE_API_URL || ''}${item}`}
-                            alt={`Client ${index + 1}`}
-                            width={100}
-                            height={55}
-                            loading="lazy"
-                            style={{
-                              height: isMobile ? '35px' : '55px',
-                              width: 'auto',
-                              objectFit: 'contain',
-                              filter: 'grayscale(100%)',
-                              opacity: 0.7,
-                            }}
-                          />
-                        ) : lp2HasLogos && typeof item === 'object' && item.url ? (
-                          <img
-                            src={item.url.startsWith('http') ? item.url : `${import.meta.env.VITE_API_URL || ''}${item.url}`}
-                            alt={item.name || `Client ${index + 1}`}
-                            width={100}
-                            height={55}
-                            loading="lazy"
-                            style={{
-                              height: isMobile ? '35px' : '55px',
-                              width: 'auto',
-                              objectFit: 'contain',
-                              filter: 'grayscale(100%)',
-                              opacity: 0.7,
-                            }}
-                          />
-                        ) : (
-                          <span style={{
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: isMobile ? '16px' : '24px',
-                            fontWeight: 500,
-                            color: '#888',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            {typeof item === 'object' ? item.name : item}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                    {repeatedItems.map((item, index) => {
+                      // Check if item has an image (centralized logos use 'image', LP2 uses 'url')
+                      const imageUrl = typeof item === 'object' ? (item.image || item.url) : (typeof item === 'string' && item.includes('/uploads/') ? item : null);
+                      const logoName = typeof item === 'object' ? item.name : item;
+
+                      return (
+                        <div
+                          key={index}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            padding: isMobile ? '8px' : '12px',
+                          }}
+                        >
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl.startsWith('http') ? imageUrl : `${import.meta.env.VITE_API_URL || ''}${imageUrl}`}
+                              alt={logoName || `Client ${index + 1}`}
+                              width={100}
+                              height={55}
+                              loading="lazy"
+                              style={{
+                                height: isMobile ? '35px' : '55px',
+                                width: 'auto',
+                                objectFit: 'contain',
+                                filter: 'grayscale(100%)',
+                                opacity: 0.7,
+                              }}
+                            />
+                          ) : (
+                            <span style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: isMobile ? '16px' : '24px',
+                              fontWeight: 500,
+                              color: '#888',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {logoName}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -2830,7 +2847,7 @@ const LandingPage3 = () => {
                 border: '1px dashed #3b82f6',
               }}>
                 <span style={{ fontSize: '13px', color: '#1d4ed8' }}>
-                  ℹ️ Client logos are fetched from Landing Page 2. Edit them there.
+                  ℹ️ Client logos are from Client Logos management. Go to Pages → Client Logos to edit.
                 </span>
               </div>
             )}
@@ -2938,17 +2955,18 @@ const LandingPage3 = () => {
                   position: 'absolute',
                   top: '-75px',
                   right: '-290px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
+                  width: '350px',
                   zIndex: 10,
                 }}>
-                  {/* Arrow pointing to white card */}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="128" height="36" viewBox="0 0 128 36" fill="none" style={{ marginBottom: '5px', marginLeft: '-20px' }}>
+                  {/* Arrow pointing to white card - fixed position */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="128" height="36" viewBox="0 0 128 36" fill="none" style={{ position: 'absolute', top: 0, left: '-20px' }}>
                     <path d="M1.80713 35.38C0.978872 35.397 0.293694 34.7393 0.276735 33.9111L0.00033106 20.4139C-0.0166279 19.5856 0.641056 18.9005 1.46931 18.8835C2.29757 18.8665 2.98274 19.5242 2.9997 20.3525L3.24539 32.35L15.2429 32.1043C16.0711 32.0873 16.7563 32.745 16.7733 33.5733C16.7902 34.4015 16.1326 35.0867 15.3043 35.1036L1.80713 35.38ZM124.277 24.8796L122.944 24.191C125.124 19.9732 125.366 16.6276 124.39 13.9901C123.404 11.3277 121.055 9.05631 117.364 7.26279C109.937 3.65439 97.7715 2.32921 83.655 3.31639C69.5975 4.29944 53.8299 7.55945 39.3392 12.9135C24.8321 18.2736 11.7162 25.6911 2.85857 34.9191L1.77642 33.8804L0.694267 32.8416C9.98032 23.1673 23.5542 15.5475 38.2995 10.0994C53.0612 4.64527 69.1087 1.3263 83.4457 0.323699C97.7236 -0.674772 110.532 0.607713 118.675 4.56445C122.769 6.55351 125.854 9.30402 127.203 12.9485C128.562 16.6178 128.04 20.8639 125.609 25.5683L124.277 24.8796Z" fill="black"/>
                   </svg>
-                  {/* Text - Two rows: MOST POPULAR / FOR GROWING STORES */}
+                  {/* Text - Two rows: MOST POPULAR / FOR GROWING STORES - fixed position */}
                   <div style={{
+                    position: 'absolute',
+                    top: '45px',
+                    left: '70px',
                     transform: 'rotate(-0.464deg)',
                     color: '#000',
                     fontFamily: '"Caveat Brush", cursive',
@@ -2956,10 +2974,10 @@ const LandingPage3 = () => {
                     fontStyle: 'normal',
                     fontWeight: 400,
                     lineHeight: '1.1',
-                    marginLeft: '65px',
+                    whiteSpace: 'nowrap',
                   }}>
-                    <div>MOST POPULAR</div>
-                    <div>FOR GROWING STORES</div>
+                    <div>{content.mostPopularLine1 || 'MOST POPULAR'}</div>
+                    <div>{content.mostPopularLine2 || 'FOR GROWING STORES'}</div>
                   </div>
                 </div>
               )}
@@ -2970,17 +2988,19 @@ const LandingPage3 = () => {
                   position: 'absolute',
                   top: '-80px',
                   right: '0px',
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'flex-end',
+                  width: '200px',
+                  height: '80px',
                   zIndex: 10,
                 }}>
-                  {/* Arrow pointing to card - Mobile version */}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="70" height="45" viewBox="0 0 97 60" fill="none" style={{ marginRight: '5px', position: 'relative', top: '-10px', left: '25px' }}>
+                  {/* Arrow pointing to card - Mobile version - fixed position */}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="70" height="45" viewBox="0 0 97 60" fill="none" style={{ position: 'absolute', top: '10px', left: '25px' }}>
                     <path d="M9.02364 59.1962C8.30694 59.6117 7.38911 59.3676 6.97361 58.6509L0.202585 46.9717C-0.212913 46.255 0.0312489 45.3372 0.747942 44.9217C1.46463 44.5062 2.38246 44.7503 2.79796 45.467L8.81664 55.8485L19.1981 49.8298C19.9148 49.4143 20.8327 49.6585 21.2482 50.3752C21.6637 51.0919 21.4195 52.0097 20.7028 52.4252L9.02364 59.1962ZM95.1663 11.9872L93.6717 12.1135C93.389 8.76808 92.1187 6.56303 90.2237 5.15956C88.2794 3.71963 85.4842 2.98079 81.9196 3.00038C74.7705 3.03969 65.1561 6.12856 55.1496 11.3706C45.1793 16.5937 34.9813 23.8698 26.6846 32.0989C18.369 40.3468 12.0729 49.4426 9.72088 58.2842L8.2713 57.8985L6.82171 57.5129C9.36595 47.9489 16.0674 38.4041 24.572 29.9689C33.0955 21.5149 43.5405 14.0655 53.7574 8.71321C63.9381 3.37992 74.0551 0.0435748 81.9031 0.000429219C85.8371 -0.0211982 89.3568 0.784423 92.0092 2.74873C94.7107 4.74949 96.3186 7.80845 96.661 11.8609L95.1663 11.9872Z" fill="black"/>
                   </svg>
-                  {/* Text - Two rows: MOST POPULAR / FOR GROWING STORES - Mobile */}
+                  {/* Text - Two rows: MOST POPULAR / FOR GROWING STORES - Mobile - fixed position */}
                   <div style={{
+                    position: 'absolute',
+                    top: '35px',
+                    right: '0px',
                     transform: 'rotate(-0.464deg)',
                     color: '#000',
                     fontFamily: '"Caveat Brush", cursive',
@@ -2988,10 +3008,10 @@ const LandingPage3 = () => {
                     fontStyle: 'normal',
                     fontWeight: 400,
                     lineHeight: '1.1',
-                    marginTop: '25px',
+                    whiteSpace: 'nowrap',
                   }}>
-                    <div>MOST POPULAR</div>
-                    <div>FOR GROWING STORES</div>
+                    <div>{content.mostPopularLine1 || 'MOST POPULAR'}</div>
+                    <div>{content.mostPopularLine2 || 'FOR GROWING STORES'}</div>
                   </div>
                 </div>
               )}
@@ -3018,7 +3038,7 @@ const LandingPage3 = () => {
                     textTransform: 'uppercase',
                     margin: 0,
                   }}>
-                    <span style={{ fontWeight: 400 }}>Starts from</span> <span style={{ fontSize: isMobile ? '24px' : '32px' }}>{content.plan1Price || '$XX / MONTH'}</span>
+                    <span style={{ fontWeight: 400 }}>{content.plan1StartsFrom || 'Starts from'}</span> <span style={{ fontSize: isMobile ? '24px' : '32px' }}>{content.plan1Price || '$XX / MONTH'}</span>
                   </p>
                   <p style={{
                     fontFamily: "'Barlow', sans-serif",
@@ -3051,7 +3071,7 @@ const LandingPage3 = () => {
                     color: '#000',
                     margin: isMobile ? '0 0 12px' : '0 0 16px',
                   }}>
-                    What do you receive
+                    {content.plan1FeaturesHeading || 'What do you receive'}
                   </p>
                   <div style={{
                     fontFamily: "'Barlow', sans-serif",
@@ -3063,12 +3083,12 @@ const LandingPage3 = () => {
                     flexDirection: 'column',
                     gap: isMobile ? '4px' : '6px',
                   }}>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Custom Shopify Theme Development</p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Responsive Mobile Optimization</p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> SEO Setup & Optimization</p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Product Page Templates</p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> Shopping Cart & Checkout Customization</p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} /> 30 Days Post-Launch Support</p>
+                    {ensureArray(content.plan1Features, defaultContent.plan1Features).map((feature, idx) => (
+                      <p key={idx} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px' }} />
+                        <span dangerouslySetInnerHTML={{ __html: feature.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      </p>
+                    ))}
                   </div>
                 </div>
 
@@ -3086,7 +3106,7 @@ const LandingPage3 = () => {
                     color: '#000',
                     margin: isMobile ? '0 0 14px' : '0 0 16px',
                   }}>
-                    HOW IS THIS RIGHT FOR YOU?
+                    {content.plan1BoxHeading || 'HOW IS THIS RIGHT FOR YOU?'}
                   </p>
                   <div style={{
                     fontFamily: "'Barlow', sans-serif",
@@ -3098,15 +3118,12 @@ const LandingPage3 = () => {
                     flexDirection: 'column',
                     gap: isMobile ? '12px' : '16px',
                   }}>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} /> <span>Generates <strong>$50K+ in monthly revenue</strong></span>
-                    </p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} /> <span>Actively investing in <strong>marketing or paid ads</strong></span>
-                    </p>
-                    <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} /> <span>Companies looking to <strong>improve conversion and scale faster</strong></span>
-                    </p>
+                    {ensureArray(content.plan1Criteria, defaultContent.plan1Criteria).map((criteria, idx) => (
+                      <p key={idx} style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <img src={TickMark} alt="✓" style={{ width: '18px', height: '18px', marginTop: '4px' }} />
+                        <span dangerouslySetInnerHTML={{ __html: criteria.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      </p>
+                    ))}
                   </div>
                 </div>
 
@@ -3185,7 +3202,7 @@ const LandingPage3 = () => {
                   textTransform: 'uppercase',
                   margin: 0,
                 }}>
-                  <span style={{ fontWeight: 400 }}>Starts from</span> <span style={{ fontSize: isMobile ? '20px' : '26px' }}>{content.plan2Price || '$XX / MONTH'}</span>
+                  <span style={{ fontWeight: 400 }}>{content.plan2StartsFrom || 'Starts from'}</span> <span style={{ fontSize: isMobile ? '20px' : '26px' }}>{content.plan2Price || '$XX / MONTH'}</span>
                 </p>
                 <p style={{
                   fontFamily: "'Barlow', sans-serif",
@@ -3217,7 +3234,7 @@ const LandingPage3 = () => {
                   color: '#000',
                   margin: isMobile ? '0 0 10px' : '0 0 12px',
                 }}>
-                  What do you receive
+                  {content.plan2FeaturesHeading || 'What do you receive'}
                 </p>
                 <div style={{
                   fontFamily: "'Barlow', sans-serif",
@@ -3229,12 +3246,12 @@ const LandingPage3 = () => {
                   flexDirection: 'column',
                   gap: isMobile ? '3px' : '4px',
                 }}>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Pre-built Shopify Theme <strong>(No Custom Development)</strong></span></p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Standard Mobile Responsiveness <strong>(Theme Default)</strong></span></p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Basic Shopify SEO Settings Only</span></p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Standard Cart & Checkout</span></p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>No Post-Launch Support Included</span></p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}><img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} /> <span>Theme-Based Design Only <strong>(No Custom Features)</strong></span></p>
+                  {ensureArray(content.plan2Features, defaultContent.plan2Features).map((feature, idx) => (
+                    <p key={idx} style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '3px' }} />
+                      <span dangerouslySetInnerHTML={{ __html: feature.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    </p>
+                  ))}
                 </div>
               </div>
 
@@ -3253,7 +3270,7 @@ const LandingPage3 = () => {
                   color: '#000',
                   margin: isMobile ? '0 0 10px' : '0 0 12px',
                 }}>
-                  HOW IS THIS RIGHT FOR YOU?
+                  {content.plan2BoxHeading || 'HOW IS THIS RIGHT FOR YOU?'}
                 </p>
                 <div style={{
                   fontFamily: "'Barlow', sans-serif",
@@ -3265,15 +3282,12 @@ const LandingPage3 = () => {
                   flexDirection: 'column',
                   gap: isMobile ? '8px' : '10px',
                 }}>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                    <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} /> <span>Generates <strong>$50K+ in monthly revenue</strong></span>
-                  </p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                    <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} /> <span>Actively investing in <strong>marketing or paid ads</strong></span>
-                  </p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                    <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} /> <span>Companies looking to <strong>improve conversion and scale faster</strong></span>
-                  </p>
+                  {ensureArray(content.plan2Criteria, defaultContent.plan2Criteria).map((criteria, idx) => (
+                    <p key={idx} style={{ margin: 0, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <img src={TickMark} alt="✓" style={{ width: '14px', height: '14px', marginTop: '2px' }} />
+                      <span dangerouslySetInnerHTML={{ __html: criteria.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    </p>
+                  ))}
                 </div>
               </div>
 
