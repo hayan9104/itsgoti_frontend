@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Routes, Route } from 'react-router-dom';
-import { whatsappFlowsAPI } from '../services/api';
+import { whatsappFlowsAPI, uploadAPI } from '../services/api';
 import FlowBuilder from './whatsappBot/FlowBuilder';
 
 const API_BASE = '/api';
@@ -228,6 +228,7 @@ const FlowsList = ({ basePath }) => {
         mediaType: 'video',
         mediaUrl: '',
         filename: '',
+        delayHours: 6, // Default: send 6 hours after booking
         order: (prev.items?.length || 0),
       }]
     }));
@@ -247,6 +248,49 @@ const FlowsList = ({ basePath }) => {
       ...prev,
       items: prev.items.filter((_, i) => i !== index)
     }));
+  };
+
+  // Upload state for scheduled content items
+  const [uploadingIndex, setUploadingIndex] = useState(null);
+  const fileInputRefs = useRef({});
+
+  const handleScheduledFileUpload = async (index, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size based on type
+    const maxSizes = {
+      video: 16 * 1024 * 1024, // 16MB
+      image: 5 * 1024 * 1024,  // 5MB
+      document: 100 * 1024 * 1024, // 100MB
+    };
+    const mediaType = scheduledContent.items[index]?.mediaType || 'video';
+    const maxSize = maxSizes[mediaType] || maxSizes.video;
+
+    if (file.size > maxSize) {
+      alert(`File too large! Maximum size for ${mediaType}: ${Math.round(maxSize / 1024 / 1024)}MB`);
+      return;
+    }
+
+    setUploadingIndex(index);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await uploadAPI.uploadFile(formData);
+
+      // Update the item with the uploaded URL
+      updateScheduledItem(index, 'mediaUrl', res.data.url);
+
+      // Also store original filename for documents
+      if (mediaType === 'document' && !scheduledContent.items[index]?.filename) {
+        updateScheduledItem(index, 'filename', file.name);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Error uploading file. Please try again.');
+    } finally {
+      setUploadingIndex(null);
+    }
   };
 
   if (loading) {
@@ -875,6 +919,41 @@ const FlowsList = ({ basePath }) => {
                         </button>
                       </div>
 
+                      {/* Send After Hours */}
+                      <div style={{
+                        marginBottom: 12,
+                        padding: '10px 12px',
+                        backgroundColor: '#eff6ff',
+                        borderRadius: 6,
+                        border: '1px solid #bfdbfe',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}>
+                        <svg width="16" height="16" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span style={{ fontSize: 13, color: '#1e40af' }}>Send after</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="72"
+                          value={item.delayHours ?? 6}
+                          onChange={(e) => updateScheduledItem(index, 'delayHours', parseInt(e.target.value) || 6)}
+                          style={{
+                            width: 60,
+                            padding: '4px 8px',
+                            borderRadius: 4,
+                            border: '1px solid #93c5fd',
+                            fontSize: 14,
+                            textAlign: 'center',
+                            fontWeight: 600,
+                            color: '#1e40af',
+                          }}
+                        />
+                        <span style={{ fontSize: 13, color: '#1e40af' }}>hours from booking</span>
+                      </div>
+
                       {/* Media Type */}
                       <div style={{ marginBottom: 12 }}>
                         <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>
@@ -899,12 +978,103 @@ const FlowsList = ({ basePath }) => {
                         </select>
                       </div>
 
-                      {/* Media URL */}
+                      {/* Media Upload & URL */}
                       {item.mediaType !== 'none' && (
                         <div style={{ marginBottom: 12 }}>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>
-                            Media URL
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 8 }}>
+                            Upload Media
                           </label>
+
+                          {/* Upload Button */}
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                            <input
+                              type="file"
+                              ref={el => fileInputRefs.current[index] = el}
+                              onChange={(e) => handleScheduledFileUpload(index, e)}
+                              accept={
+                                item.mediaType === 'image' ? 'image/*' :
+                                item.mediaType === 'video' ? 'video/*' :
+                                item.mediaType === 'document' ? '.pdf,.doc,.docx' : '*/*'
+                              }
+                              style={{ display: 'none' }}
+                            />
+                            <button
+                              onClick={() => fileInputRefs.current[index]?.click()}
+                              disabled={uploadingIndex === index}
+                              style={{
+                                padding: '10px 16px',
+                                backgroundColor: uploadingIndex === index ? '#9ca3af' : '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 6,
+                                fontSize: 13,
+                                fontWeight: 500,
+                                cursor: uploadingIndex === index ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
+                            >
+                              {uploadingIndex === index ? (
+                                <>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{ animation: 'spin 1s linear infinite' }}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                  </svg>
+                                  Choose {item.mediaType === 'image' ? 'Image' : item.mediaType === 'video' ? 'Video' : 'File'}
+                                </>
+                              )}
+                            </button>
+                            <span style={{ fontSize: 12, color: '#6b7280', alignSelf: 'center' }}>
+                              {item.mediaType === 'video' ? 'Max 16MB' : item.mediaType === 'image' ? 'Max 5MB' : 'Max 100MB'}
+                            </span>
+                          </div>
+
+                          {/* Show uploaded file */}
+                          {item.mediaUrl && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              padding: '8px 12px',
+                              backgroundColor: '#dcfce7',
+                              borderRadius: 6,
+                              marginBottom: 8,
+                            }}>
+                              <svg width="16" height="16" fill="none" stroke="#16a34a" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span style={{ fontSize: 12, color: '#16a34a', flex: 1, wordBreak: 'break-all' }}>
+                                {item.mediaUrl}
+                              </span>
+                              <button
+                                onClick={() => updateScheduledItem(index, 'mediaUrl', '')}
+                                style={{
+                                  padding: '2px 6px',
+                                  backgroundColor: 'transparent',
+                                  color: '#dc2626',
+                                  border: 'none',
+                                  fontSize: 11,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Or enter URL manually */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <div style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
+                            <span style={{ fontSize: 11, color: '#9ca3af' }}>or enter URL</span>
+                            <div style={{ flex: 1, height: 1, backgroundColor: '#e5e7eb' }} />
+                          </div>
                           <input
                             type="text"
                             value={item.mediaUrl || ''}
@@ -915,12 +1085,9 @@ const FlowsList = ({ basePath }) => {
                               padding: '8px 10px',
                               borderRadius: 6,
                               border: '1px solid #e5e7eb',
-                              fontSize: 14,
+                              fontSize: 13,
                             }}
                           />
-                          <p style={{ fontSize: 11, color: '#9ca3af', margin: '4px 0 0 0' }}>
-                            Video: 16MB max | Image: 5MB max | PDF: 100MB max
-                          </p>
                         </div>
                       )}
 

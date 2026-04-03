@@ -146,6 +146,11 @@ export const uploadAPI = {
     api.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  // Upload any file (video, image, document)
+  uploadFile: (formData) =>
+    api.post('/upload/file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
 
 // WhatsApp Flows API (Flow Builder)
