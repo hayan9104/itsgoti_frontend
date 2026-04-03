@@ -55,14 +55,30 @@ const triggerOptions = [
 ];
 
 const actionTypes = [
+  { value: 'send_template', label: 'Send Template' },
+  { value: 'send_media', label: 'Send Media' },
+  { value: 'send_change_link', label: 'Send Change Link' },
+  { value: 'notify_admin', label: 'Notify Admin' },
   { value: 'confirm_booking', label: 'Confirm Booking' },
   { value: 'deny_booking', label: 'Deny Booking' },
   { value: 'approve_reschedule', label: 'Approve Reschedule' },
   { value: 'deny_reschedule', label: 'Deny Reschedule' },
-  { value: 'send_to_admin', label: 'Notify Admin' },
   { value: 'save_response', label: 'Save Response' },
   { value: 'set_variable', label: 'Set Variable' },
   { value: 'webhook', label: 'Call Webhook' },
+];
+
+// Available MSG91 templates
+const templateOptions = [
+  { value: 'booking_received', label: 'Booking Received (to User)' },
+  { value: 'booking_admin_notify', label: 'Booking Admin Notify (to Admin)' },
+  { value: 'booking_confirmed', label: 'Booking Confirmed (to User)' },
+  { value: 'booking_denied', label: 'Booking Denied (to User)' },
+  { value: 'quick_question', label: 'Quick Question (to User)' },
+  { value: 'share_media_ask', label: 'Share Media Ask (to User)' },
+  { value: 'reschedule_approved', label: 'Reschedule Approved (to User)' },
+  { value: 'reschedule_denied', label: 'Reschedule Denied (to User)' },
+  { value: 'meeting_reminder', label: 'Meeting Reminder (to User)' },
 ];
 
 // Generate unique ID
@@ -279,11 +295,14 @@ const FlowBuilder = ({ basePath }) => {
   // Draw connections between nodes
   const renderConnections = () => {
     const connections = [];
+    const nodeWidth = 280;
+    const nodeHeight = 80;
 
     flow.nodes.forEach(node => {
       const sourceNode = node;
-      const sourceX = sourceNode.position.x + 140;
-      const sourceY = sourceNode.position.y + 40;
+      // Source: bottom-center of node
+      const sourceX = sourceNode.position.x + nodeWidth / 2;
+      const sourceY = sourceNode.position.y + nodeHeight;
 
       // Simple next node connection
       if (node.data.nextNodeId) {
@@ -292,7 +311,7 @@ const FlowBuilder = ({ basePath }) => {
           connections.push({
             key: `${node.id}-next`,
             from: { x: sourceX, y: sourceY },
-            to: { x: targetNode.position.x, y: targetNode.position.y + 40 },
+            to: { x: targetNode.position.x + nodeWidth / 2, y: targetNode.position.y },
             color: '#94a3b8',
           });
         }
@@ -305,8 +324,8 @@ const FlowBuilder = ({ basePath }) => {
           if (trueNode) {
             connections.push({
               key: `${node.id}-true`,
-              from: { x: sourceX, y: sourceY - 10 },
-              to: { x: trueNode.position.x, y: trueNode.position.y + 40 },
+              from: { x: sourceX - 40, y: sourceY },
+              to: { x: trueNode.position.x + nodeWidth / 2, y: trueNode.position.y },
               color: '#22c55e',
               label: 'Yes',
             });
@@ -317,8 +336,8 @@ const FlowBuilder = ({ basePath }) => {
           if (falseNode) {
             connections.push({
               key: `${node.id}-false`,
-              from: { x: sourceX, y: sourceY + 10 },
-              to: { x: falseNode.position.x, y: falseNode.position.y + 40 },
+              from: { x: sourceX + 40, y: sourceY },
+              to: { x: falseNode.position.x + nodeWidth / 2, y: falseNode.position.y },
               color: '#ef4444',
               label: 'No',
             });
@@ -326,16 +345,19 @@ const FlowBuilder = ({ basePath }) => {
         }
       }
 
-      // Question options
+      // Question options - spread from bottom of node
       if (node.data.options) {
+        const optCount = node.data.options.length;
         node.data.options.forEach((opt, idx) => {
           if (opt.nextNodeId) {
             const targetNode = flow.nodes.find(n => n.id === opt.nextNodeId);
             if (targetNode) {
+              // Spread options across bottom of node
+              const offsetX = optCount > 1 ? (idx - (optCount - 1) / 2) * 60 : 0;
               connections.push({
                 key: `${node.id}-opt-${idx}`,
-                from: { x: sourceX, y: sourceY + (idx * 10) },
-                to: { x: targetNode.position.x, y: targetNode.position.y + 40 },
+                from: { x: sourceX + offsetX, y: sourceY },
+                to: { x: targetNode.position.x + nodeWidth / 2, y: targetNode.position.y },
                 color: '#8b5cf6',
                 label: opt.label,
               });
@@ -345,17 +367,53 @@ const FlowBuilder = ({ basePath }) => {
       }
     });
 
-    return connections.map(conn => (
-      <g key={conn.key}>
-        <path
-          d={`M ${conn.from.x} ${conn.from.y} C ${conn.from.x + 50} ${conn.from.y}, ${conn.to.x - 50} ${conn.to.y}, ${conn.to.x} ${conn.to.y}`}
-          stroke={conn.color}
-          strokeWidth="2"
-          fill="none"
-          markerEnd="url(#arrowhead)"
-        />
-      </g>
-    ));
+    return connections.map(conn => {
+      // Calculate orthogonal (right-angle) path like tree diagram
+      const fromX = conn.from.x;
+      const fromY = conn.from.y;
+      const toX = conn.to.x;
+      const toY = conn.to.y;
+
+      // Determine path based on relative positions
+      let pathD;
+      const midY = fromY + (toY - fromY) / 2;
+
+      if (Math.abs(fromX - toX) < 20) {
+        // Nodes are vertically aligned - straight line down
+        pathD = `M ${fromX} ${fromY} L ${fromX} ${toY}`;
+      } else if (toY > fromY) {
+        // Target is below - go down, then horizontal, then down
+        pathD = `M ${fromX} ${fromY} L ${fromX} ${midY} L ${toX} ${midY} L ${toX} ${toY}`;
+      } else {
+        // Target is above or same level - go horizontal then vertical
+        const midX = fromX + (toX - fromX) / 2;
+        pathD = `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`;
+      }
+
+      return (
+        <g key={conn.key}>
+          <path
+            d={pathD}
+            stroke={conn.color}
+            strokeWidth="2"
+            fill="none"
+            markerEnd="url(#arrowhead)"
+            strokeLinejoin="round"
+          />
+          {conn.label && (
+            <text
+              x={(fromX + toX) / 2}
+              y={midY - 5}
+              fontSize="10"
+              fill={conn.color}
+              textAnchor="middle"
+            >
+              {conn.label}
+            </text>
+          )}
+        </g>
+      );
+    });
   };
 
   if (loading) {
@@ -367,7 +425,7 @@ const FlowBuilder = ({ basePath }) => {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: 'calc(100vh - 130px)', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxWidth: '100%' }}>
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -487,14 +545,19 @@ const FlowBuilder = ({ basePath }) => {
       </div>
 
       {/* Main Content */}
-      <div style={{ display: 'flex', flex: 1, gap: 16, overflow: 'hidden' }}>
-        {/* Node Palette */}
+      <div style={{ display: 'flex', flex: 1, gap: 16, overflow: 'hidden', width: '100%', minWidth: 0 }}>
+        {/* Node Palette - Fixed Left Sidebar */}
         <div style={{
           width: 200,
+          minWidth: 200,
+          maxWidth: 200,
+          flexShrink: 0,
+          flexGrow: 0,
           backgroundColor: '#fff',
           borderRadius: 12,
           padding: 16,
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          overflowY: 'auto',
         }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
             Add Nodes
@@ -542,27 +605,47 @@ const FlowBuilder = ({ basePath }) => {
           </div>
         </div>
 
-        {/* Canvas */}
+        {/* Canvas - with scroll */}
         <div
-          ref={canvasRef}
-          className="canvas-bg"
-          onDrop={handleCanvasDrop}
-          onDragOver={(e) => e.preventDefault()}
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={handleCanvasMouseUp}
           style={{
-            flex: 1,
-            backgroundColor: '#f9fafb',
-            borderRadius: 12,
+            flex: '1 1 0',
+            minWidth: 0,
+            width: 0,
             overflow: 'hidden',
+            borderRadius: 12,
             position: 'relative',
-            backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-            cursor: isPanning ? 'grabbing' : 'default',
           }}
         >
+          <div
+            ref={canvasRef}
+            className="canvas-bg"
+            onDrop={handleCanvasDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+            style={{
+              width: '100%',
+              height: '100%',
+              backgroundColor: '#f9fafb',
+              overflow: 'auto',
+              position: 'relative',
+              backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',
+              backgroundSize: '20px 20px',
+              cursor: isPanning ? 'grabbing' : 'default',
+            }}
+          >
+            {/* Inner container with large size for scrolling */}
+            <div
+              style={{
+                position: 'relative',
+                width: 2000,
+                height: 1500,
+                transform: `scale(${zoom})`,
+                transformOrigin: '0 0',
+              }}
+            >
           {/* SVG for connections */}
           <svg
             style={{
@@ -572,8 +655,6 @@ const FlowBuilder = ({ basePath }) => {
               width: '100%',
               height: '100%',
               pointerEvents: 'none',
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transformOrigin: '0 0',
             }}
           >
             <defs>
@@ -592,12 +673,7 @@ const FlowBuilder = ({ basePath }) => {
           </svg>
 
           {/* Nodes */}
-          <div
-            style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-              transformOrigin: '0 0',
-            }}
-          >
+          <div>
             {flow.nodes.map(node => {
               const config = nodeTypes[node.type];
               const isStart = node.id === flow.startNodeId;
@@ -714,8 +790,10 @@ const FlowBuilder = ({ basePath }) => {
               );
             })}
           </div>
+          </div>{/* Close inner scrollable container */}
+          </div>{/* Close canvas scrollable */}
 
-          {/* Empty State */}
+          {/* Empty State - positioned in wrapper */}
           {flow.nodes.length === 0 && (
             <div style={{
               position: 'absolute',
@@ -724,6 +802,7 @@ const FlowBuilder = ({ basePath }) => {
               transform: 'translate(-50%, -50%)',
               textAlign: 'center',
               color: '#9ca3af',
+              pointerEvents: 'none',
             }}>
               <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ margin: '0 auto 12px' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
@@ -732,7 +811,7 @@ const FlowBuilder = ({ basePath }) => {
             </div>
           )}
 
-          {/* Zoom Controls */}
+          {/* Zoom Controls - positioned in wrapper */}
           <div style={{
             position: 'absolute',
             bottom: 16,
@@ -743,6 +822,7 @@ const FlowBuilder = ({ basePath }) => {
             borderRadius: 8,
             padding: 4,
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            zIndex: 10,
           }}>
             <button
               onClick={() => setZoom(z => Math.max(0.25, z - 0.25))}
@@ -784,7 +864,7 @@ const FlowBuilder = ({ basePath }) => {
               </svg>
             </button>
           </div>
-        </div>
+        </div>{/* Close canvas wrapper */}
 
         {/* Node Editor Panel */}
         {showNodePanel && selectedNode && (
@@ -858,12 +938,17 @@ const NodeEditorPanel = ({ node, nodes, isStartNode, onUpdate, onDelete, onSetSt
   return (
     <div style={{
       width: 320,
+      minWidth: 320,
+      maxWidth: 320,
+      flexShrink: 0,
+      flexGrow: 0,
       backgroundColor: '#fff',
       borderRadius: 12,
       boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      maxHeight: '100%',
     }}>
       {/* Panel Header */}
       <div style={{
@@ -985,6 +1070,32 @@ const NodeEditorPanel = ({ node, nodes, isStartNode, onUpdate, onDelete, onSetSt
                 <option value="list">List (up to 10)</option>
                 <option value="text_input">Text Input</option>
               </select>
+            </div>
+
+            {/* Optional: Use MSG91 Template instead of interactive buttons */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+                Use MSG91 Template (optional)
+              </label>
+              <select
+                value={node.data.templateName || ''}
+                onChange={(e) => onUpdate({ data: { ...node.data, templateName: e.target.value } })}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  fontSize: 14,
+                }}
+              >
+                <option value="">None (use interactive buttons)</option>
+                {templateOptions.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <p style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                If selected, sends MSG91 template instead of interactive buttons. Option labels must match template button text.
+              </p>
             </div>
 
             {(node.data.questionType === 'buttons' || node.data.questionType === 'list') && (
@@ -1141,32 +1252,74 @@ const NodeEditorPanel = ({ node, nodes, isStartNode, onUpdate, onDelete, onSetSt
 
         {/* Action Fields */}
         {node.type === 'action' && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
-              Action Type
-            </label>
-            <select
-              value={node.data.actionType || 'confirm_booking'}
-              onChange={(e) => onUpdate({ data: { ...node.data, actionType: e.target.value } })}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: 6,
-                fontSize: 14,
-              }}
-            >
-              {actionTypes.map(a => (
-                <option key={a.value} value={a.value}>{a.label}</option>
-              ))}
-            </select>
-          </div>
+          <>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+                Action Type
+              </label>
+              <select
+                value={node.data.actionType || 'send_template'}
+                onChange={(e) => onUpdate({ data: { ...node.data, actionType: e.target.value } })}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  fontSize: 14,
+                }}
+              >
+                {actionTypes.map(a => (
+                  <option key={a.value} value={a.value}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Template Name field for send_template action */}
+            {node.data.actionType === 'send_template' && (
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+                  Template Name
+                </label>
+                <select
+                  value={node.data.templateName || ''}
+                  onChange={(e) => onUpdate({ data: { ...node.data, templateName: e.target.value } })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="">Select Template</option>
+                  {templateOptions.map(t => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Await Response checkbox for send_template */}
+            {node.data.actionType === 'send_template' && (
+              <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="awaitResponse"
+                  checked={node.data.awaitResponse || false}
+                  onChange={(e) => onUpdate({ data: { ...node.data, awaitResponse: e.target.checked } })}
+                />
+                <label htmlFor="awaitResponse" style={{ fontSize: 12, color: '#374151' }}>
+                  Wait for user response (pauses flow until button click)
+                </label>
+              </div>
+            )}
+          </>
         )}
 
         {/* Delay Fields */}
         {node.type === 'delay' && (
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 70 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
                 Hours
               </label>
@@ -1184,7 +1337,7 @@ const NodeEditorPanel = ({ node, nodes, isStartNode, onUpdate, onDelete, onSetSt
                 }}
               />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 70 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
                 Minutes
               </label>
@@ -1194,6 +1347,25 @@ const NodeEditorPanel = ({ node, nodes, isStartNode, onUpdate, onDelete, onSetSt
                 max="59"
                 value={node.data.delayMinutes || 0}
                 onChange={(e) => onUpdate({ data: { ...node.data, delayMinutes: parseInt(e.target.value) || 0 } })}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  fontSize: 14,
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 70 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+                Seconds
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={node.data.delaySeconds || 0}
+                onChange={(e) => onUpdate({ data: { ...node.data, delaySeconds: parseInt(e.target.value) || 0 } })}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
