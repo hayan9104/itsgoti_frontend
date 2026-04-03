@@ -52,10 +52,25 @@ const FlowsList = ({ basePath }) => {
   // Check if reminders have unsaved changes
   const hasReminderChanges = initialReminders && JSON.stringify(reminders) !== JSON.stringify(initialReminders);
 
+  // Scheduled Content state
+  const [showScheduledContent, setShowScheduledContent] = useState(false);
+  const [scheduledContent, setScheduledContent] = useState({
+    enabled: false,
+    startTime: '19:00',
+    endTime: '21:00',
+    items: [],
+  });
+  const [initialScheduledContent, setInitialScheduledContent] = useState(null);
+  const [savingScheduledContent, setSavingScheduledContent] = useState(false);
+
+  // Check if scheduled content has unsaved changes
+  const hasScheduledContentChanges = initialScheduledContent && JSON.stringify(scheduledContent) !== JSON.stringify(initialScheduledContent);
+
   useEffect(() => {
     fetchFlows();
     fetchTemplates();
     fetchReminders();
+    fetchScheduledContent();
   }, []);
 
   const fetchFlows = async () => {
@@ -160,6 +175,78 @@ const FlowsList = ({ basePath }) => {
     } finally {
       setSavingReminders(false);
     }
+  };
+
+  const fetchScheduledContent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/meeting-settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data?.autoMessages) {
+        setScheduledContent(data.data.autoMessages);
+        setInitialScheduledContent(data.data.autoMessages);
+      }
+    } catch (error) {
+      console.error('Error fetching scheduled content:', error);
+    }
+  };
+
+  const saveScheduledContent = async () => {
+    setSavingScheduledContent(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/meeting-settings`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ autoMessages: scheduledContent }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInitialScheduledContent(scheduledContent);
+        alert('Scheduled content saved successfully!');
+      } else {
+        alert('Failed to save scheduled content');
+      }
+    } catch (error) {
+      console.error('Error saving scheduled content:', error);
+      alert('Failed to save scheduled content');
+    } finally {
+      setSavingScheduledContent(false);
+    }
+  };
+
+  const addScheduledItem = () => {
+    setScheduledContent(prev => ({
+      ...prev,
+      items: [...(prev.items || []), {
+        text: '',
+        mediaType: 'video',
+        mediaUrl: '',
+        filename: '',
+        order: (prev.items?.length || 0),
+      }]
+    }));
+  };
+
+  const updateScheduledItem = (index, field, value) => {
+    setScheduledContent(prev => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const removeScheduledItem = (index) => {
+    setScheduledContent(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
   };
 
   if (loading) {
@@ -615,6 +702,297 @@ const FlowsList = ({ basePath }) => {
                 }}
               >
                 {savingReminders ? 'Saving...' : 'Save Reminders'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Scheduled Content Section */}
+      <div style={{ marginTop: 16 }}>
+        <div
+          onClick={() => setShowScheduledContent(!showScheduledContent)}
+          style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 20,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                backgroundColor: '#dbeafe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <svg width="20" height="20" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>
+                  Scheduled Content
+                </h3>
+                <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                  Send videos/media to new clients at specific times (e.g., 7-9 PM)
+                </p>
+              </div>
+            </div>
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="#9ca3af"
+              viewBox="0 0 24 24"
+              style={{ transform: showScheduledContent ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {showScheduledContent && (
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '0 0 12px 12px',
+            padding: 20,
+            marginTop: -10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
+            borderTop: 'none',
+          }}>
+            {/* Enable Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={scheduledContent.enabled ?? false}
+                  onChange={(e) => setScheduledContent(prev => ({ ...prev, enabled: e.target.checked }))}
+                  style={{ width: 16, height: 16, marginRight: 8 }}
+                />
+                <span style={{ fontWeight: 600, fontSize: 14 }}>Enable Scheduled Content</span>
+              </label>
+            </div>
+
+            {/* Time Window */}
+            <div style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: 16, marginBottom: 16, border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 500, fontSize: 14, color: '#374151' }}>Send between</span>
+                <input
+                  type="time"
+                  value={scheduledContent.startTime || '19:00'}
+                  onChange={(e) => setScheduledContent(prev => ({ ...prev, startTime: e.target.value }))}
+                  style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                />
+                <span style={{ fontSize: 14, color: '#6b7280' }}>and</span>
+                <input
+                  type="time"
+                  value={scheduledContent.endTime || '21:00'}
+                  onChange={(e) => setScheduledContent(prev => ({ ...prev, endTime: e.target.value }))}
+                  style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 14 }}
+                />
+              </div>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '8px 0 0 0' }}>
+                Content will be sent to users who booked today within this time window
+              </p>
+            </div>
+
+            {/* Content Items */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>Content Items</span>
+                <button
+                  onClick={addScheduledItem}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Item
+                </button>
+              </div>
+
+              {(!scheduledContent.items || scheduledContent.items.length === 0) ? (
+                <div style={{
+                  backgroundColor: '#f9fafb',
+                  borderRadius: 8,
+                  padding: 24,
+                  textAlign: 'center',
+                  border: '2px dashed #e5e7eb',
+                }}>
+                  <svg width="32" height="32" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" style={{ margin: '0 auto 8px' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                    No content items yet. Add videos or media to send to clients.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {scheduledContent.items.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        backgroundColor: '#f9fafb',
+                        borderRadius: 8,
+                        padding: 16,
+                        border: '1px solid #e5e7eb',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                        <span style={{ fontWeight: 500, fontSize: 13, color: '#374151' }}>Item {index + 1}</span>
+                        <button
+                          onClick={() => removeScheduledItem(index)}
+                          style={{
+                            padding: '4px 8px',
+                            backgroundColor: '#fef2f2',
+                            color: '#dc2626',
+                            border: 'none',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Media Type */}
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>
+                          Media Type
+                        </label>
+                        <select
+                          value={item.mediaType || 'video'}
+                          onChange={(e) => updateScheduledItem(index, 'mediaType', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 6,
+                            border: '1px solid #e5e7eb',
+                            fontSize: 14,
+                            backgroundColor: '#fff',
+                          }}
+                        >
+                          <option value="video">Video</option>
+                          <option value="image">Image</option>
+                          <option value="document">Document (PDF)</option>
+                          <option value="none">Text Only</option>
+                        </select>
+                      </div>
+
+                      {/* Media URL */}
+                      {item.mediaType !== 'none' && (
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>
+                            Media URL
+                          </label>
+                          <input
+                            type="text"
+                            value={item.mediaUrl || ''}
+                            onChange={(e) => updateScheduledItem(index, 'mediaUrl', e.target.value)}
+                            placeholder="https://itsgoti.in/videos/video.mp4"
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: 6,
+                              border: '1px solid #e5e7eb',
+                              fontSize: 14,
+                            }}
+                          />
+                          <p style={{ fontSize: 11, color: '#9ca3af', margin: '4px 0 0 0' }}>
+                            Video: 16MB max | Image: 5MB max | PDF: 100MB max
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Filename (for documents) */}
+                      {item.mediaType === 'document' && (
+                        <div style={{ marginBottom: 12 }}>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>
+                            Filename
+                          </label>
+                          <input
+                            type="text"
+                            value={item.filename || ''}
+                            onChange={(e) => updateScheduledItem(index, 'filename', e.target.value)}
+                            placeholder="Brochure.pdf"
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: 6,
+                              border: '1px solid #e5e7eb',
+                              fontSize: 14,
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Caption/Text */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>
+                          Caption / Message
+                        </label>
+                        <textarea
+                          value={item.text || ''}
+                          onChange={(e) => updateScheduledItem(index, 'text', e.target.value)}
+                          placeholder="Why most Shopify owners fail..."
+                          rows={2}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 6,
+                            border: '1px solid #e5e7eb',
+                            fontSize: 14,
+                            resize: 'vertical',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Save Button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
+                Runs every 10 minutes during time window
+              </p>
+              <button
+                onClick={saveScheduledContent}
+                disabled={savingScheduledContent || !hasScheduledContentChanges}
+                style={{
+                  padding: '8px 20px',
+                  backgroundColor: hasScheduledContentChanges ? '#25D366' : '#9ca3af',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: savingScheduledContent || !hasScheduledContentChanges ? 'not-allowed' : 'pointer',
+                  opacity: savingScheduledContent || !hasScheduledContentChanges ? 0.7 : 1,
+                }}
+              >
+                {savingScheduledContent ? 'Saving...' : 'Save Content'}
               </button>
             </div>
           </div>
