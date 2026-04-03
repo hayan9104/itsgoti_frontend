@@ -1204,6 +1204,19 @@ const NodeEditorPanel = ({ node, nodes, isStartNode, onUpdate, onDelete, onSetSt
                 <option value="document">Document</option>
                 <option value="audio">Audio</option>
               </select>
+              {/* WhatsApp File Size Limits */}
+              <div style={{
+                marginTop: 8,
+                padding: '8px 10px',
+                backgroundColor: '#fef3c7',
+                border: '1px solid #f59e0b',
+                borderRadius: 6,
+                fontSize: 11,
+                color: '#92400e',
+              }}>
+                <strong>WhatsApp Limits:</strong><br />
+                Image: 5 MB | Video: 16 MB | Audio: 16 MB | PDF: 100 MB
+              </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>
