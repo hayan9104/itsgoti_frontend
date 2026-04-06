@@ -219,4 +219,135 @@ export const themeColorsAPI = {
   delete: (pageName) => api.delete(`/theme-colors/${pageName}`),
 };
 
+// ============================================
+// WORKSPACE APIs (Separate Project Management System)
+// ============================================
+
+// Create workspace axios instance with separate token
+const workspaceApi = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add workspace token to requests
+workspaceApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('workspace_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Handle workspace response errors
+workspaceApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const url = error.config?.url || '';
+    const skipAutoLogout = url.includes('/workspace/auth/login');
+
+    if (error.response?.status === 401 && !skipAutoLogout) {
+      localStorage.removeItem('workspace_token');
+      window.location.href = '/workspace/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Workspace Auth API
+export const workspaceAuthAPI = {
+  login: (data) => workspaceApi.post('/workspace/auth/login', data),
+  register: (data) => workspaceApi.post('/workspace/auth/register', data),
+  getMe: () => workspaceApi.get('/workspace/auth/me'),
+  changePassword: (data) => workspaceApi.put('/workspace/auth/change-password', data),
+};
+
+// Workspace Users API (Admin Management)
+export const workspaceUsersAPI = {
+  getAll: () => workspaceApi.get('/workspace/auth/users'),
+  getOne: (id) => workspaceApi.get(`/workspace/auth/users/${id}`),
+  create: (data) => workspaceApi.post('/workspace/auth/register', data),
+  update: (id, data) => workspaceApi.put(`/workspace/auth/users/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/workspace/auth/users/${id}`),
+  resetPassword: (id, data) => workspaceApi.put(`/workspace/auth/users/${id}/reset-password`, data),
+};
+
+// Workspace Boards API
+export const workspaceBoardsAPI = {
+  getAll: () => workspaceApi.get('/workspace/boards'),
+  getOne: (id) => workspaceApi.get(`/workspace/boards/${id}`),
+  create: (data) => workspaceApi.post('/workspace/boards', data),
+  update: (id, data) => workspaceApi.put(`/workspace/boards/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/workspace/boards/${id}`),
+  reorder: (orderedIds) => workspaceApi.put('/workspace/boards/reorder', { orderedIds }),
+  addMember: (boardId, data) => workspaceApi.post(`/workspace/boards/${boardId}/members`, data),
+  removeMember: (boardId, userId) => workspaceApi.delete(`/workspace/boards/${boardId}/members/${userId}`),
+  addDocument: (boardId, data) => workspaceApi.post(`/workspace/boards/${boardId}/documents`, data),
+  deleteDocument: (boardId, docId) => workspaceApi.delete(`/workspace/boards/${boardId}/documents/${docId}`),
+  // Board settings
+  getSettings: (boardId) => workspaceApi.get(`/workspace/boards/${boardId}/settings`),
+  updateSettings: (boardId, data) => workspaceApi.put(`/workspace/boards/${boardId}/settings`, data),
+  addSettingItem: (boardId, settingType, data) => workspaceApi.post(`/workspace/boards/${boardId}/settings/${settingType}`, data),
+  updateSettingItem: (boardId, settingType, itemId, data) => workspaceApi.put(`/workspace/boards/${boardId}/settings/${settingType}/${itemId}`, data),
+  deleteSettingItem: (boardId, settingType, itemId) => workspaceApi.delete(`/workspace/boards/${boardId}/settings/${settingType}/${itemId}`),
+};
+
+// Workspace Tasks API
+export const workspaceTasksAPI = {
+  // Get tasks for a board
+  getByBoard: (boardId, params) => workspaceApi.get(`/workspace/tasks/board/${boardId}`, { params }),
+  // Get all tasks (super admin)
+  getAll: (params) => workspaceApi.get('/workspace/tasks/all', { params }),
+  // Get my tasks
+  getMyTasks: (params) => workspaceApi.get('/workspace/tasks/my-tasks', { params }),
+  // Single task
+  getOne: (id) => workspaceApi.get(`/workspace/tasks/${id}`),
+  create: (boardId, data) => workspaceApi.post(`/workspace/tasks/board/${boardId}`, data),
+  update: (id, data) => workspaceApi.put(`/workspace/tasks/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/workspace/tasks/${id}`),
+  // Status & reorder (drag & drop)
+  updateStatus: (id, data) => workspaceApi.put(`/workspace/tasks/${id}/status`, data),
+  reorder: (boardId, tasks) => workspaceApi.put(`/workspace/tasks/board/${boardId}/reorder`, { tasks }),
+  // Logs & comments
+  getLogs: (id) => workspaceApi.get(`/workspace/tasks/${id}/logs`),
+  getComments: (id) => workspaceApi.get(`/workspace/tasks/${id}/comments`),
+  addComment: (id, data) => workspaceApi.post(`/workspace/tasks/${id}/comments`, data),
+  // Subtasks
+  addSubtask: (id, data) => workspaceApi.post(`/workspace/tasks/${id}/subtasks`, data),
+  toggleSubtask: (taskId, subtaskId) => workspaceApi.put(`/workspace/tasks/${taskId}/subtasks/${subtaskId}`),
+  deleteSubtask: (taskId, subtaskId) => workspaceApi.delete(`/workspace/tasks/${taskId}/subtasks/${subtaskId}`),
+  // Task documents/attachments
+  addDocument: (taskId, data) => workspaceApi.post(`/workspace/tasks/${taskId}/documents`, data),
+  deleteDocument: (taskId, docId) => workspaceApi.delete(`/workspace/tasks/${taskId}/documents/${docId}`),
+  // Notes (embedded in task - things to keep in mind)
+  addNote: (taskId, data) => workspaceApi.post(`/workspace/tasks/${taskId}/notes`, data),
+  updateNote: (taskId, noteId, data) => workspaceApi.put(`/workspace/tasks/${taskId}/notes/${noteId}`, data),
+  deleteNote: (taskId, noteId) => workspaceApi.delete(`/workspace/tasks/${taskId}/notes/${noteId}`),
+  getBoardNotes: (boardId) => workspaceApi.get(`/workspace/tasks/board/${boardId}/notes`),
+};
+
+// Workspace Upload API
+export const workspaceUploadAPI = {
+  uploadFile: (formData) =>
+    workspaceApi.post('/workspace/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+};
+
+// Workspace Messages API (Inbox/Chat)
+export const workspaceMessagesAPI = {
+  getConversations: () => workspaceApi.get('/workspace/messages/conversations'),
+  getMessages: (conversationId, params) => workspaceApi.get(`/workspace/messages/${conversationId}`, { params }),
+  sendMessage: (data) => workspaceApi.post('/workspace/messages', data),
+  markAsRead: (id) => workspaceApi.put(`/workspace/messages/${id}/read`),
+  markConversationAsRead: (conversationId) => workspaceApi.put(`/workspace/messages/conversations/${conversationId}/read`),
+  deleteMessage: (id) => workspaceApi.delete(`/workspace/messages/${id}`),
+  getUnreadCount: () => workspaceApi.get('/workspace/messages/unread-count'),
+  getChatUsers: () => workspaceApi.get('/workspace/messages/users'),
+};
+
 export default api;

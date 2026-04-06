@@ -15,6 +15,12 @@ const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const AdminLogin = lazy(() => import('./admin/Login'));
 const AdminDashboard = lazy(() => import('./admin/Dashboard'));
 
+// Workspace (Project Management) - Lazy loaded
+const WorkspaceLogin = lazy(() => import('./workspace/pages/WorkspaceLogin'));
+const SuperAdminDashboard = lazy(() => import('./workspace/pages/SuperAdminDashboard'));
+const WorkspaceAdminDashboard = lazy(() => import('./workspace/pages/AdminDashboard'));
+import { WorkspaceAuthProvider, useWorkspaceAuth } from './context/WorkspaceAuthContext';
+
 // Lazy load all other pages
 const Home = lazy(() => import('./themes/default/Home'));
 const Work = lazy(() => import('./themes/default/Work'));
@@ -33,6 +39,25 @@ const ChangeSlotPage = lazy(() => import('./pages/ChangeSlotPage'));
 const PageLoader = () => (
   <div style={{height:'100vh',backgroundColor:'#fffdf8'}} />
 );
+
+// Workspace Protected Route Component
+const WorkspaceProtectedRoute = ({ children, requireSuperAdmin = false }) => {
+  const { user, loading } = useWorkspaceAuth();
+
+  if (loading) {
+    return <PageLoader />;
+  }
+
+  if (!user) {
+    return <Navigate to="/workspace/login" replace />;
+  }
+
+  if (requireSuperAdmin && user.role !== 'super_admin') {
+    return <Navigate to="/workspace/admin" replace />;
+  }
+
+  return children;
+};
 
 // Wrapper for case study to hide navbar in preview/editor mode
 const CaseStudyWrapper = () => {
@@ -286,10 +311,11 @@ function App() {
 
   return (
     <Router>
-      <BookingModalProvider>
-        <PageSlugsProvider>
-          <ScrollToTop />
-          <Routes>
+      <WorkspaceAuthProvider>
+        <BookingModalProvider>
+          <PageSlugsProvider>
+            <ScrollToTop />
+            <Routes>
           {/* Public Routes - LandingPage3 loads instantly */}
           <Route path="/" element={<DefaultLandingRouter />} />
 
@@ -321,11 +347,35 @@ function App() {
             }
           />
 
+          {/* Workspace Routes - Project Management System */}
+          <Route path="/workspace/login" element={<Suspense fallback={<PageLoader />}><WorkspaceLogin /></Suspense>} />
+          <Route
+            path="/workspace/super-admin/*"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <WorkspaceProtectedRoute requireSuperAdmin={true}>
+                  <SuperAdminDashboard />
+                </WorkspaceProtectedRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/workspace/admin/*"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <WorkspaceProtectedRoute>
+                  <WorkspaceAdminDashboard />
+                </WorkspaceProtectedRoute>
+              </Suspense>
+            }
+          />
+
           {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
           <Route path="/:slug" element={<DynamicPageRouter />} />
-        </Routes>
-        </PageSlugsProvider>
-      </BookingModalProvider>
+          </Routes>
+          </PageSlugsProvider>
+        </BookingModalProvider>
+      </WorkspaceAuthProvider>
     </Router>
   );
 }
