@@ -356,9 +356,15 @@ export const workspaceMeetingsAPI = {
   getAll: (params) => workspaceApi.get('/workspace/meetings', { params }),
   // Get single meeting
   getOne: (id) => workspaceApi.get(`/workspace/meetings/${id}`),
-  // Create meeting (with optional recording upload)
-  create: (formData) => workspaceApi.post('/workspace/meetings', formData, {
+  // Create meeting (with optional recording upload and progress tracking)
+  create: (formData, onProgress) => workspaceApi.post('/workspace/meetings', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percent);
+      }
+    },
   }),
   // Update meeting
   update: (id, data) => workspaceApi.put(`/workspace/meetings/${id}`, data),

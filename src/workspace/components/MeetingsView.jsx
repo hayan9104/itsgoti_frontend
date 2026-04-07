@@ -17,6 +17,7 @@ const MeetingsView = ({ boardId, boardName }) => {
     recording: null,
   });
   const [creating, setCreating] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     loadMeetings();
@@ -40,6 +41,7 @@ const MeetingsView = ({ boardId, boardName }) => {
     if (creating) return;
 
     setCreating(true);
+    setUploadProgress(0);
     try {
       const formData = new FormData();
       formData.append('title', newMeeting.title);
@@ -49,7 +51,9 @@ const MeetingsView = ({ boardId, boardName }) => {
         formData.append('recording', newMeeting.recording);
       }
 
-      const res = await workspaceMeetingsAPI.create(formData);
+      const res = await workspaceMeetingsAPI.create(formData, (progress) => {
+        setUploadProgress(progress);
+      });
       if (res.data.success) {
         setMeetings([res.data.data, ...meetings]);
         setShowCreateModal(false);
@@ -60,6 +64,7 @@ const MeetingsView = ({ boardId, boardName }) => {
       alert('Failed to create meeting: ' + (error.response?.data?.message || error.message));
     } finally {
       setCreating(false);
+      setUploadProgress(0);
     }
   };
 
@@ -712,9 +717,33 @@ const MeetingsView = ({ boardId, boardName }) => {
                     fontWeight: '500',
                     cursor: creating ? 'not-allowed' : 'pointer',
                     opacity: creating ? 0.7 : 1,
+                    minWidth: '140px',
+                    position: 'relative',
+                    overflow: 'hidden',
                   }}
                 >
-                  {creating ? 'Creating...' : 'Create Meeting'}
+                  {creating && uploadProgress > 0 && uploadProgress < 100 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        height: '100%',
+                        width: `${uploadProgress}%`,
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        transition: 'width 0.3s ease',
+                      }}
+                    />
+                  )}
+                  <span style={{ position: 'relative', zIndex: 1 }}>
+                    {creating
+                      ? uploadProgress > 0 && uploadProgress < 100
+                        ? `Uploading ${uploadProgress}%`
+                        : uploadProgress >= 100
+                        ? 'Processing...'
+                        : 'Starting...'
+                      : 'Create Meeting'}
+                  </span>
                 </button>
               </div>
             </form>
