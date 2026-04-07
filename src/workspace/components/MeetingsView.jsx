@@ -246,6 +246,7 @@ const MeetingsView = ({ boardId, boardName }) => {
                     </h4>
                     <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
                       {formatDate(meeting.meetingDate)}
+                      {meeting.duration > 0 && <span> • {meeting.duration} min</span>}
                     </p>
                   </div>
                   <span
@@ -306,12 +307,38 @@ const MeetingsView = ({ boardId, boardName }) => {
               </h3>
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
                 {formatDate(selectedMeeting.meetingDate)}
+                {selectedMeeting.duration > 0 && <span> • {selectedMeeting.duration} min</span>}
                 {selectedMeeting.recording?.fileName && (
                   <span> • {selectedMeeting.recording.fileName}</span>
                 )}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {selectedMeeting.recording?.url && (
+                <a 
+                  href={selectedMeeting.recording.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{
+                    padding: '8px 14px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                  </svg>
+                  View Recording
+                </a>
+              )}
               {selectedMeeting.status === 'pending' && selectedMeeting.recording?.url && (
                 <button
                   onClick={() => handleProcessRecording(selectedMeeting._id)}
