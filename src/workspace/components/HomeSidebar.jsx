@@ -387,6 +387,33 @@ const HomeSidebar = () => {
                           Documents
                         </div>
 
+                        {/* Meetings */}
+                        <div
+                          onClick={() => {
+                            handleSectionClick(board._id, 'meetings');
+                            navigate(`${basePath}/boards/${board._id}?view=meetings`);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 14px 8px 46px',
+                            cursor: 'pointer',
+                            color: (currentBoardId === board._id && currentView === 'meetings') ? '#2558BF' : '#6b7280',
+                            fontSize: '13px',
+                            borderRadius: '6px',
+                            margin: '0 8px',
+                            backgroundColor: (currentBoardId === board._id && currentView === 'meetings') ? '#e0e7ff' : 'transparent',
+                          }}
+                          onMouseEnter={(e) => { if (!(currentBoardId === board._id && currentView === 'meetings')) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
+                          onMouseLeave={(e) => { if (!(currentBoardId === board._id && currentView === 'meetings')) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                          </svg>
+                          Meetings
+                        </div>
+
                         {/* Members */}
                         {isSuperAdmin && (
                           <div

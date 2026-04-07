@@ -10,6 +10,7 @@ import MembersView from '../components/MembersView';
 import CalendarView from '../components/CalendarView';
 import DocumentsView from '../components/DocumentsView';
 import BoardSettingsView from '../components/BoardSettingsView';
+import MeetingsView from '../components/MeetingsView';
 
 // Default columns if board has no custom statuses
 const DEFAULT_COLUMNS = [
@@ -281,6 +282,14 @@ const BoardDetail = () => {
           boardId={boardId}
           boardName={board.name}
           boardColor={board.color}
+        />
+      )}
+
+      {/* Meetings View */}
+      {viewMode === 'meetings' && (
+        <MeetingsView
+          boardId={boardId}
+          boardName={board.name}
         />
       )}
 

@@ -350,4 +350,28 @@ export const workspaceMessagesAPI = {
   getChatUsers: () => workspaceApi.get('/workspace/messages/users'),
 };
 
+// Workspace Meetings API (Meeting Notes with AI Processing)
+export const workspaceMeetingsAPI = {
+  // Get all meetings
+  getAll: (params) => workspaceApi.get('/workspace/meetings', { params }),
+  // Get single meeting
+  getOne: (id) => workspaceApi.get(`/workspace/meetings/${id}`),
+  // Create meeting (with optional recording upload)
+  create: (formData) => workspaceApi.post('/workspace/meetings', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  // Update meeting
+  update: (id, data) => workspaceApi.put(`/workspace/meetings/${id}`, data),
+  // Delete meeting
+  delete: (id) => workspaceApi.delete(`/workspace/meetings/${id}`),
+  // Upload recording to existing meeting
+  uploadRecording: (id, formData) => workspaceApi.post(`/workspace/meetings/${id}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  // Process recording with AI
+  processRecording: (id) => workspaceApi.post(`/workspace/meetings/${id}/process`),
+  // Toggle action item completion
+  toggleActionItem: (id, itemIndex) => workspaceApi.put(`/workspace/meetings/${id}/action-items/${itemIndex}`),
+};
+
 export default api;
