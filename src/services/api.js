@@ -372,6 +372,8 @@ export const workspaceMeetingsAPI = {
   processRecording: (id) => workspaceApi.post(`/workspace/meetings/${id}/process`),
   // Toggle action item completion
   toggleActionItem: (id, itemIndex) => workspaceApi.put(`/workspace/meetings/${id}/action-items/${itemIndex}`),
+  // Export meeting as PDF
+  exportPDF: (id) => workspaceApi.get(`/workspace/meetings/${id}/export-pdf`, { responseType: 'blob' }),
 };
 
 export default api;
