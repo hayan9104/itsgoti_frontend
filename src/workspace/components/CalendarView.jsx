@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { workspaceTasksAPI } from '../../services/api';
+import { workspaceTasksAPI, scheduledMeetingsAPI } from '../../services/api';
 
 const PAST_DAYS = 365;  // 1 year back
 const FUTURE_DAYS = 60;
@@ -10,15 +10,25 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
   const [tasks, setTasks] = useState([]);
   const [boardNotes, setBoardNotes] = useState([]);
   const [boardTasks, setBoardTasks] = useState([]);
+  const [scheduledMeetings, setScheduledMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dates, setDates] = useState([]);
   const [startIndex, setStartIndex] = useState(PAST_DAYS - 2); // Start 2 days before today
   const [hoveredCell, setHoveredCell] = useState(null);
   const [showPopup, setShowPopup] = useState(null);
+  const [popupType, setPopupType] = useState('note'); // 'note' or 'meeting'
   const [noteContent, setNoteContent] = useState('');
   const [relatedTaskId, setRelatedTaskId] = useState('');
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Meeting form state
+  const [meetingForm, setMeetingForm] = useState({
+    title: '',
+    description: '',
+    meetingUrl: '',
+    scheduledTime: '10:00',
+  });
 
   useEffect(() => {
     generateDates();
@@ -54,9 +64,10 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
 
   const loadData = async () => {
     try {
-      const [tasksRes, notesRes] = await Promise.all([
+      const [tasksRes, notesRes, meetingsRes] = await Promise.all([
         workspaceTasksAPI.getByBoard(boardId),
-        workspaceTasksAPI.getBoardNotes(boardId)
+        workspaceTasksAPI.getBoardNotes(boardId),
+        scheduledMeetingsAPI.getAll({ board: boardId })
       ]);
 
       if (tasksRes.data.success) {
@@ -67,6 +78,10 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
 
       if (notesRes.data.success) {
         setBoardNotes(notesRes.data.data);
+      }
+
+      if (meetingsRes.data.success) {
+        setScheduledMeetings(meetingsRes.data.data);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -104,11 +119,26 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
     });
   };
 
-  const handleAddClick = (date) => {
+  const getMeetingsForDate = (date) => {
+    const dateStr = date.toDateString();
+    return scheduledMeetings.filter(m => {
+      const meetingDate = m.scheduledAt ? new Date(m.scheduledAt).toDateString() : null;
+      return meetingDate === dateStr;
+    });
+  };
+
+  const handleAddClick = (date, type = 'note') => {
     setShowPopup({ date, dateStr: date.toDateString() });
+    setPopupType(type);
     setNoteContent('');
     setRelatedTaskId('');
     setTaskSearchQuery('');
+    setMeetingForm({
+      title: '',
+      description: '',
+      meetingUrl: '',
+      scheduledTime: '10:00',
+    });
   };
 
   const handleSaveNote = async () => {
@@ -176,6 +206,102 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
       console.error('Delete note error:', error);
       alert('Failed to delete note: ' + (error.response?.data?.message || error.message));
     }
+  };
+
+  const handleSaveMeeting = async () => {
+    if (!meetingForm.title.trim() || !meetingForm.meetingUrl.trim() || !showPopup) {
+      alert('Please fill in meeting title and meeting link.');
+      return;
+    }
+
+    // Validate URL
+    const validPlatforms = ['zoom.us', 'meet.google.com', 'teams.microsoft.com', 'teams.live.com', 'webex.com'];
+    const isValidUrl = validPlatforms.some(p => meetingForm.meetingUrl.toLowerCase().includes(p));
+    if (!isValidUrl) {
+      alert('Please enter a valid meeting link (Zoom, Google Meet, Microsoft Teams, or Webex)');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Combine date and time
+      const scheduledDate = new Date(showPopup.date);
+      const [hours, minutes] = meetingForm.scheduledTime.split(':');
+      scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+      const response = await scheduledMeetingsAPI.create({
+        title: meetingForm.title.trim(),
+        description: meetingForm.description.trim(),
+        meetingUrl: meetingForm.meetingUrl.trim(),
+        scheduledAt: scheduledDate.toISOString(),
+        board: boardId,
+      });
+
+      if (response.data.success) {
+        setScheduledMeetings(prev => [...prev, response.data.data]);
+        setShowPopup(null);
+        setMeetingForm({ title: '', description: '', meetingUrl: '', scheduledTime: '10:00' });
+        alert('Meeting scheduled! Recall.ai bot will join automatically at the scheduled time.');
+      } else {
+        alert('Failed to schedule meeting.');
+      }
+    } catch (error) {
+      console.error('Save meeting error:', error);
+      alert('Failed to schedule meeting: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMeeting = async (meetingId) => {
+    if (!window.confirm('Cancel this scheduled meeting?')) return;
+
+    const previousMeetings = [...scheduledMeetings];
+    setScheduledMeetings(scheduledMeetings.filter(m => m._id !== meetingId));
+
+    try {
+      const response = await scheduledMeetingsAPI.delete(meetingId);
+      if (!response.data.success) {
+        setScheduledMeetings(previousMeetings);
+        alert('Failed to cancel meeting');
+      }
+    } catch (error) {
+      setScheduledMeetings(previousMeetings);
+      console.error('Delete meeting error:', error);
+      alert('Failed to cancel meeting: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const getMeetingStatusColor = (status) => {
+    const colors = {
+      scheduled: '#8b5cf6',
+      joining: '#3b82f6',
+      in_waiting_room: '#f59e0b',
+      in_call: '#10b981',
+      recording: '#ef4444',
+      call_ended: '#6b7280',
+      processing: '#f59e0b',
+      completed: '#10b981',
+      failed: '#ef4444',
+      cancelled: '#9ca3af',
+    };
+    return colors[status] || '#6b7280';
+  };
+
+  const getMeetingStatusLabel = (status) => {
+    const labels = {
+      scheduled: 'Scheduled',
+      joining: 'Joining...',
+      in_waiting_room: 'In Waiting Room',
+      in_call: 'In Call',
+      recording: '🔴 Recording',
+      call_ended: 'Call Ended',
+      processing: 'Processing...',
+      completed: '✓ Completed',
+      failed: 'Failed',
+      cancelled: 'Cancelled',
+    };
+    return labels[status] || status;
   };
 
   const formatDate = (date) => {
@@ -361,9 +487,11 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
             const { dayNum, dayName } = formatDate(date);
             const dateTasks = getTasksForDate(date);
             const dateNotes = getNotesForDate(date);
+            const dateMeetings = getMeetingsForDate(date);
             const today = isToday(date);
             const past = isPast(date);
             const isFirstOfMonth = date.getDate() === 1;
+            const hasContent = dateTasks.length > 0 || dateNotes.length > 0 || dateMeetings.length > 0;
 
             return (
               <div
@@ -383,6 +511,58 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
               >
                 {/* Column Content */}
                 <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  {/* Scheduled Meetings */}
+                  {dateMeetings.map(meeting => (
+                    <div
+                      key={meeting._id}
+                      style={{
+                        padding: '12px',
+                        backgroundColor: '#f0fdf4',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        color: '#166534',
+                        border: '1px solid #86efac',
+                        position: 'relative',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '600', marginBottom: '4px' }}>🎥 {meeting.title}</div>
+                          <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                            {new Date(meeting.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                        {meeting.botStatus === 'scheduled' && (
+                          <button
+                            onClick={() => handleDeleteMeeting(meeting._id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#dc2626',
+                              padding: '2px',
+                              fontSize: '14px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      <div style={{
+                        marginTop: '8px',
+                        fontSize: '10px',
+                        color: '#fff',
+                        backgroundColor: getMeetingStatusColor(meeting.botStatus),
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        display: 'inline-block',
+                        fontWeight: '500',
+                      }}>
+                        {getMeetingStatusLabel(meeting.botStatus)}
+                      </div>
+                    </div>
+                  ))}
+
                   {/* Tasks */}
                   {dateTasks.map(task => (
                     <div
@@ -445,59 +625,89 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                     </div>
                   ))}
 
-                  {/* Empty State - Add Button */}
-                  {dateTasks.length === 0 && dateNotes.length === 0 && hoveredCell === date.toDateString() && (
+                  {/* Empty State - Add Buttons */}
+                  {!hasContent && hoveredCell === date.toDateString() && (
                     <div style={{
                       flex: 1,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      minHeight: '150px'
+                      minHeight: '150px',
+                      gap: '12px'
                     }}>
                       <button
-                        onClick={() => handleAddClick(date)}
+                        onClick={() => handleAddClick(date, 'meeting')}
                         style={{
-                          width: '50px',
-                          height: '50px',
-                          borderRadius: '50%',
-                          backgroundColor: '#fff',
-                          border: '2px solid #e5e7eb',
-                          color: '#6b7280',
+                          padding: '10px 20px',
+                          borderRadius: '8px',
+                          backgroundColor: '#10b981',
+                          border: 'none',
+                          color: '#fff',
                           cursor: 'pointer',
-                          fontSize: '28px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          fontSize: '13px',
+                          fontWeight: '500',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          gap: '6px',
                         }}
                       >
-                        +
+                        🎥 Add Meeting
                       </button>
-                      <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '10px' }}>
-                        Add note
-                      </div>
+                      <button
+                        onClick={() => handleAddClick(date, 'note')}
+                        style={{
+                          padding: '10px 20px',
+                          borderRadius: '8px',
+                          backgroundColor: '#f59e0b',
+                          border: 'none',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        📝 Add Note
+                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* Add button when there are items */}
-                {(dateTasks.length > 0 || dateNotes.length > 0) && hoveredCell === date.toDateString() && (
-                  <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb' }}>
+                {/* Add buttons when there are items */}
+                {hasContent && hoveredCell === date.toDateString() && (
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => handleAddClick(date)}
+                      onClick={() => handleAddClick(date, 'meeting')}
                       style={{
-                        width: '100%',
-                        padding: '10px',
-                        backgroundColor: '#f9fafb',
-                        border: '1px dashed #d1d5db',
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: '#f0fdf4',
+                        border: '1px dashed #86efac',
                         borderRadius: '8px',
-                        color: '#6b7280',
+                        color: '#166534',
                         cursor: 'pointer',
-                        fontSize: '13px'
+                        fontSize: '12px'
                       }}
                     >
-                      + Add note
+                      + Meeting
+                    </button>
+                    <button
+                      onClick={() => handleAddClick(date, 'note')}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        backgroundColor: '#fffbeb',
+                        border: '1px dashed #fcd34d',
+                        borderRadius: '8px',
+                        color: '#92400e',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      + Note
                     </button>
                   </div>
                 )}
@@ -530,11 +740,49 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
             borderRadius: '16px',
             padding: '24px',
             zIndex: 1001,
-            boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
+            boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
+            {/* Type Selector */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <button
+                onClick={() => setPopupType('meeting')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: popupType === 'meeting' ? '2px solid #10b981' : '1px solid #e5e7eb',
+                  backgroundColor: popupType === 'meeting' ? '#f0fdf4' : '#fff',
+                  color: popupType === 'meeting' ? '#166534' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}
+              >
+                🎥 Meeting
+              </button>
+              <button
+                onClick={() => setPopupType('note')}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: popupType === 'note' ? '2px solid #f59e0b' : '1px solid #e5e7eb',
+                  backgroundColor: popupType === 'note' ? '#fffbeb' : '#fff',
+                  color: popupType === 'note' ? '#92400e' : '#6b7280',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}
+              >
+                📝 Note
+              </button>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
-                Add Note - {formatDate(showPopup.date).dayNum} {formatDate(showPopup.date).dayName}
+                {popupType === 'meeting' ? '🎥 Schedule Meeting' : '📝 Add Note'} - {formatDate(showPopup.date).dayNum} {formatDate(showPopup.date).dayName}
               </h3>
               <button
                 onClick={() => setShowPopup(null)}
@@ -544,87 +792,206 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
               </button>
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
-                Select Task *
-              </label>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={taskSearchQuery}
-                onChange={(e) => setTaskSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  marginBottom: '8px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <div style={{
-                maxHeight: '120px',
-                overflowY: 'auto',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}>
-                {filteredBoardTasks.map(t => (
-                  <div
-                    key={t._id}
-                    onClick={() => setRelatedTaskId(t._id)}
+            {/* Meeting Form */}
+            {popupType === 'meeting' && (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                    Meeting Title *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Weekly standup, Client call, etc."
+                    value={meetingForm.title}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
                     style={{
-                      padding: '10px 12px',
-                      cursor: 'pointer',
-                      backgroundColor: relatedTaskId === t._id ? '#fef3c7' : '#fff',
-                      borderBottom: '1px solid #f3f4f6'
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #86efac',
+                      borderRadius: '8px',
+                      backgroundColor: '#f0fdf4',
+                      boxSizing: 'border-box'
                     }}
-                  >
-                    {relatedTaskId === t._id ? '● ' : '○ '}{t.title}
-                  </div>
-                ))}
-                {filteredBoardTasks.length === 0 && (
-                  <div style={{ padding: '16px', textAlign: 'center', color: '#9ca3af' }}>No tasks</div>
-                )}
-              </div>
-            </div>
+                  />
+                </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
-                Note *
-              </label>
-              <textarea
-                value={noteContent}
-                onChange={(e) => setNoteContent(e.target.value)}
-                placeholder="Things to keep in mind..."
-                style={{
-                  width: '100%',
-                  minHeight: '80px',
-                  padding: '12px',
-                  border: '1px solid #fcd34d',
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                    Meeting Time *
+                  </label>
+                  <input
+                    type="time"
+                    value={meetingForm.scheduledTime}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, scheduledTime: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                    Meeting Link *
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+                    value={meetingForm.meetingUrl}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, meetingUrl: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#6b7280' }}>
+                    Supports: Zoom, Google Meet, Microsoft Teams, Webex
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    placeholder="Meeting agenda, topics to discuss..."
+                    value={meetingForm.description}
+                    onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+                    style={{
+                      width: '100%',
+                      minHeight: '60px',
+                      padding: '12px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #86efac',
                   borderRadius: '8px',
-                  backgroundColor: '#fffbeb',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
+                  padding: '12px',
+                  marginBottom: '20px',
+                  fontSize: '13px',
+                  color: '#166534'
+                }}>
+                  <strong>🤖 Recall.ai Bot</strong> will automatically join the meeting at the scheduled time, record it, and generate a transcript + summary.
+                </div>
 
-            <button
-              onClick={handleSaveNote}
-              disabled={saving || !noteContent.trim() || !relatedTaskId}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: (!noteContent.trim() || !relatedTaskId) ? '#d1d5db' : '#f59e0b',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '15px',
-                fontWeight: '600',
-                cursor: (!noteContent.trim() || !relatedTaskId) ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {saving ? 'Saving...' : '📝 Add Note'}
-            </button>
+                <button
+                  onClick={handleSaveMeeting}
+                  disabled={saving || !meetingForm.title.trim() || !meetingForm.meetingUrl.trim()}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    backgroundColor: (!meetingForm.title.trim() || !meetingForm.meetingUrl.trim()) ? '#d1d5db' : '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    cursor: (!meetingForm.title.trim() || !meetingForm.meetingUrl.trim()) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {saving ? 'Scheduling...' : '🎥 Schedule Meeting'}
+                </button>
+              </>
+            )}
+
+            {/* Note Form */}
+            {popupType === 'note' && (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                    Select Task *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={taskSearchQuery}
+                    onChange={(e) => setTaskSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <div style={{
+                    maxHeight: '120px',
+                    overflowY: 'auto',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px'
+                  }}>
+                    {filteredBoardTasks.map(t => (
+                      <div
+                        key={t._id}
+                        onClick={() => setRelatedTaskId(t._id)}
+                        style={{
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          backgroundColor: relatedTaskId === t._id ? '#fef3c7' : '#fff',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}
+                      >
+                        {relatedTaskId === t._id ? '● ' : '○ '}{t.title}
+                      </div>
+                    ))}
+                    {filteredBoardTasks.length === 0 && (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#9ca3af' }}>No tasks</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                    Note *
+                  </label>
+                  <textarea
+                    value={noteContent}
+                    onChange={(e) => setNoteContent(e.target.value)}
+                    placeholder="Things to keep in mind..."
+                    style={{
+                      width: '100%',
+                      minHeight: '80px',
+                      padding: '12px',
+                      border: '1px solid #fcd34d',
+                      borderRadius: '8px',
+                      backgroundColor: '#fffbeb',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={handleSaveNote}
+                  disabled={saving || !noteContent.trim() || !relatedTaskId}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: (!noteContent.trim() || !relatedTaskId) ? '#d1d5db' : '#f59e0b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    cursor: (!noteContent.trim() || !relatedTaskId) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {saving ? 'Saving...' : '📝 Add Note'}
+                </button>
+              </>
+            )}
           </div>
         </>
       )}

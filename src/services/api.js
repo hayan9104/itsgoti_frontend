@@ -350,7 +350,27 @@ export const workspaceMessagesAPI = {
   getChatUsers: () => workspaceApi.get('/workspace/messages/users'),
 };
 
-// Workspace Meetings API (Meeting Notes with AI Processing)
+// Workspace Scheduled Meetings API (Recall.ai Integration)
+export const scheduledMeetingsAPI = {
+  // Get all scheduled meetings
+  getAll: (params) => workspaceApi.get('/workspace/scheduled-meetings', { params }),
+  // Get single meeting
+  getOne: (id) => workspaceApi.get(`/workspace/scheduled-meetings/${id}`),
+  // Create scheduled meeting
+  create: (data) => workspaceApi.post('/workspace/scheduled-meetings', data),
+  // Update meeting
+  update: (id, data) => workspaceApi.put(`/workspace/scheduled-meetings/${id}`, data),
+  // Delete meeting
+  delete: (id) => workspaceApi.delete(`/workspace/scheduled-meetings/${id}`),
+  // Get meeting status from Recall.ai
+  getStatus: (id) => workspaceApi.get(`/workspace/scheduled-meetings/${id}/status`),
+  // Process with AI
+  process: (id) => workspaceApi.post(`/workspace/scheduled-meetings/${id}/process`),
+  // Toggle action item
+  toggleActionItem: (id, itemIndex) => workspaceApi.put(`/workspace/scheduled-meetings/${id}/action-items/${itemIndex}`),
+};
+
+// Workspace Meetings API (Meeting Notes with AI Processing - Manual Upload)
 export const workspaceMeetingsAPI = {
   // Get all meetings
   getAll: (params) => workspaceApi.get('/workspace/meetings', { params }),
