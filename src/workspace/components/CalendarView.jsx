@@ -91,6 +91,45 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
         const meetingsRes = await scheduledMeetingsAPI.getAll({ board: boardId });
         if (meetingsRes.data.success) {
           setScheduledMeetings(meetingsRes.data.data);
+
+          // ========== DEBUG LOGS - REMOVE LATER ==========
+          console.log('\n%c📹 SCHEDULED MEETINGS DATA', 'background: #10b981; color: white; font-size: 16px; padding: 8px 16px; border-radius: 4px;');
+          console.log('%c Total Meetings: ' + meetingsRes.data.data.length, 'color: #6b7280; font-size: 14px;');
+
+          meetingsRes.data.data.forEach((meeting, index) => {
+            console.log(`\n%c Meeting ${index + 1}: ${meeting.title}`, 'color: #2563eb; font-weight: bold; font-size: 14px;');
+            console.table({
+              'Title': meeting.title,
+              'Status': meeting.botStatus,
+              'Platform': meeting.platform,
+              'Scheduled At': meeting.scheduledAt ? new Date(meeting.scheduledAt).toLocaleString() : 'N/A',
+              'Bot Joined At (Start)': meeting.botJoinedAt ? new Date(meeting.botJoinedAt).toLocaleString() : 'Not started',
+              'Bot Left At (End)': meeting.botLeftAt ? new Date(meeting.botLeftAt).toLocaleString() : 'Not ended',
+              'Duration (seconds)': meeting.recordingDuration || 'N/A',
+              'Duration (minutes)': meeting.recordingDuration ? Math.round(meeting.recordingDuration / 60) : 'N/A',
+              'Video URL': meeting.videoUrl || 'No recording yet',
+              'Recording URL': meeting.recordingUrl || 'No recording yet',
+              'Meeting Link': meeting.meetingUrl,
+              'Recall Bot ID': meeting.recallBotId || 'Not assigned',
+              'AI Processing': meeting.aiProcessingStatus,
+              'Summary': meeting.summary ? meeting.summary.substring(0, 100) + '...' : 'No summary',
+            });
+          });
+
+          // Summary table
+          console.log('\n%c📊 SUMMARY TABLE', 'background: #8b5cf6; color: white; font-size: 14px; padding: 4px 12px; border-radius: 4px;');
+          console.table(
+            meetingsRes.data.data.map(m => ({
+              Title: m.title,
+              Status: m.botStatus,
+              'Scheduled': m.scheduledAt ? new Date(m.scheduledAt).toLocaleString() : '-',
+              'Duration': m.recordingDuration ? `${Math.round(m.recordingDuration / 60)} min` : '-',
+              'Has Recording': m.videoUrl || m.recordingUrl ? '✅ Yes' : '❌ No',
+              'Has Summary': m.summary ? '✅ Yes' : '❌ No',
+            }))
+          );
+          console.log('%c========== END DEBUG LOGS ==========\n', 'color: #9ca3af;');
+          // ========== END DEBUG LOGS ==========
         }
       } catch (err) {
         console.error('Failed to load scheduled meetings:', err);
@@ -281,6 +320,39 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
       setScheduledMeetings(previousMeetings);
       console.error('Delete meeting error:', error);
       alert('Failed to cancel meeting: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleSyncMeeting = async (meetingId) => {
+    try {
+      const response = await scheduledMeetingsAPI.sync(meetingId);
+      if (response.data.success) {
+        // Update the meeting in local state
+        setScheduledMeetings(prev => prev.map(m =>
+          m._id === meetingId ? response.data.data : m
+        ));
+
+        // ========== DEBUG LOG ==========
+        const meeting = response.data.data;
+        console.log('\n%c🔄 MEETING SYNCED FROM RECALL.AI', 'background: #10b981; color: white; font-size: 14px; padding: 4px 12px;');
+        console.table({
+          'Title': meeting.title,
+          'Status': meeting.botStatus,
+          'Duration (sec)': meeting.recordingDuration || 'N/A',
+          'Duration (min)': meeting.recordingDuration ? Math.round(meeting.recordingDuration / 60) : 'N/A',
+          'Video URL': meeting.videoUrl || 'No video',
+          'Recording URL': meeting.recordingUrl || 'No recording',
+          'Bot Joined': meeting.botJoinedAt ? new Date(meeting.botJoinedAt).toLocaleString() : 'N/A',
+          'Bot Left': meeting.botLeftAt ? new Date(meeting.botLeftAt).toLocaleString() : 'N/A',
+          'Has Transcript': meeting.formattedTranscript ? 'Yes' : 'No',
+        });
+        // ========== END DEBUG ==========
+
+        alert('Meeting synced successfully!');
+      }
+    } catch (error) {
+      console.error('Sync meeting error:', error);
+      alert('Failed to sync meeting: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -563,17 +635,49 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                           ✕
                         </button>
                       </div>
-                      <div style={{
-                        marginTop: '8px',
-                        fontSize: '10px',
-                        color: '#fff',
-                        backgroundColor: getMeetingStatusColor(meeting.botStatus),
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        display: 'inline-block',
-                        fontWeight: '500',
-                      }}>
-                        {getMeetingStatusLabel(meeting.botStatus)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          fontSize: '10px',
+                          color: '#fff',
+                          backgroundColor: getMeetingStatusColor(meeting.botStatus),
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontWeight: '500',
+                        }}>
+                          {getMeetingStatusLabel(meeting.botStatus)}
+                        </span>
+                        {/* Sync button - shows for meetings with a recallBotId */}
+                        {meeting.recallBotId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSyncMeeting(meeting._id);
+                            }}
+                            style={{
+                              fontSize: '10px',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              border: 'none',
+                              backgroundColor: '#3b82f6',
+                              color: '#fff',
+                              cursor: 'pointer',
+                              fontWeight: '500',
+                            }}
+                            title="Sync recording from Recall.ai"
+                          >
+                            🔄 Sync
+                          </button>
+                        )}
+                        {/* Show recording indicator if available */}
+                        {(meeting.videoUrl || meeting.recordingUrl) && (
+                          <span style={{
+                            fontSize: '10px',
+                            color: '#059669',
+                            fontWeight: '500',
+                          }}>
+                            📹 Has Recording
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

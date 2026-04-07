@@ -368,6 +368,10 @@ export const scheduledMeetingsAPI = {
   process: (id) => workspaceApi.post(`/workspace/scheduled-meetings/${id}/process`),
   // Toggle action item
   toggleActionItem: (id, itemIndex) => workspaceApi.put(`/workspace/scheduled-meetings/${id}/action-items/${itemIndex}`),
+  // Manual sync from Recall.ai (fetch recording, transcript, etc.)
+  sync: (id) => workspaceApi.post(`/workspace/scheduled-meetings/${id}/sync`),
+  // Sync all completed recordings to Meetings tab
+  syncAll: (board) => workspaceApi.post(`/workspace/scheduled-meetings/sync-all${board ? `?board=${board}` : ''}`),
 };
 
 // Workspace Meetings API (Meeting Notes with AI Processing - Manual Upload)

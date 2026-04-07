@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { workspaceMeetingsAPI } from '../../services/api';
+import { workspaceMeetingsAPI, scheduledMeetingsAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
 const MeetingsView = ({ boardId, boardName }) => {
@@ -7,17 +7,7 @@ const MeetingsView = ({ boardId, boardName }) => {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [processing, setProcessing] = useState({});
-
-  // Create meeting form
-  const [newMeeting, setNewMeeting] = useState({
-    title: '',
-    meetingDate: new Date().toISOString().split('T')[0],
-    recording: null,
-  });
-  const [creating, setCreating] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     loadMeetings();
@@ -25,6 +15,22 @@ const MeetingsView = ({ boardId, boardName }) => {
 
   const loadMeetings = async () => {
     try {
+      // First, auto-sync any completed recordings from Recall.ai
+      try {
+        console.log('🔄 Auto-syncing recordings from Recall.ai...');
+        const syncRes = await scheduledMeetingsAPI.syncAll(boardId);
+        if (syncRes.data.success) {
+          console.log('✅ Sync complete:', syncRes.data.message);
+          if (syncRes.data.results) {
+            console.table(syncRes.data.results);
+          }
+        }
+      } catch (syncError) {
+        console.log('ℹ️ Sync skipped:', syncError.message);
+        // Don't fail if sync fails, just continue loading
+      }
+
+      // Then load all meetings
       const res = await workspaceMeetingsAPI.getAll({ board: boardId });
       if (res.data.success) {
         setMeetings(res.data.data);
@@ -72,7 +78,7 @@ const MeetingsView = ({ boardId, boardName }) => {
     setProcessing({ ...processing, [meetingId]: true });
     try {
       const res = await workspaceMeetingsAPI.processRecording(meetingId);
-      if (res.data.success) {
+      if (res.data.success && res.data.data) {
         setMeetings(meetings.map(m => m._id === meetingId ? res.data.data : m));
         if (selectedMeeting?._id === meetingId) {
           setSelectedMeeting(res.data.data);
@@ -137,10 +143,19 @@ const MeetingsView = ({ boardId, boardName }) => {
     switch (status) {
       case 'pending': return '#f59e0b';
       case 'processing': return '#3b82f6';
-      case 'uploaded': return '#8b5cf6'; // Purple for uploaded but not processed
+      case 'uploaded': return '#8b5cf6';
       case 'completed': return '#22c55e';
       case 'failed': return '#ef4444';
       default: return '#6b7280';
+    }
+  };
+
+  const getProcessingLabel = (step) => {
+    switch (step) {
+      case 'transcribing': return 'Transcribing voice...';
+      case 'analyzing': return 'Analyzing points...';
+      case 'finalizing': return 'Finalizing summary...';
+      default: return 'AI is processing...';
     }
   };
 
@@ -182,29 +197,7 @@ const MeetingsView = ({ boardId, boardName }) => {
               {meetings.length} meeting{meetings.length !== 1 ? 's' : ''} in {boardName}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              style={{
-                padding: '8px 14px',
-                backgroundColor: '#2558BF',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
-              Add Meeting
-            </button>
-          </div>
+          {/* Add Meeting button removed - meetings auto-sync from Recall.ai */}
         </div>
 
         {/* Meetings List */}
@@ -226,7 +219,7 @@ const MeetingsView = ({ boardId, boardName }) => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
-            {meetings.map((meeting) => (
+            {meetings.filter(m => m && m._id).map((meeting) => (
               <div
                 key={meeting._id}
                 onClick={() => setSelectedMeeting(meeting)}
@@ -255,11 +248,13 @@ const MeetingsView = ({ boardId, boardName }) => {
                       fontSize: '11px',
                       fontWeight: '500',
                       borderRadius: '6px',
-                      backgroundColor: getStatusColor(meeting.status) + '20',
-                      color: getStatusColor(meeting.status),
+                      backgroundColor: getStatusColor(meeting.aiProcessingStatus || meeting.status) + '20',
+                      color: getStatusColor(meeting.aiProcessingStatus || meeting.status),
                     }}
                   >
-                    {meeting.status}
+                    {meeting.aiProcessingStatus === 'processing' && meeting.aiProcessingStep 
+                      ? getProcessingLabel(meeting.aiProcessingStep) 
+                      : (meeting.aiProcessingStatus || meeting.status)}
                   </span>
                 </div>
                 {meeting.summary && (
@@ -339,10 +334,10 @@ const MeetingsView = ({ boardId, boardName }) => {
                   View Recording
                 </a>
               )}
-              {selectedMeeting.status === 'pending' && selectedMeeting.recording?.url && (
+              {(selectedMeeting.aiProcessingStatus === 'pending' || selectedMeeting.status === 'pending') && selectedMeeting.recording?.url && (
                 <button
                   onClick={() => handleProcessRecording(selectedMeeting._id)}
-                  disabled={processing[selectedMeeting._id]}
+                  disabled={processing[selectedMeeting._id] || selectedMeeting.aiProcessingStatus === 'processing'}
                   style={{
                     padding: '8px 14px',
                     backgroundColor: '#7c3aed',
@@ -351,19 +346,22 @@ const MeetingsView = ({ boardId, boardName }) => {
                     borderRadius: '8px',
                     fontSize: '13px',
                     fontWeight: '500',
-                    cursor: 'pointer',
+                    cursor: (processing[selectedMeeting._id] || selectedMeeting.aiProcessingStatus === 'processing') ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
+                    opacity: (processing[selectedMeeting._id] || selectedMeeting.aiProcessingStatus === 'processing') ? 0.7 : 1,
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7117 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0034 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92176 4.44061 8.37485 5.27072 7.03255C6.10083 5.69025 7.28825 4.60557 8.7 3.9C9.87812 3.30493 11.1801 2.99656 12.5 3H13C15.0843 3.11502 17.053 3.99479 18.5291 5.47089C20.0052 6.94699 20.885 8.91568 21 11V11.5Z"/>
                   </svg>
-                  {processing[selectedMeeting._id] ? 'Processing...' : 'Process with AI'}
+                  {processing[selectedMeeting._id] || selectedMeeting.aiProcessingStatus === 'processing' 
+                    ? getProcessingLabel(selectedMeeting.aiProcessingStep) 
+                    : 'Process with AI'}
                 </button>
               )}
-              {selectedMeeting.status === 'completed' && (
+              {(selectedMeeting.aiProcessingStatus === 'completed' || selectedMeeting.status === 'completed') && (
                 <button
                   onClick={() => handleExportPDF(selectedMeeting._id)}
                   style={{
@@ -385,6 +383,29 @@ const MeetingsView = ({ boardId, boardName }) => {
                   </svg>
                   Export PDF
                 </button>
+              )}
+              {selectedMeeting.aiProcessingStatus === 'processing' && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: '#eff6ff',
+                  borderRadius: '8px',
+                  border: '1px solid #bfdbfe',
+                }}>
+                  <div className="spinner" style={{
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid #bfdbfe',
+                    borderTop: '2px solid #2558BF',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                  }} />
+                  <span style={{ fontSize: '12px', color: '#1e40af', fontWeight: '500' }}>
+                    {getProcessingLabel(selectedMeeting.aiProcessingStep)}
+                  </span>
+                </div>
               )}
               {isSuperAdmin && (
                 <button
@@ -632,152 +653,7 @@ const MeetingsView = ({ boardId, boardName }) => {
         </div>
       )}
 
-      {/* Create Meeting Modal */}
-      {showCreateModal && (
-        <div
-          onClick={() => setShowCreateModal(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: '#fff',
-              borderRadius: '16px',
-              padding: '24px',
-              width: '100%',
-              maxWidth: '480px',
-            }}
-          >
-            <h3 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600', color: '#111827' }}>
-              Add Meeting
-            </h3>
-            <form onSubmit={handleCreateMeeting}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Meeting Title *
-                </label>
-                <input
-                  type="text"
-                  value={newMeeting.title}
-                  onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
-                  required
-                  placeholder="e.g., Client Discovery Call"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                  }}
-                />
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Meeting Date *
-                </label>
-                <input
-                  type="date"
-                  value={newMeeting.meetingDate}
-                  onChange={(e) => setNewMeeting({ ...newMeeting, meetingDate: e.target.value })}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                  }}
-                />
-              </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Recording (Optional)
-                </label>
-                <input
-                  type="file"
-                  accept="audio/*,video/*"
-                  onChange={(e) => setNewMeeting({ ...newMeeting, recording: e.target.files[0] })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                  }}
-                />
-                <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#9ca3af' }}>
-                  Upload MP3, MP4, WAV, or WebM file
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#f3f4f6',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: creating ? '#93c5fd' : '#2558BF',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: creating ? 'not-allowed' : 'pointer',
-                    opacity: creating ? 0.7 : 1,
-                    minWidth: '140px',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {creating && uploadProgress > 0 && uploadProgress < 100 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        height: '100%',
-                        width: `${uploadProgress}%`,
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        transition: 'width 0.3s ease',
-                      }}
-                    />
-                  )}
-                  <span style={{ position: 'relative', zIndex: 1 }}>
-                    {creating
-                      ? uploadProgress > 0 && uploadProgress < 100
-                        ? `Uploading ${uploadProgress}%`
-                        : uploadProgress >= 100
-                        ? 'Processing...'
-                        : 'Starting...'
-                      : 'Create Meeting'}
-                  </span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Create Meeting Modal removed - meetings auto-sync from Recall.ai via Calendar */}
 
       <style>{`
         @keyframes spin {
