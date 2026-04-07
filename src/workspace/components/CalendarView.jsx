@@ -532,21 +532,24 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                             {new Date(meeting.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
-                        {meeting.botStatus === 'scheduled' && (
-                          <button
-                            onClick={() => handleDeleteMeeting(meeting._id)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              color: '#dc2626',
-                              padding: '2px',
-                              fontSize: '14px'
-                            }}
-                          >
-                            ✕
-                          </button>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteMeeting(meeting._id);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#dc2626',
+                            padding: '2px',
+                            fontSize: '14px',
+                            lineHeight: 1
+                          }}
+                          title="Delete meeting"
+                        >
+                          ✕
+                        </button>
                       </div>
                       <div style={{
                         marginTop: '8px',
