@@ -64,24 +64,36 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
 
   const loadData = async () => {
     try {
-      const [tasksRes, notesRes, meetingsRes] = await Promise.all([
-        workspaceTasksAPI.getByBoard(boardId),
-        workspaceTasksAPI.getBoardNotes(boardId),
-        scheduledMeetingsAPI.getAll({ board: boardId })
-      ]);
-
-      if (tasksRes.data.success) {
-        const regularTasks = tasksRes.data.data.filter(t => t.type !== 'note');
-        setTasks(regularTasks);
-        setBoardTasks(regularTasks);
+      // Load tasks
+      try {
+        const tasksRes = await workspaceTasksAPI.getByBoard(boardId);
+        if (tasksRes.data.success) {
+          const regularTasks = tasksRes.data.data.filter(t => t.type !== 'note');
+          setTasks(regularTasks);
+          setBoardTasks(regularTasks);
+        }
+      } catch (err) {
+        console.error('Failed to load tasks:', err);
       }
 
-      if (notesRes.data.success) {
-        setBoardNotes(notesRes.data.data);
+      // Load notes
+      try {
+        const notesRes = await workspaceTasksAPI.getBoardNotes(boardId);
+        if (notesRes.data.success) {
+          setBoardNotes(notesRes.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load notes:', err);
       }
 
-      if (meetingsRes.data.success) {
-        setScheduledMeetings(meetingsRes.data.data);
+      // Load scheduled meetings
+      try {
+        const meetingsRes = await scheduledMeetingsAPI.getAll({ board: boardId });
+        if (meetingsRes.data.success) {
+          setScheduledMeetings(meetingsRes.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load scheduled meetings:', err);
       }
     } catch (error) {
       console.error('Failed to load data:', error);
