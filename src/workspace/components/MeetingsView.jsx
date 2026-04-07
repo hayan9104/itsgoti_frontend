@@ -16,6 +16,7 @@ const MeetingsView = ({ boardId, boardName }) => {
     meetingDate: new Date().toISOString().split('T')[0],
     recording: null,
   });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     loadMeetings();
@@ -36,6 +37,9 @@ const MeetingsView = ({ boardId, boardName }) => {
 
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
+    if (creating) return;
+
+    setCreating(true);
     try {
       const formData = new FormData();
       formData.append('title', newMeeting.title);
@@ -53,7 +57,9 @@ const MeetingsView = ({ boardId, boardName }) => {
       }
     } catch (error) {
       console.error('Failed to create meeting:', error);
-      alert('Failed to create meeting');
+      alert('Failed to create meeting: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -653,18 +659,20 @@ const MeetingsView = ({ boardId, boardName }) => {
                 </button>
                 <button
                   type="submit"
+                  disabled={creating}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#2558BF',
+                    backgroundColor: creating ? '#93c5fd' : '#2558BF',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '14px',
                     fontWeight: '500',
-                    cursor: 'pointer',
+                    cursor: creating ? 'not-allowed' : 'pointer',
+                    opacity: creating ? 0.7 : 1,
                   }}
                 >
-                  Create Meeting
+                  {creating ? 'Creating...' : 'Create Meeting'}
                 </button>
               </div>
             </form>
