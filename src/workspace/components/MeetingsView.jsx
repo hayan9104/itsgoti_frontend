@@ -137,6 +137,7 @@ const MeetingsView = ({ boardId, boardName }) => {
     switch (status) {
       case 'pending': return '#f59e0b';
       case 'processing': return '#3b82f6';
+      case 'uploaded': return '#8b5cf6'; // Purple for uploaded but not processed
       case 'completed': return '#22c55e';
       case 'failed': return '#ef4444';
       default: return '#6b7280';
