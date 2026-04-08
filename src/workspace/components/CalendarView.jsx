@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { workspaceTasksAPI, scheduledMeetingsAPI } from '../../services/api';
+import { workspaceTasksAPI, workspaceBoardsAPI, scheduledMeetingsAPI } from '../../services/api';
+import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
 const PAST_DAYS = 365;  // 1 year back
 const FUTURE_DAYS = 60;
 const COLUMN_WIDTH = 240;
 const VISIBLE_COLUMNS = 5; // How many columns visible at once
 
-const CalendarView = ({ boardId, boardName, boardColor }) => {
+const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
+  const { isSuperAdmin } = useWorkspaceAuth();
+  const [boardId, setBoardId] = useState(propBoardId);
+  const [allBoards, setAllBoards] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [boardNotes, setBoardNotes] = useState([]);
   const [boardTasks, setBoardTasks] = useState([]);
@@ -21,6 +25,8 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
   const [relatedTaskId, setRelatedTaskId] = useState('');
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedMeetingDetail, setSelectedMeetingDetail] = useState(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Meeting form state
   const [meetingForm, setMeetingForm] = useState({
@@ -30,7 +36,35 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
     scheduledTime: '10:00',
   });
 
+  // Task assignment state for meeting form
+  const [assignToTask, setAssignToTask] = useState(false);
+  const [meetingBoardSearch, setMeetingBoardSearch] = useState('');
+  const [meetingSelectedBoard, setMeetingSelectedBoard] = useState(null);
+  const [meetingBoardTasks, setMeetingBoardTasks] = useState([]);
+  const [meetingTaskSearch, setMeetingTaskSearch] = useState('');
+  const [meetingSelectedTask, setMeetingSelectedTask] = useState(null);
+  const [loadingMeetingTasks, setLoadingMeetingTasks] = useState(false);
+
+  // Load all boards (needed for task assignment dropdown and for global view)
   useEffect(() => {
+    const loadBoards = async () => {
+      try {
+        const res = await workspaceBoardsAPI.getAll();
+        if (res.data.success && res.data.data.length > 0) {
+          setAllBoards(res.data.data);
+          if (!propBoardId) {
+            setBoardId(res.data.data[0]._id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load boards:', err);
+      }
+    };
+    loadBoards();
+  }, [propBoardId]);
+
+  useEffect(() => {
+    if (!boardId) return;
     generateDates();
     loadData();
   }, [boardId]);
@@ -116,11 +150,22 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
 
   const getTasksForDate = (date) => {
     const dateStr = date.toDateString();
-    return tasks.filter(t => {
+    const result = [];
+    tasks.forEach(t => {
       const taskDueDate = t.dueDate ? new Date(t.dueDate).toDateString() : null;
       const taskScheduledDate = t.scheduledDate ? new Date(t.scheduledDate).toDateString() : null;
-      return taskScheduledDate === dateStr || taskDueDate === dateStr;
+      const isStart = taskScheduledDate === dateStr;
+      const isDue = taskDueDate === dateStr;
+
+      if (isStart && isDue) {
+        result.push({ ...t, _dateType: 'start_due' });
+      } else if (isStart) {
+        result.push({ ...t, _dateType: 'start' });
+      } else if (isDue) {
+        result.push({ ...t, _dateType: 'due' });
+      }
     });
+    return result;
   };
 
   const getNotesForDate = (date) => {
@@ -220,6 +265,24 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
     }
   };
 
+  const handleMeetingBoardSelect = async (board) => {
+    setMeetingSelectedBoard(board);
+    setMeetingSelectedTask(null);
+    setMeetingTaskSearch('');
+    setLoadingMeetingTasks(true);
+    try {
+      const res = await workspaceTasksAPI.getByBoard(board._id);
+      if (res.data.success) {
+        setMeetingBoardTasks(res.data.data.filter(t => t.type !== 'note'));
+      }
+    } catch (err) {
+      console.error('Failed to load board tasks:', err);
+      setMeetingBoardTasks([]);
+    } finally {
+      setLoadingMeetingTasks(false);
+    }
+  };
+
   const handleSaveMeeting = async () => {
     if (!meetingForm.title.trim() || !meetingForm.meetingUrl.trim() || !showPopup) {
       alert('Please fill in meeting title and meeting link.');
@@ -241,18 +304,28 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
       const [hours, minutes] = meetingForm.scheduledTime.split(':');
       scheduledDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      const response = await scheduledMeetingsAPI.create({
+      const createData = {
         title: meetingForm.title.trim(),
         description: meetingForm.description.trim(),
         meetingUrl: meetingForm.meetingUrl.trim(),
         scheduledAt: scheduledDate.toISOString(),
         board: boardId,
-      });
+      };
+
+      if (assignToTask && meetingSelectedTask) {
+        createData.assignedTask = meetingSelectedTask._id;
+      }
+
+      const response = await scheduledMeetingsAPI.create(createData);
 
       if (response.data.success) {
         setScheduledMeetings(prev => [...prev, response.data.data]);
         setShowPopup(null);
         setMeetingForm({ title: '', description: '', meetingUrl: '', scheduledTime: '10:00' });
+        setAssignToTask(false);
+        setMeetingSelectedBoard(null);
+        setMeetingSelectedTask(null);
+        setMeetingBoardTasks([]);
         alert('Meeting scheduled! Recall.ai bot will join automatically at the scheduled time.');
       } else {
         alert('Failed to schedule meeting.');
@@ -385,7 +458,8 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
       display: 'flex',
       flexDirection: 'column',
       padding: '0 24px 24px 24px',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      height: 'calc(100vh - 48px)'
     }}>
       {/* Main Card */}
       <div style={{
@@ -429,6 +503,30 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
             >
               Today
             </button>
+            {!propBoardId && allBoards.length > 0 && (
+              <select
+                value={boardId || ''}
+                onChange={(e) => {
+                  setBoardId(e.target.value);
+                  setLoading(true);
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#111827',
+                  backgroundColor: '#f9fafb',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                {allBoards.map(b => (
+                  <option key={b._id} value={b._id}>{b.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Right: Navigation Arrows */}
@@ -527,7 +625,7 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
         </div>
 
         {/* Date Columns Body */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
           {visibleDates.map((date, idx) => {
             const { dayNum, dayName } = formatDate(date);
             const dateTasks = getTasksForDate(date);
@@ -551,7 +649,8 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                   display: 'flex',
                   flexDirection: 'column',
                   position: 'relative',
-                  overflowY: 'auto'
+                  overflowY: 'auto',
+                  minHeight: '100%'
                 }}
               >
                 {/* Column Content */}
@@ -560,6 +659,7 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                   {dateMeetings.map(meeting => (
                     <div
                       key={meeting._id}
+                      onClick={() => setSelectedMeetingDetail(meeting)}
                       style={{
                         padding: '12px',
                         backgroundColor: '#f0fdf4',
@@ -568,6 +668,7 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                         color: '#166534',
                         border: '1px solid #86efac',
                         position: 'relative',
+                        cursor: 'pointer',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '8px' }}>
@@ -577,24 +678,26 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                             {new Date(meeting.scheduledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteMeeting(meeting._id);
-                          }}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#dc2626',
-                            padding: '2px',
-                            fontSize: '14px',
-                            lineHeight: 1
-                          }}
-                          title="Delete meeting"
-                        >
-                          ✕
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMeeting(meeting._id);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#dc2626',
+                              padding: '2px',
+                              fontSize: '14px',
+                              lineHeight: 1
+                            }}
+                            title="Delete meeting"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                         <span style={{
@@ -644,23 +747,47 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                   ))}
 
                   {/* Tasks */}
-                  {dateTasks.map(task => (
-                    <div
-                      key={task._id}
-                      style={{
-                        padding: '10px 14px',
-                        backgroundColor: past ? '#d1d5db' : (boardColor || '#2558BF'),
-                        borderRadius: '10px',
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                      }}
-                    >
-                      {task.title}
-                    </div>
-                  ))}
+                  {dateTasks.map((task, tIdx) => {
+                    const dateLabel = task._dateType === 'start' ? 'Start'
+                      : task._dateType === 'due' ? 'Due'
+                      : task._dateType === 'start_due' ? 'Start & Due'
+                      : '';
+                    const labelBg = task._dateType === 'due' ? '#fbbf24'
+                      : task._dateType === 'start_due' ? '#c084fc'
+                      : '#86efac';
+                    // Past: muted blue-grey, Current/Future: board color
+                    const taskBg = past ? '#94a3b8' : (boardColor || '#2558BF');
+                    return (
+                      <div
+                        key={`${task._id}-${task._dateType}-${tIdx}`}
+                        style={{
+                          padding: '10px 14px',
+                          backgroundColor: taskBg,
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          opacity: past ? 0.85 : 1,
+                        }}
+                      >
+                        <div style={{ marginBottom: '4px', fontSize: '12px', opacity: 0.85 }}>Task:</div>
+                        <div style={{ marginBottom: '6px' }}>{task.title}</div>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          backgroundColor: labelBg,
+                          color: '#111827',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                        }}>
+                          {dateLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   {/* Notes */}
                   {dateNotes.map(note => (
@@ -677,19 +804,21 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
                         <span style={{ flex: 1, lineHeight: '1.4' }}>{note.content}</span>
-                        <button
-                          onClick={() => handleDeleteNote(note.task._id, note._id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#d97706',
-                            padding: '2px',
-                            fontSize: '14px'
-                          }}
-                        >
-                          ✕
-                        </button>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleDeleteNote(note.task._id, note._id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#d97706',
+                              padding: '2px',
+                              fontSize: '14px'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                       <div style={{
                         marginTop: '8px',
@@ -705,8 +834,8 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                     </div>
                   ))}
 
-                  {/* Empty State - Add Buttons */}
-                  {!hasContent && hoveredCell === date.toDateString() && (
+                  {/* Empty State - Add Buttons (Super Admin only) */}
+                  {isSuperAdmin && !hasContent && hoveredCell === date.toDateString() && (
                     <div style={{
                       flex: 1,
                       display: 'flex',
@@ -756,8 +885,8 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                   )}
                 </div>
 
-                {/* Add buttons when there are items */}
-                {hasContent && hoveredCell === date.toDateString() && (
+                {/* Add buttons when there are items (Super Admin only) */}
+                {isSuperAdmin && hasContent && hoveredCell === date.toDateString() && (
                   <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => handleAddClick(date, 'meeting')}
@@ -796,6 +925,158 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
           })}
         </div>
       </div>
+
+      {/* Meeting Detail Popup */}
+      {selectedMeetingDetail && (
+        <>
+          <div
+            onClick={() => { setSelectedMeetingDetail(null); setCopiedLink(false); }}
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 999
+            }}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: '#fff', borderRadius: '16px',
+            padding: '28px', width: '420px', maxWidth: '90vw',
+            zIndex: 1000, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+                {selectedMeetingDetail.title}
+              </h3>
+              <button
+                onClick={() => { setSelectedMeetingDetail(null); setCopiedLink(false); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#9ca3af' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Status</span>
+                <span style={{
+                  fontSize: '12px', fontWeight: '600', color: '#fff',
+                  backgroundColor: getMeetingStatusColor(selectedMeetingDetail.botStatus),
+                  padding: '4px 10px', borderRadius: '6px',
+                }}>
+                  {getMeetingStatusLabel(selectedMeetingDetail.botStatus)}
+                </span>
+              </div>
+
+              {/* Time */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Time</span>
+                <span style={{ fontSize: '14px', color: '#111827' }}>
+                  {new Date(selectedMeetingDetail.scheduledAt).toLocaleString('en-US', {
+                    weekday: 'short', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  })}
+                </span>
+              </div>
+
+              {/* Platform */}
+              {selectedMeetingDetail.platform && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Platform</span>
+                  <span style={{ fontSize: '14px', color: '#111827', textTransform: 'capitalize' }}>
+                    {selectedMeetingDetail.platform?.replace('_', ' ')}
+                  </span>
+                </div>
+              )}
+
+              {/* Assigned To */}
+              {selectedMeetingDetail.visibleTo && selectedMeetingDetail.visibleTo.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px', flexShrink: 0 }}>Assigned</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selectedMeetingDetail.visibleTo.map((user, i) => (
+                      <span key={i} style={{
+                        fontSize: '12px', backgroundColor: '#eff6ff', color: '#1e40af',
+                        padding: '4px 10px', borderRadius: '6px', fontWeight: '500',
+                        border: '1px solid #bfdbfe',
+                      }}>
+                        {user.name || user.email || user}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Created By */}
+              {selectedMeetingDetail.createdBy && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Created by</span>
+                  <span style={{ fontSize: '14px', color: '#111827' }}>
+                    {selectedMeetingDetail.createdBy.name || selectedMeetingDetail.createdBy.email || 'Unknown'}
+                  </span>
+                </div>
+              )}
+
+              {/* Description */}
+              {selectedMeetingDetail.description && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px', flexShrink: 0 }}>Note</span>
+                  <span style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>
+                    {selectedMeetingDetail.description}
+                  </span>
+                </div>
+              )}
+
+              {/* Meeting Link */}
+              {selectedMeetingDetail.meetingUrl && (
+                <div>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', display: 'block', marginBottom: '8px' }}>
+                    Meeting Link
+                  </span>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+                    borderRadius: '8px', padding: '10px 12px',
+                  }}>
+                    <span style={{
+                      flex: 1, fontSize: '13px', color: '#2558BF',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {selectedMeetingDetail.meetingUrl}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedMeetingDetail.meetingUrl);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      }}
+                      style={{
+                        padding: '6px 14px', fontSize: '12px', fontWeight: '600',
+                        backgroundColor: copiedLink ? '#22c55e' : '#2558BF',
+                        color: '#fff', border: 'none', borderRadius: '6px',
+                        cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s',
+                      }}
+                    >
+                      {copiedLink ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Recording indicator */}
+              {(selectedMeetingDetail.videoUrl || selectedMeetingDetail.recordingUrl) && (
+                <div style={{
+                  backgroundColor: '#f0fdf4', border: '1px solid #86efac',
+                  borderRadius: '8px', padding: '10px 12px',
+                  fontSize: '13px', color: '#166534', fontWeight: '500',
+                }}>
+                  Recording available
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modal */}
       {showPopup && (
@@ -953,6 +1234,195 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
                     }}
                   />
                 </div>
+
+                {/* Assign to specific task */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#374151',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={assignToTask}
+                      onChange={(e) => {
+                        setAssignToTask(e.target.checked);
+                        if (!e.target.checked) {
+                          setMeetingSelectedBoard(null);
+                          setMeetingSelectedTask(null);
+                          setMeetingBoardTasks([]);
+                          setMeetingBoardSearch('');
+                          setMeetingTaskSearch('');
+                        }
+                      }}
+                      style={{ width: '18px', height: '18px', accentColor: '#2558BF', cursor: 'pointer' }}
+                    />
+                    Assign meeting to a specific task
+                  </label>
+                  <p style={{ margin: '4px 0 0 28px', fontSize: '12px', color: '#6b7280' }}>
+                    Only the task assignee and you will see this meeting
+                  </p>
+                </div>
+
+                {assignToTask && (
+                  <>
+                    {/* Board Selector */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                        Select Board *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search boards..."
+                        value={meetingBoardSearch}
+                        onChange={(e) => setMeetingBoardSearch(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          marginBottom: '6px',
+                          boxSizing: 'border-box',
+                          fontSize: '13px',
+                        }}
+                      />
+                      <div style={{
+                        maxHeight: '120px',
+                        overflowY: 'auto',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                      }}>
+                        {allBoards
+                          .filter(b => b.name.toLowerCase().includes(meetingBoardSearch.toLowerCase()))
+                          .map(b => (
+                            <div
+                              key={b._id}
+                              onClick={() => handleMeetingBoardSelect(b)}
+                              style={{
+                                padding: '10px 12px',
+                                cursor: 'pointer',
+                                backgroundColor: meetingSelectedBoard?._id === b._id ? '#eff6ff' : '#fff',
+                                borderBottom: '1px solid #f3f4f6',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '13px',
+                              }}
+                              onMouseEnter={(e) => { if (meetingSelectedBoard?._id !== b._id) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                              onMouseLeave={(e) => { if (meetingSelectedBoard?._id !== b._id) e.currentTarget.style.backgroundColor = '#fff'; }}
+                            >
+                              <div style={{
+                                width: '14px',
+                                height: '14px',
+                                borderRadius: '4px',
+                                backgroundColor: b.color || '#2558BF',
+                                flexShrink: 0,
+                              }} />
+                              {meetingSelectedBoard?._id === b._id ? '● ' : '○ '}{b.name}
+                            </div>
+                          ))
+                        }
+                        {allBoards.filter(b => b.name.toLowerCase().includes(meetingBoardSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: '12px', color: '#9ca3af', textAlign: 'center', fontSize: '13px' }}>
+                            No boards found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Task Selector (shows after board selected) */}
+                    {meetingSelectedBoard && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '14px', fontWeight: '600', display: 'block', marginBottom: '8px' }}>
+                          Select Task *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Search tasks..."
+                          value={meetingTaskSearch}
+                          onChange={(e) => setMeetingTaskSearch(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            marginBottom: '6px',
+                            boxSizing: 'border-box',
+                            fontSize: '13px',
+                          }}
+                        />
+                        <div style={{
+                          maxHeight: '140px',
+                          overflowY: 'auto',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                        }}>
+                          {loadingMeetingTasks ? (
+                            <div style={{ padding: '12px', color: '#9ca3af', textAlign: 'center', fontSize: '13px' }}>
+                              Loading tasks...
+                            </div>
+                          ) : meetingBoardTasks
+                              .filter(t => t.title.toLowerCase().includes(meetingTaskSearch.toLowerCase()))
+                              .map(t => (
+                                <div
+                                  key={t._id}
+                                  onClick={() => setMeetingSelectedTask(t)}
+                                  style={{
+                                    padding: '10px 12px',
+                                    cursor: 'pointer',
+                                    backgroundColor: meetingSelectedTask?._id === t._id ? '#eff6ff' : '#fff',
+                                    borderBottom: '1px solid #f3f4f6',
+                                    fontSize: '13px',
+                                  }}
+                                  onMouseEnter={(e) => { if (meetingSelectedTask?._id !== t._id) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                                  onMouseLeave={(e) => { if (meetingSelectedTask?._id !== t._id) e.currentTarget.style.backgroundColor = '#fff'; }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {meetingSelectedTask?._id === t._id ? '● ' : '○ '}
+                                    <span>{t.title}</span>
+                                  </div>
+                                  {t.assignee && (
+                                    <div style={{ fontSize: '11px', color: '#6b7280', marginLeft: '18px', marginTop: '2px' }}>
+                                      Assigned to: {t.assignee.name || t.assignee.email || 'Unknown'}
+                                    </div>
+                                  )}
+                                </div>
+                              ))
+                          }
+                          {!loadingMeetingTasks && meetingBoardTasks.filter(t => t.title.toLowerCase().includes(meetingTaskSearch.toLowerCase())).length === 0 && (
+                            <div style={{ padding: '12px', color: '#9ca3af', textAlign: 'center', fontSize: '13px' }}>
+                              No tasks found in this board
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected summary */}
+                    {meetingSelectedTask && (
+                      <div style={{
+                        backgroundColor: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '8px',
+                        padding: '10px 12px',
+                        marginBottom: '16px',
+                        fontSize: '13px',
+                        color: '#1e40af',
+                      }}>
+                        <strong>📌 Linked to:</strong> {meetingSelectedTask.title}
+                        {meetingSelectedTask.assignee && (
+                          <span> → visible to <strong>{meetingSelectedTask.assignee.name || meetingSelectedTask.assignee.email}</strong></span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
 
                 <div style={{
                   backgroundColor: '#f0fdf4',

@@ -8,6 +8,8 @@ import BoardDetail from './BoardDetail';
 import AdminsManager from './AdminsManager';
 import AllTasks from './AllTasks';
 import Inbox from './Inbox';
+import CalendarView from '../components/CalendarView';
+import MeetingsView from '../components/MeetingsView';
 import { workspaceBoardsAPI, workspaceTasksAPI, workspaceUsersAPI, workspaceMessagesAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
@@ -535,6 +537,8 @@ const SuperAdminDashboard = () => {
     if (location.pathname.includes('/inbox')) return 'inbox';
     if (location.pathname.includes('/admins')) return 'admins';
     if (location.pathname.includes('/all-tasks')) return 'tasks';
+    if (location.pathname.includes('/calendar')) return 'calendar';
+    if (location.pathname.includes('/meetings')) return 'meetings';
     if (location.pathname.includes('/settings')) return 'settings';
     return 'home';
   };
@@ -563,6 +567,8 @@ const SuperAdminDashboard = () => {
         <Route path="/my-tasks" element={<MyTasks />} />
         <Route path="/boards" element={<BoardsList />} />
         <Route path="/boards/:boardId" element={<BoardDetail />} />
+        <Route path="/calendar" element={<CalendarView />} />
+        <Route path="/meetings" element={<MeetingsView />} />
         <Route path="/all-tasks" element={<AllTasks />} />
         <Route path="/admins" element={<AdminsManager />} />
         <Route path="/inbox" element={

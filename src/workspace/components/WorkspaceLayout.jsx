@@ -36,11 +36,15 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
         { id: 'inbox', path: '/inbox', icon: 'inbox', label: 'Inbox' },
         { id: 'admins', path: '/admins', icon: 'users', label: 'Team' },
         { id: 'tasks', path: '/all-tasks', icon: 'tasks', label: 'Tasks' },
+        { id: 'calendar', path: '/calendar', icon: 'calendar', label: 'Calendar' },
+        { id: 'meetings', path: '/meetings', icon: 'meetings', label: 'Meetings' },
       ]
     : [
         { id: 'home', path: '', icon: 'home', label: 'Home' },
         { id: 'inbox', path: '/inbox', icon: 'inbox', label: 'Inbox' },
         { id: 'tasks', path: '/my-tasks', icon: 'tasks', label: 'Tasks' },
+        { id: 'calendar', path: '/calendar', icon: 'calendar', label: 'Calendar' },
+        { id: 'meetings', path: '/meetings', icon: 'meetings', label: 'Meetings' },
       ];
 
   const icons = {
@@ -62,6 +66,16 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
     tasks: (
       <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
+      </svg>
+    ),
+    calendar: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z" />
+      </svg>
+    ),
+    meetings: (
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
       </svg>
     ),
     settings: (

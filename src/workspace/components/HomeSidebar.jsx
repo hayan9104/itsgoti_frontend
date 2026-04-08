@@ -333,33 +333,6 @@ const HomeSidebar = () => {
                           Tasks
                         </div>
 
-                        {/* Calendar */}
-                        <div
-                          onClick={() => {
-                            handleSectionClick(board._id, 'calendar');
-                            navigate(`${basePath}/boards/${board._id}?view=calendar`);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 14px 8px 46px',
-                            cursor: 'pointer',
-                            color: (currentBoardId === board._id && currentView === 'calendar') ? '#2558BF' : '#6b7280',
-                            fontSize: '13px',
-                            borderRadius: '6px',
-                            margin: '0 8px',
-                            backgroundColor: (currentBoardId === board._id && currentView === 'calendar') ? '#e0e7ff' : 'transparent',
-                          }}
-                          onMouseEnter={(e) => { if (!(currentBoardId === board._id && currentView === 'calendar')) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
-                          onMouseLeave={(e) => { if (!(currentBoardId === board._id && currentView === 'calendar')) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z" />
-                          </svg>
-                          Calendar
-                        </div>
-
                         {/* Documents */}
                         <div
                           onClick={() => {
@@ -385,33 +358,6 @@ const HomeSidebar = () => {
                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                           </svg>
                           Documents
-                        </div>
-
-                        {/* Meetings */}
-                        <div
-                          onClick={() => {
-                            handleSectionClick(board._id, 'meetings');
-                            navigate(`${basePath}/boards/${board._id}?view=meetings`);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 14px 8px 46px',
-                            cursor: 'pointer',
-                            color: (currentBoardId === board._id && currentView === 'meetings') ? '#2558BF' : '#6b7280',
-                            fontSize: '13px',
-                            borderRadius: '6px',
-                            margin: '0 8px',
-                            backgroundColor: (currentBoardId === board._id && currentView === 'meetings') ? '#e0e7ff' : 'transparent',
-                          }}
-                          onMouseEnter={(e) => { if (!(currentBoardId === board._id && currentView === 'meetings')) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
-                          onMouseLeave={(e) => { if (!(currentBoardId === board._id && currentView === 'meetings')) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
-                          </svg>
-                          Meetings
                         </div>
 
                         {/* Members */}

@@ -6,6 +6,8 @@ import InboxSidebar from '../components/InboxSidebar';
 import BoardsList from './BoardsList';
 import BoardDetail from './BoardDetail';
 import Inbox from './Inbox';
+import CalendarView from '../components/CalendarView';
+import MeetingsView from '../components/MeetingsView';
 import { workspaceTasksAPI, workspaceBoardsAPI, workspaceMessagesAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
@@ -631,6 +633,8 @@ const AdminDashboard = () => {
   const getActiveSection = () => {
     if (location.pathname.includes('/inbox')) return 'inbox';
     if (location.pathname.includes('/my-tasks')) return 'tasks';
+    if (location.pathname.includes('/calendar')) return 'calendar';
+    if (location.pathname.includes('/meetings')) return 'meetings';
     if (location.pathname.includes('/settings')) return 'settings';
     return 'home';
   };
@@ -659,6 +663,8 @@ const AdminDashboard = () => {
         <Route path="/my-tasks" element={<MyTasks />} />
         <Route path="/boards" element={<BoardsList />} />
         <Route path="/boards/:boardId" element={<BoardDetail />} />
+        <Route path="/calendar" element={<CalendarView />} />
+        <Route path="/meetings" element={<MeetingsView />} />
         <Route path="/inbox" element={
           <Inbox
             selectedConversation={inboxConversation}

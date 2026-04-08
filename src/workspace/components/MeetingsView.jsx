@@ -1,17 +1,75 @@
 import { useState, useEffect } from 'react';
-import { workspaceMeetingsAPI, scheduledMeetingsAPI } from '../../services/api';
+import { workspaceMeetingsAPI, workspaceBoardsAPI, workspaceTasksAPI, scheduledMeetingsAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
-const MeetingsView = ({ boardId, boardName }) => {
+const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   const { isSuperAdmin } = useWorkspaceAuth();
+  const [boardId, setBoardId] = useState(propBoardId);
+  const [boardName, setBoardName] = useState(propBoardName);
+  const [allBoards, setAllBoards] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [processing, setProcessing] = useState({});
 
+  // Filter state
+  const [filterTaskId, setFilterTaskId] = useState('');
+  const [boardTasks, setBoardTasks] = useState([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
+  // Super admin tabs: 'with_board' | 'without_board'
+  const [activeTab, setActiveTab] = useState('with_board');
+
+  // Load all boards
   useEffect(() => {
-    loadMeetings();
-  }, [boardId]);
+    const loadBoards = async () => {
+      try {
+        const res = await workspaceBoardsAPI.getAll();
+        if (res.data.success && res.data.data.length > 0) {
+          setAllBoards(res.data.data);
+          if (!propBoardId) {
+            setBoardId(res.data.data[0]._id);
+            setBoardName(res.data.data[0].name);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load boards:', err);
+      }
+    };
+    loadBoards();
+  }, [propBoardId]);
+
+  // Load tasks when board changes
+  useEffect(() => {
+    if (!boardId || propBoardId) return; // skip if board-specific view
+    setFilterTaskId('');
+    const loadTasks = async () => {
+      setLoadingTasks(true);
+      try {
+        const res = await workspaceTasksAPI.getByBoard(boardId);
+        if (res.data.success) {
+          setBoardTasks(res.data.data.filter(t => t.type !== 'note'));
+        }
+      } catch (err) {
+        setBoardTasks([]);
+      } finally {
+        setLoadingTasks(false);
+      }
+    };
+    loadTasks();
+  }, [boardId, propBoardId]);
+
+  // Load meetings
+  useEffect(() => {
+    if (propBoardId) {
+      loadMeetings();
+    } else if (activeTab === 'without_board') {
+      loadUnassignedMeetings();
+    } else {
+      if (!boardId) return;
+      loadMeetings();
+    }
+  }, [boardId, activeTab]);
 
   useEffect(() => {
     if (selectedMeeting && !selectedMeeting.summary) {
@@ -34,6 +92,7 @@ const MeetingsView = ({ boardId, boardName }) => {
   };
 
   const loadMeetings = async () => {
+    setLoading(true);
     try {
       // First, auto-sync any completed recordings from Recall.ai
       try {
@@ -42,8 +101,28 @@ const MeetingsView = ({ boardId, boardName }) => {
         // Don't fail if sync fails, just continue loading
       }
 
-      // Then load all meetings
-      const res = await workspaceMeetingsAPI.getAll({ board: boardId });
+      // Load meetings for this board
+      const params = { board: boardId };
+      // For global "With Boards" tab, only show task-assigned meetings
+      if (!propBoardId) {
+        params.assigned = 'true';
+      }
+      const res = await workspaceMeetingsAPI.getAll(params);
+      if (res.data.success) {
+        setMeetings(res.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load meetings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUnassignedMeetings = async () => {
+    setLoading(true);
+    try {
+      // Load meetings that have no task assignment (legacy/unassigned)
+      const res = await workspaceMeetingsAPI.getAll({ unassigned: 'true' });
       if (res.data.success) {
         setMeetings(res.data.data);
       }
@@ -151,6 +230,11 @@ const MeetingsView = ({ boardId, boardName }) => {
     }
   };
 
+  // Filter meetings by task
+  const filteredMeetings = filterTaskId
+    ? meetings.filter(m => m.assignedTask === filterTaskId || m.assignedTask?._id === filterTaskId)
+    : meetings;
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#f59e0b';
@@ -195,25 +279,126 @@ const MeetingsView = ({ boardId, boardName }) => {
     );
   }
 
+  const filterSelectStyle = {
+    padding: '8px 12px',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#111827',
+    backgroundColor: '#f9fafb',
+    cursor: 'pointer',
+    outline: 'none',
+    minWidth: '130px',
+  };
+
+  const tabStyle = (active) => ({
+    padding: '10px 20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: active ? '#2558BF' : '#6b7280',
+    backgroundColor: active ? '#eff6ff' : '#fff',
+    border: active ? '2px solid #2558BF' : '1px solid #e5e7eb',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  });
+
   return (
     <div style={{ padding: '24px', display: 'flex', gap: '24px', height: 'calc(100vh - 120px)' }}>
       {/* Meetings List */}
-      <div style={{ width: selectedMeeting ? '320px' : '100%', flexShrink: 0 }}>
+      <div style={{ width: selectedMeeting ? '320px' : '100%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-              Meeting Notes
-            </h2>
-            <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
-              {meetings.length} meeting{meetings.length !== 1 ? 's' : ''} in {boardName}
-            </p>
-          </div>
-          {/* Add Meeting button removed - meetings auto-sync from Recall.ai */}
+        <div style={{ marginBottom: '16px' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+            Meeting Notes
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
+            {filteredMeetings.length} meeting{filteredMeetings.length !== 1 ? 's' : ''}
+            {activeTab === 'with_board' && boardName ? ` in ${boardName}` : ''}
+          </p>
         </div>
 
+        {/* Super Admin Tabs */}
+        {!propBoardId && isSuperAdmin && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button
+              onClick={() => { setActiveTab('with_board'); setSelectedMeeting(null); }}
+              style={tabStyle(activeTab === 'with_board')}
+            >
+              With Boards
+            </button>
+            <button
+              onClick={() => { setActiveTab('without_board'); setSelectedMeeting(null); setFilterTaskId(''); }}
+              style={tabStyle(activeTab === 'without_board')}
+            >
+              Without Boards
+            </button>
+          </div>
+        )}
+
+        {/* Filters (only for "with board" tab or admin view) */}
+        {activeTab === 'with_board' && !propBoardId && allBoards.length > 0 && (
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Board Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Board</label>
+              <select
+                value={boardId || ''}
+                onChange={(e) => {
+                  const selected = allBoards.find(b => b._id === e.target.value);
+                  setBoardId(e.target.value);
+                  setBoardName(selected?.name || '');
+                  setSelectedMeeting(null);
+                  setFilterTaskId('');
+                }}
+                style={filterSelectStyle}
+              >
+                {allBoards.map(b => (
+                  <option key={b._id} value={b._id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Task Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Task</label>
+              <select
+                value={filterTaskId}
+                onChange={(e) => { setFilterTaskId(e.target.value); setSelectedMeeting(null); }}
+                style={filterSelectStyle}
+                disabled={loadingTasks}
+              >
+                <option value="">All Tasks</option>
+                {boardTasks.map(t => (
+                  <option key={t._id} value={t._id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Clear filters */}
+            {filterTaskId && (
+              <button
+                onClick={() => { setFilterTaskId(''); setSelectedMeeting(null); }}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  color: '#dc2626',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Meetings List */}
-        {meetings.length === 0 ? (
+        {filteredMeetings.length === 0 ? (
           <div style={{
             padding: '60px 20px',
             textAlign: 'center',
@@ -231,7 +416,7 @@ const MeetingsView = ({ boardId, boardName }) => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
-            {meetings.filter(m => m && m._id).map((meeting) => (
+            {filteredMeetings.filter(m => m && m._id).map((meeting) => (
               <div
                 key={meeting._id}
                 onClick={() => setSelectedMeeting(meeting)}
@@ -449,6 +634,80 @@ const MeetingsView = ({ boardId, boardName }) => {
 
           {/* Detail Content */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '32px', backgroundColor: '#f9fafb' }}>
+            {/* Meeting Recording */}
+            {(selectedMeeting.localRecordingPath || selectedMeeting.recording?.url) && (() => {
+              const recordingUrl = selectedMeeting.localRecordingPath
+                ? `${window.location.origin}${selectedMeeting.localRecordingPath}`
+                : selectedMeeting.recording?.url || '';
+              const isLocal = !!selectedMeeting.localRecordingPath;
+
+              return (
+                <div style={{
+                  padding: '16px 20px',
+                  backgroundColor: '#fff',
+                  borderRadius: '10px',
+                  marginBottom: '20px',
+                  border: '1px solid #e5e7eb',
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Meeting Recording
+                  </div>
+
+                  {/* Video Player */}
+                  <div style={{
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    backgroundColor: '#000',
+                    marginBottom: '12px',
+                  }}>
+                    <video
+                      controls
+                      preload="metadata"
+                      style={{ width: '100%', maxHeight: '400px', display: 'block' }}
+                      src={recordingUrl}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+
+                  {/* Link + Copy */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+                    borderRadius: '8px', padding: '8px 12px',
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#2558BF" style={{ flexShrink: 0 }}>
+                      <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                    </svg>
+                    <span style={{
+                      flex: 1, fontSize: '12px', color: '#6b7280',
+                      minWidth: 0,
+                    }}>
+                      {recordingUrl.length > 55 ? recordingUrl.substring(0, 55) + '...' : recordingUrl}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(recordingUrl);
+                        alert('Recording link copied!');
+                      }}
+                      style={{
+                        padding: '5px 12px', fontSize: '11px', fontWeight: '600',
+                        backgroundColor: '#2558BF', color: '#fff', border: 'none',
+                        borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                  {isLocal && (
+                    <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#22c55e', fontWeight: '500' }}>
+                      Saved to server - permanent link
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
             {selectedMeeting.status === 'processing' && (
               <div style={{
                 padding: '20px',
