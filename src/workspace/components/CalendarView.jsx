@@ -91,45 +91,6 @@ const CalendarView = ({ boardId, boardName, boardColor }) => {
         const meetingsRes = await scheduledMeetingsAPI.getAll({ board: boardId });
         if (meetingsRes.data.success) {
           setScheduledMeetings(meetingsRes.data.data);
-
-          // ========== DEBUG LOGS - REMOVE LATER ==========
-          console.log('\n%c📹 SCHEDULED MEETINGS DATA', 'background: #10b981; color: white; font-size: 16px; padding: 8px 16px; border-radius: 4px;');
-          console.log('%c Total Meetings: ' + meetingsRes.data.data.length, 'color: #6b7280; font-size: 14px;');
-
-          meetingsRes.data.data.forEach((meeting, index) => {
-            console.log(`\n%c Meeting ${index + 1}: ${meeting.title}`, 'color: #2563eb; font-weight: bold; font-size: 14px;');
-            console.table({
-              'Title': meeting.title,
-              'Status': meeting.botStatus,
-              'Platform': meeting.platform,
-              'Scheduled At': meeting.scheduledAt ? new Date(meeting.scheduledAt).toLocaleString() : 'N/A',
-              'Bot Joined At (Start)': meeting.botJoinedAt ? new Date(meeting.botJoinedAt).toLocaleString() : 'Not started',
-              'Bot Left At (End)': meeting.botLeftAt ? new Date(meeting.botLeftAt).toLocaleString() : 'Not ended',
-              'Duration (seconds)': meeting.recordingDuration || 'N/A',
-              'Duration (minutes)': meeting.recordingDuration ? Math.round(meeting.recordingDuration / 60) : 'N/A',
-              'Video URL': meeting.videoUrl || 'No recording yet',
-              'Recording URL': meeting.recordingUrl || 'No recording yet',
-              'Meeting Link': meeting.meetingUrl,
-              'Recall Bot ID': meeting.recallBotId || 'Not assigned',
-              'AI Processing': meeting.aiProcessingStatus,
-              'Summary': meeting.summary ? meeting.summary.substring(0, 100) + '...' : 'No summary',
-            });
-          });
-
-          // Summary table
-          console.log('\n%c📊 SUMMARY TABLE', 'background: #8b5cf6; color: white; font-size: 14px; padding: 4px 12px; border-radius: 4px;');
-          console.table(
-            meetingsRes.data.data.map(m => ({
-              Title: m.title,
-              Status: m.botStatus,
-              'Scheduled': m.scheduledAt ? new Date(m.scheduledAt).toLocaleString() : '-',
-              'Duration': m.recordingDuration ? `${Math.round(m.recordingDuration / 60)} min` : '-',
-              'Has Recording': m.videoUrl || m.recordingUrl ? '✅ Yes' : '❌ No',
-              'Has Summary': m.summary ? '✅ Yes' : '❌ No',
-            }))
-          );
-          console.log('%c========== END DEBUG LOGS ==========\n', 'color: #9ca3af;');
-          // ========== END DEBUG LOGS ==========
         }
       } catch (err) {
         console.error('Failed to load scheduled meetings:', err);
