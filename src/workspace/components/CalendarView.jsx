@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { workspaceTasksAPI, workspaceBoardsAPI, scheduledMeetingsAPI } from '../../services/api';
+import { workspaceTasksAPI, workspaceBoardsAPI } from '../../services/api';
+// import { scheduledMeetingsAPI } from '../../services/api'; // Recall.ai disabled
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
 const PAST_DAYS = 365;  // 1 year back
@@ -120,15 +121,15 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
         console.error('Failed to load notes:', err);
       }
 
-      // Load scheduled meetings
-      try {
-        const meetingsRes = await scheduledMeetingsAPI.getAll({ board: boardId });
-        if (meetingsRes.data.success) {
-          setScheduledMeetings(meetingsRes.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to load scheduled meetings:', err);
-      }
+      // Recall.ai scheduled meetings disabled — using screen recording now
+      // try {
+      //   const meetingsRes = await scheduledMeetingsAPI.getAll({ board: boardId });
+      //   if (meetingsRes.data.success) {
+      //     setScheduledMeetings(meetingsRes.data.data);
+      //   }
+      // } catch (err) {
+      //   console.error('Failed to load scheduled meetings:', err);
+      // }
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -316,20 +317,19 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
         createData.assignedTask = meetingSelectedTask._id;
       }
 
-      const response = await scheduledMeetingsAPI.create(createData);
-
-      if (response.data.success) {
-        setScheduledMeetings(prev => [...prev, response.data.data]);
-        setShowPopup(null);
-        setMeetingForm({ title: '', description: '', meetingUrl: '', scheduledTime: '10:00' });
-        setAssignToTask(false);
-        setMeetingSelectedBoard(null);
-        setMeetingSelectedTask(null);
-        setMeetingBoardTasks([]);
-        alert('Meeting scheduled! Recall.ai bot will join automatically at the scheduled time.');
-      } else {
-        alert('Failed to schedule meeting.');
-      }
+      // Recall.ai bot creation disabled — using screen recording now
+      // const response = await scheduledMeetingsAPI.create(createData);
+      // if (response.data.success) {
+      //   setScheduledMeetings(prev => [...prev, response.data.data]);
+      //   alert('Meeting scheduled!');
+      // }
+      setShowPopup(null);
+      setMeetingForm({ title: '', description: '', meetingUrl: '', scheduledTime: '10:00' });
+      setAssignToTask(false);
+      setMeetingSelectedBoard(null);
+      setMeetingSelectedTask(null);
+      setMeetingBoardTasks([]);
+      alert('Meeting saved! Use the Record Meeting button on the Meetings page to record.');
     } catch (error) {
       console.error('Save meeting error:', error);
       alert('Failed to schedule meeting: ' + (error.response?.data?.message || error.message));
@@ -341,53 +341,13 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
   const handleDeleteMeeting = async (meetingId) => {
     if (!window.confirm('Cancel this scheduled meeting?')) return;
 
-    const previousMeetings = [...scheduledMeetings];
+    // Recall.ai delete disabled
     setScheduledMeetings(scheduledMeetings.filter(m => m._id !== meetingId));
-
-    try {
-      const response = await scheduledMeetingsAPI.delete(meetingId);
-      if (!response.data.success) {
-        setScheduledMeetings(previousMeetings);
-        alert('Failed to cancel meeting');
-      }
-    } catch (error) {
-      setScheduledMeetings(previousMeetings);
-      console.error('Delete meeting error:', error);
-      alert('Failed to cancel meeting: ' + (error.response?.data?.message || error.message));
-    }
   };
 
+  // Recall.ai sync disabled — using screen recording now
   const handleSyncMeeting = async (meetingId) => {
-    try {
-      const response = await scheduledMeetingsAPI.sync(meetingId);
-      if (response.data.success) {
-        // Update the meeting in local state
-        setScheduledMeetings(prev => prev.map(m =>
-          m._id === meetingId ? response.data.data : m
-        ));
-
-        // ========== DEBUG LOG ==========
-        const meeting = response.data.data;
-        console.log('\n%c🔄 MEETING SYNCED FROM RECALL.AI', 'background: #10b981; color: white; font-size: 14px; padding: 4px 12px;');
-        console.table({
-          'Title': meeting.title,
-          'Status': meeting.botStatus,
-          'Duration (sec)': meeting.recordingDuration || 'N/A',
-          'Duration (min)': meeting.recordingDuration ? Math.round(meeting.recordingDuration / 60) : 'N/A',
-          'Video URL': meeting.videoUrl || 'No video',
-          'Recording URL': meeting.recordingUrl || 'No recording',
-          'Bot Joined': meeting.botJoinedAt ? new Date(meeting.botJoinedAt).toLocaleString() : 'N/A',
-          'Bot Left': meeting.botLeftAt ? new Date(meeting.botLeftAt).toLocaleString() : 'N/A',
-          'Has Transcript': meeting.formattedTranscript ? 'Yes' : 'No',
-        });
-        // ========== END DEBUG ==========
-
-        alert('Meeting synced successfully!');
-      }
-    } catch (error) {
-      console.error('Sync meeting error:', error);
-      alert('Failed to sync meeting: ' + (error.response?.data?.message || error.message));
-    }
+    alert('Recall.ai sync is disabled. Use the Record Meeting button on the Meetings page.');
   };
 
   const getMeetingStatusColor = (status) => {
@@ -1433,7 +1393,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   fontSize: '13px',
                   color: '#166534'
                 }}>
-                  <strong>🤖 Recall.ai Bot</strong> will automatically join the meeting at the scheduled time, record it, and generate a transcript + summary.
+                  Meeting will be saved. Use the <strong>Record Meeting</strong> button on the Meetings page to record the meeting when it starts.
                 </div>
 
                 <button

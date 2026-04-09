@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { workspaceMeetingsAPI, workspaceBoardsAPI, workspaceTasksAPI, scheduledMeetingsAPI } from '../../services/api';
+import { workspaceMeetingsAPI, workspaceBoardsAPI, workspaceTasksAPI } from '../../services/api';
+// import { scheduledMeetingsAPI } from '../../services/api'; // Recall.ai disabled
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
+import ScreenRecorder from './ScreenRecorder';
 
 const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   const { isSuperAdmin } = useWorkspaceAuth();
@@ -11,6 +13,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   const [loading, setLoading] = useState(true);
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [processing, setProcessing] = useState({});
+  const [copiedRecLink, setCopiedRecLink] = useState(false);
 
   // Filter state
   const [filterTaskId, setFilterTaskId] = useState('');
@@ -19,6 +22,10 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
 
   // Super admin tabs: 'with_board' | 'without_board'
   const [activeTab, setActiveTab] = useState('with_board');
+
+  // Screen recording
+  const [showRecorder, setShowRecorder] = useState(false);
+  const [recordingUploading, setRecordingUploading] = useState(false);
 
   // Load all boards
   useEffect(() => {
@@ -94,12 +101,10 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   const loadMeetings = async () => {
     setLoading(true);
     try {
-      // First, auto-sync any completed recordings from Recall.ai
-      try {
-        await scheduledMeetingsAPI.syncAll(boardId);
-      } catch (syncError) {
-        // Don't fail if sync fails, just continue loading
-      }
+      // Recall.ai sync disabled — using screen recording now
+      // try {
+      //   await scheduledMeetingsAPI.syncAll(boardId);
+      // } catch (syncError) {}
 
       // Load meetings for this board
       const params = { board: boardId };
@@ -230,6 +235,42 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     }
   };
 
+  // Handle screen recording complete — create meeting with optional board/task assignment
+  const handleScreenRecordingComplete = async (blob, { title: recTitle, boardId: recBoardId, taskId } = {}) => {
+    setRecordingUploading(true);
+    try {
+      // Step 1: Create a new meeting
+      const formData = new FormData();
+      const timestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      formData.append('title', recTitle || `Screen Recording - ${timestamp}`);
+      formData.append('meetingDate', new Date().toISOString().split('T')[0]);
+
+      // Use selected board from recorder, or current board
+      const targetBoardId = recBoardId || boardId;
+      if (targetBoardId) formData.append('board', targetBoardId);
+
+      // If task is selected, assign for visibility control
+      if (taskId) formData.append('assignedTask', taskId);
+
+      // Step 2: Attach the recording blob as a file
+      const file = new File([blob], `recording-${Date.now()}.webm`, { type: 'video/webm' });
+      formData.append('recording', file);
+
+      const res = await workspaceMeetingsAPI.create(formData, () => {});
+      if (res.data.success) {
+        const newMeeting = res.data.data;
+        setMeetings(prev => [newMeeting, ...prev]);
+        setShowRecorder(false);
+        setSelectedMeeting(newMeeting);
+      }
+    } catch (error) {
+      console.error('Failed to save recording:', error);
+      alert('Failed to save recording: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setRecordingUploading(false);
+    }
+  };
+
   // Filter meetings by task
   const filteredMeetings = filterTaskId
     ? meetings.filter(m => m.assignedTask === filterTaskId || m.assignedTask?._id === filterTaskId)
@@ -309,14 +350,42 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       {/* Meetings List */}
       <div style={{ width: selectedMeeting ? '320px' : '100%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{ marginBottom: '16px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-            Meeting Notes
-          </h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
-            {filteredMeetings.length} meeting{filteredMeetings.length !== 1 ? 's' : ''}
-            {activeTab === 'with_board' && boardName ? ` in ${boardName}` : ''}
-          </p>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+              Meeting Notes
+            </h2>
+            <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
+              {filteredMeetings.length} meeting{filteredMeetings.length !== 1 ? 's' : ''}
+              {activeTab === 'with_board' && boardName ? ` in ${boardName}` : ''}
+            </p>
+          </div>
+          {isSuperAdmin && (
+            <button
+              className="rec-meeting-btn"
+              onClick={() => setShowRecorder(true)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#dc2626',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="6"/>
+              </svg>
+              Record Meeting
+            </button>
+          )}
         </div>
 
         {/* Super Admin Tabs */}
@@ -688,15 +757,18 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(recordingUrl);
-                        alert('Recording link copied!');
+                        setCopiedRecLink(true);
+                        setTimeout(() => setCopiedRecLink(false), 2000);
                       }}
                       style={{
                         padding: '5px 12px', fontSize: '11px', fontWeight: '600',
-                        backgroundColor: '#2558BF', color: '#fff', border: 'none',
+                        backgroundColor: copiedRecLink ? '#22c55e' : '#2558BF',
+                        color: '#fff', border: 'none',
                         borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
+                        transition: 'background-color 0.2s',
                       }}
                     >
-                      Copy Link
+                      {copiedRecLink ? 'Copied!' : 'Copy Link'}
                     </button>
                   </div>
                   {isLocal && (
@@ -1004,12 +1076,55 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
         </div>
       )}
 
-      {/* Create Meeting Modal removed - meetings auto-sync from Recall.ai via Calendar */}
+      {/* Screen Recorder Modal */}
+      {showRecorder && (
+        <ScreenRecorder
+          onRecordingComplete={handleScreenRecordingComplete}
+          onClose={() => setShowRecorder(false)}
+        />
+      )}
+
+      {/* Uploading Overlay */}
+      {recordingUploading && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000,
+        }}>
+          <div style={{
+            backgroundColor: '#fff', borderRadius: '16px', padding: '32px 40px',
+            textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+          }}>
+            <div style={{
+              width: '40px', height: '40px', margin: '0 auto 16px',
+              border: '4px solid #e5e7eb', borderTop: '4px solid #2558BF',
+              borderRadius: '50%', animation: 'spin 1s linear infinite',
+            }} />
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+              Saving Recording...
+            </p>
+            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
+              Uploading recording to server
+            </p>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        .rec-meeting-btn:hover {
+          opacity: 0.85;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 14px rgba(220,38,38,0.4);
+        }
+        .rec-meeting-btn:active {
+          transform: translateY(1px) scale(0.97);
+          box-shadow: 0 1px 4px rgba(220,38,38,0.2);
+          opacity: 0.75;
         }
       `}</style>
     </div>
