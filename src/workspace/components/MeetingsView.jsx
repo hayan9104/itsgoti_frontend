@@ -346,7 +346,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   });
 
   return (
-    <div style={{ padding: '24px', display: 'flex', gap: '24px', height: 'calc(100vh - 120px)' }}>
+    <div style={{ padding: '24px', display: 'flex', gap: '24px', height: 'calc(100vh - 48px)' }}>
       {/* Meetings List */}
       <div style={{ width: selectedMeeting ? '320px' : '100%', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
@@ -705,10 +705,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
           <div style={{ flex: 1, overflowY: 'auto', padding: '32px', backgroundColor: '#f9fafb' }}>
             {/* Meeting Recording */}
             {(selectedMeeting.localRecordingPath || selectedMeeting.recording?.url) && (() => {
-              const recordingUrl = selectedMeeting.localRecordingPath
-                ? `${window.location.origin}${selectedMeeting.localRecordingPath}`
-                : selectedMeeting.recording?.url || '';
-              const isLocal = !!selectedMeeting.localRecordingPath;
+              const rawPath = selectedMeeting.localRecordingPath || selectedMeeting.recording?.url || '';
+              const recordingUrl = rawPath.startsWith('http') ? rawPath : `${window.location.origin}${rawPath}`;
 
               return (
                 <div style={{
@@ -722,12 +720,52 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                     Meeting Recording
                   </div>
 
-                  {/* Video Player */}
+                  {/* Recording Link — at top */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+                    borderRadius: '8px', padding: '10px 14px',
+                    marginBottom: '12px',
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#2558BF" style={{ flexShrink: 0 }}>
+                      <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                    </svg>
+                    <a
+                      href={recordingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        flex: 1, fontSize: '12px', color: '#2558BF',
+                        minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        textDecoration: 'none',
+                      }}
+                      title={recordingUrl}
+                    >
+                      {recordingUrl}
+                    </a>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(recordingUrl);
+                        setCopiedRecLink(true);
+                        setTimeout(() => setCopiedRecLink(false), 2000);
+                      }}
+                      style={{
+                        padding: '6px 14px', fontSize: '12px', fontWeight: '600',
+                        backgroundColor: copiedRecLink ? '#22c55e' : '#2558BF',
+                        color: '#fff', border: 'none',
+                        borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {copiedRecLink ? 'Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+
+                  {/* Video Player — below link */}
                   <div style={{
                     borderRadius: '8px',
                     overflow: 'hidden',
                     backgroundColor: '#000',
-                    marginBottom: '12px',
                   }}>
                     <video
                       controls
@@ -738,44 +776,6 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                       Your browser does not support the video tag.
                     </video>
                   </div>
-
-                  {/* Link + Copy */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
-                    borderRadius: '8px', padding: '8px 12px',
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#2558BF" style={{ flexShrink: 0 }}>
-                      <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-                    </svg>
-                    <span style={{
-                      flex: 1, fontSize: '12px', color: '#6b7280',
-                      minWidth: 0,
-                    }}>
-                      {recordingUrl.length > 55 ? recordingUrl.substring(0, 55) + '...' : recordingUrl}
-                    </span>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(recordingUrl);
-                        setCopiedRecLink(true);
-                        setTimeout(() => setCopiedRecLink(false), 2000);
-                      }}
-                      style={{
-                        padding: '5px 12px', fontSize: '11px', fontWeight: '600',
-                        backgroundColor: copiedRecLink ? '#22c55e' : '#2558BF',
-                        color: '#fff', border: 'none',
-                        borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
-                        transition: 'background-color 0.2s',
-                      }}
-                    >
-                      {copiedRecLink ? 'Copied!' : 'Copy Link'}
-                    </button>
-                  </div>
-                  {isLocal && (
-                    <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#22c55e', fontWeight: '500' }}>
-                      Saved to server - permanent link
-                    </p>
-                  )}
                 </div>
               );
             })()}
