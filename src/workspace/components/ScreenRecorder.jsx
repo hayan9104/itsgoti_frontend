@@ -275,7 +275,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
   };
 
   const modalStyle = {
-    backgroundColor: '#fff',
+    backgroundColor: '#2a2b2d',
     borderRadius: '16px',
     width: '520px',
     maxWidth: '95vw',
@@ -286,7 +286,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
 
   const headerStyle = {
     padding: '20px 24px',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid #333436',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -298,7 +298,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
 
   const btnPrimary = {
     padding: '10px 20px',
-    backgroundColor: '#2558BF',
+    backgroundColor: '#6f6e6f',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
@@ -317,9 +317,9 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
 
   const btnSecondary = {
     ...btnPrimary,
-    backgroundColor: '#f3f4f6',
-    color: '#374151',
-    border: '1px solid #e5e7eb',
+    backgroundColor: '#2a2b2d',
+    color: '#e5e7eb',
+    border: '1px solid #333436',
   };
 
   const btnSuccess = {
@@ -332,7 +332,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
       <div style={modalStyle}>
         {/* Header */}
         <div style={headerStyle}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
             {recState === 'idle' && 'Record Meeting'}
             {(recState === 'recording' || recState === 'paused') && 'Recording in Progress'}
             {recState === 'preview' && 'Recording Preview'}
@@ -377,11 +377,11 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
                   placeholder="e.g. Sprint Planning Meeting"
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: '8px',
-                    border: '1px solid #e5e7eb', fontSize: '14px', color: '#111827',
+                    border: '1px solid #333436', fontSize: '14px', color: '#f1f1f1',
                     outline: 'none', boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#2558BF'}
-                  onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+                  onFocus={(e) => e.target.style.borderColor = '#6f6e6f'}
+                  onBlur={(e) => e.target.style.borderColor = '#333436'}
                 />
               </div>
 
@@ -394,17 +394,17 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                 <label style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '12px 16px', backgroundColor: '#f9fafb',
-                  borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer',
+                  padding: '12px 16px', backgroundColor: '#252628',
+                  borderRadius: '8px', border: '1px solid #333436', cursor: 'pointer',
                 }}>
                   <input
                     type="checkbox"
                     checked={includeMic}
                     onChange={(e) => setIncludeMic(e.target.checked)}
-                    style={{ width: '18px', height: '18px', accentColor: '#2558BF' }}
+                    style={{ width: '18px', height: '18px', accentColor: '#6f6e6f' }}
                   />
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>Include Microphone</div>
+                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>Include Microphone</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Record your voice along with the meeting</div>
                   </div>
                 </label>
@@ -445,7 +445,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
               <div style={{
                 fontSize: '48px',
                 fontWeight: '700',
-                color: '#111827',
+                color: '#f1f1f1',
                 fontFamily: 'monospace',
                 marginBottom: '32px',
               }}>
@@ -505,23 +505,23 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
               <div style={{
                 display: 'flex', gap: '16px',
                 padding: '12px 16px',
-                backgroundColor: '#f9fafb',
+                backgroundColor: '#252628',
                 borderRadius: '8px',
                 marginBottom: '20px',
                 fontSize: '13px', color: '#6b7280',
               }}>
-                <span>Duration: <strong style={{ color: '#111827' }}>{formatTime(timer)}</strong></span>
-                <span>Size: <strong style={{ color: '#111827' }}>{recordedBlob ? formatFileSize(recordedBlob.size) : '-'}</strong></span>
-                <span>Format: <strong style={{ color: '#111827' }}>WebM</strong></span>
+                <span>Duration: <strong style={{ color: '#f1f1f1' }}>{formatTime(timer)}</strong></span>
+                <span>Size: <strong style={{ color: '#f1f1f1' }}>{recordedBlob ? formatFileSize(recordedBlob.size) : '-'}</strong></span>
+                <span>Format: <strong style={{ color: '#f1f1f1' }}>WebM</strong></span>
               </div>
 
               {/* Assign to Board/Task */}
               <div style={{
                 padding: '16px',
-                backgroundColor: '#f9fafb',
+                backgroundColor: '#252628',
                 borderRadius: '8px',
                 marginBottom: '16px',
-                border: '1px solid #e5e7eb',
+                border: '1px solid #333436',
               }}>
                 <label style={{
                   display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
@@ -533,10 +533,10 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
                       setAssignToBoard(e.target.checked);
                       if (!e.target.checked) { setSelectedBoardId(''); setSelectedTaskId(''); setTasks([]); }
                     }}
-                    style={{ width: '18px', height: '18px', accentColor: '#2558BF' }}
+                    style={{ width: '18px', height: '18px', accentColor: '#6f6e6f' }}
                   />
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>Save to a Board</div>
+                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>Save to a Board</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>Assign to a task — only the assigned person will see this recording</div>
                   </div>
                 </label>
@@ -554,8 +554,8 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
                         disabled={loadingBoards}
                         style={{
                           width: '100%', padding: '10px 12px', borderRadius: '8px',
-                          border: '1px solid #e5e7eb', fontSize: '13px', color: '#111827',
-                          backgroundColor: '#fff', cursor: 'pointer', outline: 'none',
+                          border: '1px solid #333436', fontSize: '13px', color: '#f1f1f1',
+                          backgroundColor: '#2a2b2d', cursor: 'pointer', outline: 'none',
                         }}
                       >
                         <option value="">{loadingBoards ? 'Loading boards...' : '-- Select Board --'}</option>
@@ -577,8 +577,8 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
                           disabled={loadingTasks}
                           style={{
                             width: '100%', padding: '10px 12px', borderRadius: '8px',
-                            border: '1px solid #e5e7eb', fontSize: '13px', color: '#111827',
-                            backgroundColor: '#fff', cursor: 'pointer', outline: 'none',
+                            border: '1px solid #333436', fontSize: '13px', color: '#f1f1f1',
+                            backgroundColor: '#2a2b2d', cursor: 'pointer', outline: 'none',
                           }}
                         >
                           <option value="">{loadingTasks ? 'Loading tasks...' : '-- Select Task --'}</option>
@@ -657,7 +657,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose }) => {
           box-shadow: 0 4px 14px rgba(5,150,105,0.4);
         }
         .rec-btn-secondary:hover {
-          background-color: #e5e7eb !important;
+          background-color: #333436 !important;
         }
       `}</style>
     </div>

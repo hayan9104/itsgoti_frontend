@@ -137,15 +137,15 @@ const AdminsManager = () => {
   const UserTable = ({ usersList, title, showDeleteButton = true }) => (
     <div
       style={{
-        backgroundColor: '#fff',
+        backgroundColor: '#2a2b2d',
         borderRadius: '12px',
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         overflow: 'hidden',
         marginBottom: '24px',
       }}
     >
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb' }}>
-        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid #333436' }}>
+        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#f1f1f1' }}>
           {title} ({usersList.length})
         </h3>
       </div>
@@ -156,7 +156,7 @@ const AdminsManager = () => {
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ backgroundColor: '#f9fafb' }}>
+            <tr style={{ backgroundColor: '#252628' }}>
               <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
                 Member
               </th>
@@ -173,7 +173,7 @@ const AdminsManager = () => {
           </thead>
           <tbody>
             {usersList.map((user) => (
-              <tr key={user._id} style={{ borderTop: '1px solid #e5e7eb' }}>
+              <tr key={user._id} style={{ borderTop: '1px solid #333436' }}>
                 <td style={{ padding: '16px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div
@@ -181,7 +181,7 @@ const AdminsManager = () => {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        backgroundColor: user.role === 'super_admin' ? '#22c55e' : '#2558BF',
+                        backgroundColor: user.role === 'super_admin' ? '#22c55e' : '#6f6e6f',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -193,7 +193,7 @@ const AdminsManager = () => {
                       {user.initials || user.name?.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <p style={{ margin: 0, fontWeight: '500', color: '#111827', fontSize: '14px' }}>
+                      <p style={{ margin: 0, fontWeight: '500', color: '#f1f1f1', fontSize: '14px' }}>
                         {user.name}
                       </p>
                       <p style={{ margin: 0, color: '#6b7280', fontSize: '13px' }}>{user.email}</p>
@@ -234,12 +234,12 @@ const AdminsManager = () => {
                       onClick={() => openEditModal(user)}
                       style={{
                         padding: '6px 12px',
-                        backgroundColor: '#f3f4f6',
+                        backgroundColor: '#2a2b2d',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '12px',
                         cursor: 'pointer',
-                        color: '#374151',
+                        color: '#e5e7eb',
                       }}
                     >
                       Edit
@@ -296,7 +296,7 @@ const AdminsManager = () => {
         }}
       >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#f1f1f1', margin: 0 }}>
             Manage Team Members
           </h1>
           <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
@@ -310,7 +310,7 @@ const AdminsManager = () => {
             alignItems: 'center',
             gap: '8px',
             padding: '10px 20px',
-            backgroundColor: '#2558BF',
+            backgroundColor: '#6f6e6f',
             color: '#fff',
             border: 'none',
             borderRadius: '8px',
@@ -347,9 +347,9 @@ const AdminsManager = () => {
               width: '100%',
               padding: '10px 12px 10px 44px',
               fontSize: '14px',
-              border: '1px solid #d1d5db',
+              border: '1px solid #424244',
               borderRadius: '8px',
-              backgroundColor: '#fff',
+              backgroundColor: '#2a2b2d',
               outline: 'none',
             }}
           />
@@ -364,21 +364,21 @@ const AdminsManager = () => {
           style={{
             textAlign: 'center',
             padding: '48px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '12px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           }}
         >
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="#d1d5db" style={{ marginBottom: '16px' }}>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="#424244" style={{ marginBottom: '16px' }}>
             <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />
           </svg>
-          <h3 style={{ color: '#374151', fontSize: '18px', marginBottom: '8px' }}>No members found</h3>
+          <h3 style={{ color: '#e5e7eb', fontSize: '18px', marginBottom: '8px' }}>No members found</h3>
           <p style={{ color: '#6b7280', marginBottom: '24px' }}>Add team members to get started</p>
           <button
             onClick={openCreateModal}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#2558BF',
+              backgroundColor: '#6f6e6f',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -417,7 +417,7 @@ const AdminsManager = () => {
         >
           <div
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: '#2a2b2d',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '480px',
@@ -428,13 +428,13 @@ const AdminsManager = () => {
             <div
               style={{
                 padding: '20px 24px',
-                borderBottom: '1px solid #e5e7eb',
+                borderBottom: '1px solid #333436',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
               }}
             >
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
                 {editingUser ? 'Edit Member' : 'Add New Member'}
               </h2>
               <button
@@ -465,7 +465,7 @@ const AdminsManager = () => {
               )}
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#e5e7eb', marginBottom: '6px' }}>
                   Full Name *
                 </label>
                 <input
@@ -476,7 +476,7 @@ const AdminsManager = () => {
                     width: '100%',
                     padding: '10px 14px',
                     fontSize: '14px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #424244',
                     borderRadius: '8px',
                     outline: 'none',
                     boxSizing: 'border-box',
@@ -485,7 +485,7 @@ const AdminsManager = () => {
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#e5e7eb', marginBottom: '6px' }}>
                   Email *
                 </label>
                 <input
@@ -496,7 +496,7 @@ const AdminsManager = () => {
                     width: '100%',
                     padding: '10px 14px',
                     fontSize: '14px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #424244',
                     borderRadius: '8px',
                     outline: 'none',
                     boxSizing: 'border-box',
@@ -505,7 +505,7 @@ const AdminsManager = () => {
               </div>
 
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#e5e7eb', marginBottom: '6px' }}>
                   Password {editingUser ? '(leave blank to keep current)' : '*'}
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -518,7 +518,7 @@ const AdminsManager = () => {
                       width: '100%',
                       padding: '10px 44px 10px 14px',
                       fontSize: '14px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #424244',
                       borderRadius: '8px',
                       outline: 'none',
                       boxSizing: 'border-box',
@@ -557,7 +557,7 @@ const AdminsManager = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#e5e7eb', marginBottom: '6px' }}>
                     Role
                   </label>
                   <select
@@ -567,9 +567,9 @@ const AdminsManager = () => {
                       width: '100%',
                       padding: '10px 14px',
                       fontSize: '14px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #424244',
                       borderRadius: '8px',
-                      backgroundColor: '#fff',
+                      backgroundColor: '#2a2b2d',
                     }}
                   >
                     <option value="admin">Admin</option>
@@ -578,7 +578,7 @@ const AdminsManager = () => {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#e5e7eb', marginBottom: '6px' }}>
                     Status
                   </label>
                   <select
@@ -588,9 +588,9 @@ const AdminsManager = () => {
                       width: '100%',
                       padding: '10px 14px',
                       fontSize: '14px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #424244',
                       borderRadius: '8px',
-                      backgroundColor: '#fff',
+                      backgroundColor: '#2a2b2d',
                     }}
                   >
                     <option value="active">Active</option>
@@ -606,9 +606,9 @@ const AdminsManager = () => {
                   style={{
                     padding: '10px 20px',
                     borderRadius: '8px',
-                    border: '1px solid #d1d5db',
-                    backgroundColor: '#fff',
-                    color: '#374151',
+                    border: '1px solid #424244',
+                    backgroundColor: '#2a2b2d',
+                    color: '#e5e7eb',
                     fontSize: '14px',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -623,7 +623,7 @@ const AdminsManager = () => {
                     padding: '10px 20px',
                     borderRadius: '8px',
                     border: 'none',
-                    backgroundColor: formLoading ? '#93c5fd' : '#2558BF',
+                    backgroundColor: formLoading ? '#93c5fd' : '#6f6e6f',
                     color: '#fff',
                     fontSize: '14px',
                     fontWeight: '500',

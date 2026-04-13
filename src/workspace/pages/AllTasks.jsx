@@ -5,15 +5,15 @@ import { workspaceTasksAPI, workspaceUsersAPI } from '../../services/api';
 const PRIORITY_COLORS = {
   low: { bg: '#f0fdf4', color: '#166534' },
   medium: { bg: '#fefce8', color: '#854d0e' },
-  high: { bg: '#fef2f2', color: '#dc2626' },
-  urgent: { bg: '#fef2f2', color: '#991b1b' },
+  high: { bg: '#3a1a1a', color: '#dc2626' },
+  urgent: { bg: '#3a1a1a', color: '#991b1b' },
 };
 
 const STATUS_COLORS = {
-  open: { bg: '#f3f4f6', color: '#4b5563' },
-  todo: { bg: '#dbeafe', color: '#1e40af' },
-  doing: { bg: '#fef3c7', color: '#92400e' },
-  done: { bg: '#dcfce7', color: '#166534' },
+  open: { bg: '#2a2b2d', color: '#a2a0a2' },
+  todo: { bg: '#1a2a3a', color: '#1e40af' },
+  doing: { bg: '#2e2a1a', color: '#92400e' },
+  done: { bg: '#1a2e1a', color: '#166534' },
 };
 
 const AllTasks = () => {
@@ -86,7 +86,7 @@ const AllTasks = () => {
     <div>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: 0 }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#f1f1f1', margin: 0 }}>
           All Tasks
         </h1>
         <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
@@ -113,7 +113,7 @@ const AllTasks = () => {
           <div
             key={stat.label}
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: '#2a2b2d',
               borderRadius: '10px',
               padding: '16px',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
@@ -137,7 +137,7 @@ const AllTasks = () => {
       {/* Filters */}
       <div
         style={{
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '12px',
           padding: '16px 20px',
           marginBottom: '20px',
@@ -168,9 +168,11 @@ const AllTasks = () => {
               width: '100%',
               padding: '8px 12px 8px 40px',
               fontSize: '14px',
-              border: '1px solid #e5e7eb',
+              border: '1px solid #333436',
               borderRadius: '8px',
               outline: 'none',
+              backgroundColor: '#2a2b2d',
+              color: '#e5e7eb',
             }}
           />
         </div>
@@ -182,9 +184,10 @@ const AllTasks = () => {
           style={{
             padding: '8px 12px',
             fontSize: '14px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #333436',
             borderRadius: '8px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
+            color: '#e5e7eb',
             minWidth: '120px',
           }}
         >
@@ -202,9 +205,10 @@ const AllTasks = () => {
           style={{
             padding: '8px 12px',
             fontSize: '14px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #333436',
             borderRadius: '8px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
+            color: '#e5e7eb',
             minWidth: '120px',
           }}
         >
@@ -222,9 +226,10 @@ const AllTasks = () => {
           style={{
             padding: '8px 12px',
             fontSize: '14px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #333436',
             borderRadius: '8px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
+            color: '#e5e7eb',
             minWidth: '150px',
           }}
         >
@@ -244,7 +249,7 @@ const AllTasks = () => {
               padding: '8px 12px',
               fontSize: '13px',
               color: '#6b7280',
-              backgroundColor: '#f3f4f6',
+              backgroundColor: '#2a2b2d',
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
@@ -263,15 +268,15 @@ const AllTasks = () => {
           style={{
             textAlign: 'center',
             padding: '48px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '12px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           }}
         >
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="#d1d5db" style={{ marginBottom: '16px' }}>
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="#424244" style={{ marginBottom: '16px' }}>
             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" />
           </svg>
-          <h3 style={{ color: '#374151', fontSize: '18px', marginBottom: '8px' }}>No tasks found</h3>
+          <h3 style={{ color: '#e5e7eb', fontSize: '18px', marginBottom: '8px' }}>No tasks found</h3>
           <p style={{ color: '#6b7280' }}>
             {filters.search || filters.status || filters.priority || filters.assignee
               ? 'Try adjusting your filters'
@@ -281,7 +286,7 @@ const AllTasks = () => {
       ) : (
         <div
           style={{
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '12px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
             overflow: 'hidden',
@@ -289,7 +294,7 @@ const AllTasks = () => {
         >
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f9fafb' }}>
+              <tr style={{ backgroundColor: '#252628' }}>
                 <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
                   Task
                 </th>
@@ -318,13 +323,13 @@ const AllTasks = () => {
                 return (
                   <tr
                     key={task._id}
-                    style={{ borderTop: '1px solid #e5e7eb', cursor: 'pointer' }}
+                    style={{ borderTop: '1px solid #333436', cursor: 'pointer' }}
                     onClick={() => navigate(`/workspace/super-admin/boards/${task.board?._id || task.board}`)}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2a2b2d')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     <td style={{ padding: '16px 20px' }}>
-                      <p style={{ margin: 0, fontWeight: '500', color: '#111827', fontSize: '14px' }}>
+                      <p style={{ margin: 0, fontWeight: '500', color: '#f1f1f1', fontSize: '14px' }}>
                         {task.title}
                       </p>
                       {task.description && (
@@ -350,7 +355,7 @@ const AllTasks = () => {
                           alignItems: 'center',
                           gap: '6px',
                           fontSize: '13px',
-                          color: '#374151',
+                          color: '#e5e7eb',
                         }}
                       >
                         <span
@@ -358,7 +363,7 @@ const AllTasks = () => {
                             width: '8px',
                             height: '8px',
                             borderRadius: '2px',
-                            backgroundColor: task.board?.color || '#2558BF',
+                            backgroundColor: task.board?.color || '#6f6e6f',
                           }}
                         />
                         {task.board?.name || 'Unknown'}
@@ -402,7 +407,7 @@ const AllTasks = () => {
                               width: '28px',
                               height: '28px',
                               borderRadius: '6px',
-                              backgroundColor: '#2558BF',
+                              backgroundColor: '#6f6e6f',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -413,7 +418,7 @@ const AllTasks = () => {
                           >
                             {task.assignee.initials || task.assignee.name?.substring(0, 2).toUpperCase()}
                           </div>
-                          <span style={{ fontSize: '13px', color: '#374151' }}>{task.assignee.name}</span>
+                          <span style={{ fontSize: '13px', color: '#e5e7eb' }}>{task.assignee.name}</span>
                         </div>
                       ) : (
                         <span style={{ color: '#9ca3af', fontSize: '13px' }}>Unassigned</span>

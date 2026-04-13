@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { workspaceBoardsAPI } from '../../services/api';
 
 const COLORS = [
-  '#2558BF', '#7c3aed', '#db2777', '#dc2626',
+  '#6f6e6f', '#7c3aed', '#db2777', '#dc2626',
   '#ea580c', '#ca8a04', '#16a34a', '#0d9488',
   '#0284c7', '#6366f1', '#8b5cf6', '#64748b',
 ];
@@ -59,7 +59,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
     >
       <div
         style={{
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '16px',
           width: '100%',
           maxWidth: '480px',
@@ -72,13 +72,13 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid #333436',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
             Create New Board
           </h2>
           <button
@@ -122,7 +122,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: '500',
-                color: '#374151',
+                color: '#e5e7eb',
                 marginBottom: '8px',
               }}
             >
@@ -137,13 +137,15 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 width: '100%',
                 padding: '10px 14px',
                 fontSize: '14px',
-                border: '1px solid #d1d5db',
+                border: '1px solid #424244',
                 borderRadius: '8px',
                 outline: 'none',
                 boxSizing: 'border-box',
+                backgroundColor: '#1e1f21',
+                color: '#e5e7eb',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#2558BF')}
-              onBlur={(e) => (e.target.style.borderColor = '#d1d5db')}
+              onFocus={(e) => (e.target.style.borderColor = '#6f6e6f')}
+              onBlur={(e) => (e.target.style.borderColor = '#424244')}
             />
           </div>
 
@@ -154,7 +156,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: '500',
-                color: '#374151',
+                color: '#e5e7eb',
                 marginBottom: '8px',
               }}
             >
@@ -169,15 +171,17 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 width: '100%',
                 padding: '10px 14px',
                 fontSize: '14px',
-                border: '1px solid #d1d5db',
+                border: '1px solid #424244',
                 borderRadius: '8px',
                 outline: 'none',
                 resize: 'vertical',
                 fontFamily: 'inherit',
                 boxSizing: 'border-box',
+                backgroundColor: '#1e1f21',
+                color: '#e5e7eb',
               }}
-              onFocus={(e) => (e.target.style.borderColor = '#2558BF')}
-              onBlur={(e) => (e.target.style.borderColor = '#d1d5db')}
+              onFocus={(e) => (e.target.style.borderColor = '#6f6e6f')}
+              onBlur={(e) => (e.target.style.borderColor = '#424244')}
             />
           </div>
 
@@ -188,7 +192,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: '500',
-                color: '#374151',
+                color: '#e5e7eb',
                 marginBottom: '8px',
               }}
             >
@@ -223,7 +227,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: '500',
-                color: '#374151',
+                color: '#e5e7eb',
                 marginBottom: '8px',
               }}
             >
@@ -239,9 +243,9 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                     flex: 1,
                     padding: '10px 16px',
                     borderRadius: '8px',
-                    border: visibility === v ? '2px solid #2558BF' : '1px solid #d1d5db',
-                    backgroundColor: visibility === v ? '#eff6ff' : '#fff',
-                    color: visibility === v ? '#2558BF' : '#374151',
+                    border: visibility === v ? '2px solid #6f6e6f' : '1px solid #424244',
+                    backgroundColor: visibility === v ? '#3a3b3d' : '#1e1f21',
+                    color: visibility === v ? '#f1f1f1' : '#a2a0a2',
                     fontSize: '13px',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -267,9 +271,9 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
               style={{
                 padding: '10px 20px',
                 borderRadius: '8px',
-                border: '1px solid #d1d5db',
-                backgroundColor: '#fff',
-                color: '#374151',
+                border: '1px solid #424244',
+                backgroundColor: '#2a2b2d',
+                color: '#e5e7eb',
                 fontSize: '14px',
                 fontWeight: '500',
                 cursor: 'pointer',
@@ -284,7 +288,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: 'none',
-                backgroundColor: loading ? '#93c5fd' : '#2558BF',
+                backgroundColor: loading ? '#93c5fd' : '#6f6e6f',
                 color: '#fff',
                 fontSize: '14px',
                 fontWeight: '500',

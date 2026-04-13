@@ -243,7 +243,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
     if (type?.includes('pdf')) return { bg: '#fee2e2', color: '#ef4444', text: 'PDF' };
     if (type?.includes('word') || type?.includes('document')) return { bg: '#dbeafe', color: '#3b82f6', text: 'DOC' };
     if (type?.includes('sheet') || type?.includes('excel')) return { bg: '#dcfce7', color: '#22c55e', text: 'XLS' };
-    return { bg: '#f3f4f6', color: '#6b7280', text: 'FILE' };
+    return { bg: '#2a2b2d', color: '#6b7280', text: 'FILE' };
   };
 
   const formatDisplayDate = (dateStr) => {
@@ -339,7 +339,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
           position: 'fixed',
           top: '80px',
           right: '320px',
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '12px',
           boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
           padding: '12px',
@@ -379,7 +379,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
 
         {/* Current Month Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontWeight: '600', color: '#111827', fontSize: '13px' }}>
+          <span style={{ fontWeight: '600', color: '#f1f1f1', fontSize: '13px' }}>
             {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </span>
           <div style={{ display: 'flex', gap: '2px' }}>
@@ -435,8 +435,8 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   height: '28px',
                   borderRadius: '50%',
                   border: 'none',
-                  backgroundColor: isSelected ? '#2558BF' : 'transparent',
-                  color: isSelected ? '#fff' : isPast ? '#d1d5db' : '#374151',
+                  backgroundColor: isSelected ? '#6f6e6f' : 'transparent',
+                  color: isSelected ? '#fff' : isPast ? '#424244' : '#374151',
                   cursor: isPast ? 'not-allowed' : 'pointer',
                   fontSize: '12px',
                   fontWeight: isToday || isSelected ? '600' : '400',
@@ -445,7 +445,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 }}
                 onMouseEnter={(e) => {
                   if (!isPast && !isSelected) {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb';
+                    e.currentTarget.style.backgroundColor = '#333436';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -462,7 +462,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
 
         {/* Next Month Header */}
         <div style={{ marginBottom: '8px' }}>
-          <span style={{ fontWeight: '600', color: '#111827', fontSize: '13px' }}>
+          <span style={{ fontWeight: '600', color: '#f1f1f1', fontSize: '13px' }}>
             {nextMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </span>
         </div>
@@ -492,7 +492,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   height: '28px',
                   borderRadius: '50%',
                   border: 'none',
-                  backgroundColor: isSelected ? '#2558BF' : 'transparent',
+                  backgroundColor: isSelected ? '#6f6e6f' : 'transparent',
                   color: isSelected ? '#fff' : '#374151',
                   cursor: 'pointer',
                   fontSize: '12px',
@@ -502,7 +502,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = '#e5e7eb';
+                    e.currentTarget.style.backgroundColor = '#333436';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -518,7 +518,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
         </div>
 
         {/* Quick Actions */}
-        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px' }}>
+        <div style={{ borderTop: '1px solid #333436', paddingTop: '10px' }}>
           <button
             type="button"
             onClick={() => {
@@ -528,11 +528,11 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
             style={{
               width: '100%',
               padding: '8px',
-              backgroundColor: '#f3f4f6',
+              backgroundColor: '#2a2b2d',
               border: 'none',
               borderRadius: '6px',
               fontSize: '12px',
-              color: '#374151',
+              color: '#e5e7eb',
               cursor: 'pointer',
               marginBottom: '6px',
               fontWeight: '500',
@@ -550,7 +550,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
               width: '100%',
               padding: '8px',
               backgroundColor: 'transparent',
-              border: '1px solid #e5e7eb',
+              border: '1px solid #333436',
               borderRadius: '6px',
               fontSize: '12px',
               color: '#6b7280',
@@ -577,7 +577,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
             alignItems: 'center',
             gap: '10px',
             padding: '10px 14px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '8px',
             cursor: 'pointer',
           }}
@@ -598,7 +598,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
               ),
               left: 0,
               right: 0,
-              backgroundColor: '#fff',
+              backgroundColor: '#2a2b2d',
               borderRadius: '8px',
               boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
               zIndex: 100,
@@ -616,13 +616,13 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 style={{
                   padding: '10px 14px',
                   cursor: 'pointer',
-                  backgroundColor: (option.id || option.value) === value ? '#f3f4f6' : 'transparent',
+                  backgroundColor: (option.id || option.value) === value ? '#2a2b2d' : 'transparent',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = (option.id || option.value) === value ? '#f3f4f6' : 'transparent'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = (option.id || option.value) === value ? '#2a2b2d' : 'transparent'}
               >
                 {renderOption(option)}
               </div>
@@ -667,7 +667,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '16px',
           width: '90%',
           maxWidth: '900px',
@@ -684,7 +684,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
         }}
       >
         {/* Left Side - Scrollable Content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid #e5e7eb' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid #333436' }}>
           {/* Header - Fixed */}
           <div
             style={{
@@ -692,10 +692,10 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderBottom: '1px solid #f3f4f6',
+              borderBottom: '1px solid #2a2b2d',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#f1f1f1' }}>
               Create task
             </h2>
             <button
@@ -756,12 +756,12 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   width: '100%',
                   padding: '14px 16px',
                   fontSize: '15px',
-                  border: '2px solid #2558BF',
+                  border: '2px solid #6f6e6f',
                   borderRadius: '8px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   marginBottom: '16px',
-                  backgroundColor: '#fff',
+                  backgroundColor: '#2a2b2d',
                 }}
               />
 
@@ -774,15 +774,15 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   width: '100%',
                   padding: '14px 16px',
                   fontSize: '14px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '8px',
                   outline: 'none',
                   resize: 'none',
                   fontFamily: 'inherit',
                   boxSizing: 'border-box',
                   minHeight: '180px',
-                  backgroundColor: '#fff',
-                  color: '#374151',
+                  backgroundColor: '#2a2b2d',
+                  color: '#e5e7eb',
                 }}
               />
 
@@ -831,11 +831,11 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                       alignItems: 'center',
                       gap: '6px',
                       padding: '8px 14px',
-                      backgroundColor: '#f3f4f6',
+                      backgroundColor: '#2a2b2d',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',
-                      color: '#4b5563',
+                      color: '#a2a0a2',
                       cursor: 'pointer',
                     }}
                   >
@@ -859,11 +859,11 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                       alignItems: 'center',
                       gap: '6px',
                       padding: '8px 14px',
-                      backgroundColor: '#f3f4f6',
+                      backgroundColor: '#2a2b2d',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',
-                      color: '#4b5563',
+                      color: '#a2a0a2',
                       cursor: 'pointer',
                     }}
                   >
@@ -888,11 +888,11 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                         alignItems: 'center',
                         gap: '6px',
                         padding: '8px 14px',
-                        backgroundColor: showTagPicker ? '#e0e7ff' : '#f3f4f6',
+                        backgroundColor: showTagPicker ? '#e0e7ff' : '#2a2b2d',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '13px',
-                        color: showTagPicker ? '#2558BF' : '#4b5563',
+                        color: showTagPicker ? '#6f6e6f' : '#4b5563',
                         cursor: 'pointer',
                       }}
                     >
@@ -910,7 +910,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                           top: '100%',
                           left: attachments.length === 0 ? '120px' : 0,
                           width: '280px',
-                          backgroundColor: '#fff',
+                          backgroundColor: '#2a2b2d',
                           borderRadius: '8px',
                           boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
                           padding: '12px',
@@ -934,7 +934,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                               border: 'none',
                               outline: 'none',
                               fontSize: '14px',
-                              color: '#374151',
+                              color: '#e5e7eb',
                             }}
                           />
                         </div>
@@ -953,11 +953,11 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                                   alignItems: 'center',
                                   gap: '8px',
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                               >
                                 <div style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: tag.color }} />
-                                <span style={{ fontSize: '14px', color: '#374151' }}>{tag.name}</span>
+                                <span style={{ fontSize: '14px', color: '#e5e7eb' }}>{tag.name}</span>
                               </div>
                             ))}
                           </div>
@@ -969,9 +969,9 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                               cursor: 'pointer',
                               borderRadius: '6px',
                               fontSize: '14px',
-                              color: '#2558BF',
+                              color: '#6f6e6f',
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
                             + Create "{tagSearch}"
@@ -1001,11 +1001,11 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                       alignItems: 'center',
                       gap: '6px',
                       padding: '8px 14px',
-                      backgroundColor: '#f3f4f6',
+                      backgroundColor: '#2a2b2d',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',
-                      color: '#4b5563',
+                      color: '#a2a0a2',
                       cursor: 'pointer',
                     }}
                   >
@@ -1024,9 +1024,9 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#6b7280">
                       <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
                     </svg>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Subtasks</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#e5e7eb' }}>Subtasks</span>
                     {subtasks.length > 0 && (
-                      <span style={{ fontSize: '12px', color: '#9ca3af', backgroundColor: '#f3f4f6', padding: '2px 8px', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '12px', color: '#9ca3af', backgroundColor: '#2a2b2d', padding: '2px 8px', borderRadius: '10px' }}>
                         {subtasks.length}
                       </span>
                     )}
@@ -1041,18 +1041,18 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                         alignItems: 'center',
                         gap: '10px',
                         padding: '10px 12px',
-                        backgroundColor: '#f9fafb',
+                        backgroundColor: '#1e1f21',
                         borderRadius: '6px',
                         marginBottom: '8px',
                       }}
                     >
-                      <span style={{ flex: 1, fontSize: '14px', color: '#374151' }}>{subtask.title}</span>
+                      <span style={{ flex: 1, fontSize: '14px', color: '#e5e7eb' }}>{subtask.title}</span>
                       <div
                         style={{
                           width: '24px',
                           height: '24px',
                           borderRadius: '50%',
-                          backgroundColor: '#2558BF',
+                          backgroundColor: '#6f6e6f',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1095,7 +1095,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                           flex: 1,
                           padding: '10px 14px',
                           fontSize: '14px',
-                          border: '2px solid #2558BF',
+                          border: '2px solid #6f6e6f',
                           borderRadius: '6px',
                           outline: 'none',
                         }}
@@ -1108,7 +1108,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                           width: '32px',
                           height: '32px',
                           borderRadius: '50%',
-                          backgroundColor: newSubtask.trim() ? '#22c55e' : '#e5e7eb',
+                          backgroundColor: newSubtask.trim() ? '#22c55e' : '#333436',
                           border: 'none',
                           display: 'flex',
                           alignItems: 'center',
@@ -1175,7 +1175,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#6b7280">
                       <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
                     </svg>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Attachments</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#e5e7eb' }}>Attachments</span>
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
@@ -1187,9 +1187,9 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                           style={{
                             width: '100px',
                             padding: '12px',
-                            backgroundColor: '#f9fafb',
+                            backgroundColor: '#1e1f21',
                             borderRadius: '8px',
-                            border: '1px solid #e5e7eb',
+                            border: '1px solid #333436',
                             position: 'relative',
                           }}
                         >
@@ -1200,8 +1200,8 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                               position: 'absolute',
                               top: '4px',
                               right: '4px',
-                              background: '#fff',
-                              border: '1px solid #e5e7eb',
+                              background: '#2a2b2d',
+                              border: '1px solid #333436',
                               borderRadius: '50%',
                               width: '20px',
                               height: '20px',
@@ -1237,7 +1237,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                             style={{
                               margin: 0,
                               fontSize: '11px',
-                              color: '#374151',
+                              color: '#e5e7eb',
                               textAlign: 'center',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -1292,8 +1292,8 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 gap: '12px',
                 justifyContent: 'flex-end',
                 padding: '16px 28px',
-                borderTop: '1px solid #e5e7eb',
-                backgroundColor: '#fff',
+                borderTop: '1px solid #333436',
+                backgroundColor: '#2a2b2d',
               }}
             >
               <button
@@ -1304,7 +1304,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   borderRadius: '8px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: '#4b5563',
+                  color: '#a2a0a2',
                   fontSize: '14px',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -1319,7 +1319,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   padding: '10px 24px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: loading || !title.trim() ? '#d1d5db' : '#2558BF',
+                  backgroundColor: loading || !title.trim() ? '#424244' : '#6f6e6f',
                   color: '#fff',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -1337,7 +1337,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
           className="modal-scroll"
           style={{
             width: '280px',
-            backgroundColor: '#fafafa',
+            backgroundColor: '#1e1f21',
             padding: '24px',
             overflowY: 'auto',
             scrollbarWidth: 'none',
@@ -1349,13 +1349,13 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
             <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
               Create in
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', backgroundColor: '#fff', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', backgroundColor: '#1e1f21', borderRadius: '8px' }}>
               <div
                 style={{
                   width: '28px',
                   height: '28px',
                   borderRadius: '6px',
-                  backgroundColor: '#2558BF',
+                  backgroundColor: '#6f6e6f',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1365,7 +1365,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
                 </svg>
               </div>
-              <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>
                 {boardName || 'Current Board'}
               </span>
             </div>
@@ -1386,14 +1386,14 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 return (
                   <>
                     <div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: t.color }} />
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>{t.label}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>{t.label}</span>
                   </>
                 );
               }}
               renderOption={(opt) => (
                 <>
                   <div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: opt.color }} />
-                  <span style={{ fontSize: '14px', color: '#374151' }}>{opt.label}</span>
+                  <span style={{ fontSize: '14px', color: '#e5e7eb' }}>{opt.label}</span>
                 </>
               )}
             />
@@ -1410,7 +1410,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 alignItems: 'center',
                 gap: '10px',
                 padding: '10px 14px',
-                backgroundColor: '#f9fafb',
+                backgroundColor: '#1e1f21',
                 borderRadius: '8px',
               }}
             >
@@ -1439,7 +1439,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 alignItems: 'center',
                 gap: '10px',
                 padding: '10px 14px',
-                backgroundColor: '#f9fafb',
+                backgroundColor: '#1e1f21',
                 borderRadius: '8px',
                 cursor: 'not-allowed',
                 opacity: 0.7,
@@ -1451,7 +1451,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
-                  backgroundColor: '#e5e7eb',
+                  backgroundColor: '#333436',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1480,7 +1480,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 alignItems: 'center',
                 gap: '10px',
                 padding: '10px 14px',
-                backgroundColor: '#fff',
+                backgroundColor: '#2a2b2d',
                 borderRadius: '8px',
                 cursor: 'pointer',
               }}
@@ -1516,7 +1516,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 alignItems: 'center',
                 gap: '10px',
                 padding: '10px 14px',
-                backgroundColor: '#fff',
+                backgroundColor: '#2a2b2d',
                 borderRadius: '8px',
                 cursor: 'pointer',
               }}
@@ -1524,7 +1524,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#6b7280">
                 <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
               </svg>
-              <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>
                 {formatEstimatedTime(estimatedTime)}
               </span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="#9ca3af" style={{ marginLeft: 'auto' }}>
@@ -1540,7 +1540,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                   top: '100%',
                   left: 0,
                   right: 0,
-                  backgroundColor: '#fff',
+                  backgroundColor: '#2a2b2d',
                   borderRadius: '8px',
                   boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
                   zIndex: 100,
@@ -1559,19 +1559,19 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                     style={{
                       padding: '10px 14px',
                       cursor: 'pointer',
-                      backgroundColor: option.value === estimatedTime ? '#f3f4f6' : 'transparent',
+                      backgroundColor: option.value === estimatedTime ? '#2a2b2d' : 'transparent',
                       fontSize: '14px',
-                      color: '#374151',
+                      color: '#e5e7eb',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = option.value === estimatedTime ? '#f3f4f6' : 'transparent'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = option.value === estimatedTime ? '#2a2b2d' : 'transparent'}
                   >
                     {option.label}
                   </div>
                 ))}
 
                 {/* Custom Time Option */}
-                <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px' }}>
+                <div style={{ borderTop: '1px solid #333436', padding: '8px' }}>
                   {!showCustomTime ? (
                     <div
                       onClick={() => setShowCustomTime(true)}
@@ -1579,7 +1579,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                         padding: '8px 6px',
                         cursor: 'pointer',
                         fontSize: '14px',
-                        color: '#2558BF',
+                        color: '#6f6e6f',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -1603,7 +1603,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                           flex: 1,
                           padding: '8px 10px',
                           fontSize: '14px',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid #424244',
                           borderRadius: '6px',
                           outline: 'none',
                           width: '80px',
@@ -1614,7 +1614,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                         onClick={handleCustomTimeSubmit}
                         style={{
                           padding: '8px 12px',
-                          backgroundColor: '#2558BF',
+                          backgroundColor: '#6f6e6f',
                           color: '#fff',
                           border: 'none',
                           borderRadius: '6px',
@@ -1643,7 +1643,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 alignItems: 'center',
                 gap: '10px',
                 padding: '10px 14px',
-                backgroundColor: '#fff',
+                backgroundColor: '#2a2b2d',
                 borderRadius: '8px',
                 cursor: 'pointer',
               }}
@@ -1687,7 +1687,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                         backgroundColor: p.color,
                       }}
                     />
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>{p.label}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>{p.label}</span>
                   </>
                 );
               }}
@@ -1701,7 +1701,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                       backgroundColor: opt.color,
                     }}
                   />
-                  <span style={{ fontSize: '14px', color: '#374151' }}>{opt.label}</span>
+                  <span style={{ fontSize: '14px', color: '#e5e7eb' }}>{opt.label}</span>
                 </>
               )}
             />

@@ -14,19 +14,42 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+/* Dark theme for workspace form elements ONLY (not login page) */
+[data-workspace] input,
+[data-workspace] select,
+[data-workspace] textarea {
+  background-color: #1e1f21 !important;
+  color: #e5e7eb !important;
+  border-color: #424244 !important;
+}
+
+[data-workspace] input::placeholder,
+[data-workspace] textarea::placeholder {
+  color: #6f6e6f !important;
+}
+
+[data-workspace] select option {
+  background-color: #2a2b2d;
+  color: #e5e7eb;
+}
+
+/* Custom scrollbar - dark */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #1e1f21;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #4a4b4d;
   border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6f6e6f;
 }
 
 ::-webkit-scrollbar-thumb:hover {

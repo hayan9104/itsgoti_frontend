@@ -3,10 +3,10 @@ import { workspaceTasksAPI, workspaceUsersAPI, workspaceBoardsAPI } from '../../
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
 const PRIORITY_COLORS = {
-  low: { bg: '#f0fdf4', color: '#166534', label: 'Low' },
-  medium: { bg: '#fefce8', color: '#854d0e', label: 'Medium' },
-  high: { bg: '#fef2f2', color: '#dc2626', label: 'High' },
-  urgent: { bg: '#fef2f2', color: '#991b1b', label: 'Urgent' },
+  low: { bg: '#1a2e1a', color: '#4ade80', label: 'Low' },
+  medium: { bg: '#2e2a1a', color: '#fbbf24', label: 'Medium' },
+  high: { bg: '#2e1a1a', color: '#f87171', label: 'High' },
+  urgent: { bg: '#3a1a1a', color: '#ef4444', label: 'Urgent' },
 };
 
 const LABEL_COLORS = {
@@ -192,22 +192,19 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
       onDragEnd={onDragEnd}
       onClick={onClick}
       style={{
-        backgroundColor: '#fff',
+        backgroundColor: '#2a2b2d',
         borderRadius: '8px',
-        padding: '14px',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        padding: '12px 14px',
         cursor: 'grab',
-        transition: 'box-shadow 0.2s, transform 0.1s',
-        borderLeft: `3px solid ${boardColor || '#2558BF'}`,
+        transition: 'background-color 0.15s',
+        border: '1px solid #353638',
         position: 'relative',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.backgroundColor = '#2a2b2d';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.backgroundColor = '#2a2b2d';
       }}
     >
       {/* Menu Trigger */}
@@ -221,12 +218,12 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
           border: 'none',
           cursor: 'pointer',
           padding: '4px',
-          color: '#9ca3af',
+          color: '#6f6e6f',
           borderRadius: '4px',
           zIndex: 5
         }}
-        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#424244'; e.currentTarget.style.color = '#f1f1f1'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6f6e6f'; }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
@@ -241,13 +238,13 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
             position: 'absolute',
             top: '40px',
             right: '0',
-            backgroundColor: '#fff',
+            backgroundColor: '#353638',
             borderRadius: '8px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-            zIndex: 100, // Sufficiently high within its stacking context
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+            zIndex: 100,
             minWidth: '220px',
             padding: '8px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #4a4b4d',
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -265,7 +262,7 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
               Open...
             </div>
 
-            <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '4px 0' }} />
+            <div style={{ height: '1px', backgroundColor: '#4a4b4d', margin: '4px 0' }} />
 
             {isSuperAdmin && (
               <>
@@ -276,19 +273,19 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
                   Members...
                 </div>
                 {showMembers && (
-                  <div style={{ padding: '8px', backgroundColor: '#f9fafb', borderRadius: '6px', margin: '4px 0', border: '1px solid #f3f4f6' }}>
+                  <div style={{ padding: '8px', backgroundColor: '#2a2b2d', borderRadius: '6px', margin: '4px 0', border: '1px solid #4a4b4d' }}>
                     {task.assignee ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', marginBottom: '8px', padding: '4px 8px', backgroundColor: '#fff', borderRadius: '4px', border: '1px solid #e5e7eb' }}>
-                        <span style={{ fontWeight: '500' }}>{task.assignee.name}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', marginBottom: '8px', padding: '4px 8px', backgroundColor: '#353638', borderRadius: '4px', border: '1px solid #4a4b4d' }}>
+                        <span style={{ fontWeight: '500', color: '#e5e7eb' }}>{task.assignee.name}</span>
                         <button onClick={() => handleAssign(null)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
                       </div>
                     ) : (
-                      <div style={{ fontSize: '11px', color: '#6b7280', padding: '4px 8px', fontStyle: 'italic' }}>Unassigned</div>
+                      <div style={{ fontSize: '11px', color: '#6f6e6f', padding: '4px 8px', fontStyle: 'italic' }}>Unassigned</div>
                     )}
-                    <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '4px', paddingTop: '4px' }}>
-                      <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '4px', paddingLeft: '8px' }}>ASSIGN TO</div>
+                    <div style={{ borderTop: '1px solid #4a4b4d', marginTop: '4px', paddingTop: '4px' }}>
+                      <div style={{ fontSize: '10px', color: '#6f6e6f', marginBottom: '4px', paddingLeft: '8px' }}>ASSIGN TO</div>
                       {users.filter(u => u._id !== task.assignee?._id).map(u => (
-                        <div key={u._id} onClick={() => handleAssign(u._id)} style={{ padding: '6px 8px', cursor: 'pointer', fontSize: '12px', borderRadius: '4px' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e5e7eb'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>{u.name}</div>
+                        <div key={u._id} onClick={() => handleAssign(u._id)} style={{ padding: '6px 8px', cursor: 'pointer', fontSize: '12px', borderRadius: '4px' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#4a4b4d'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>{u.name}</div>
                       ))}
                     </div>
                   </div>
@@ -303,29 +300,29 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
               Dates...
             </div>
             {showDates && (
-              <div style={{ padding: '10px', backgroundColor: '#f9fafb', borderRadius: '6px', margin: '4px 0', border: '1px solid #f3f4f6' }}>
+              <div style={{ padding: '10px', backgroundColor: '#2a2b2d', borderRadius: '6px', margin: '4px 0', border: '1px solid #4a4b4d' }}>
                 <div style={{ marginBottom: '10px' }}>
-                  <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Start Date</label>
+                  <label style={{ fontSize: '11px', color: '#a2a0a2', display: 'block', marginBottom: '4px' }}>Start Date</label>
                   <input 
                     type="date" 
                     value={task.startDate?.split('T')[0] || ''} 
                     onChange={(e) => handleUpdateDates(e.target.value, task.dueDate)} 
-                    style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #e5e7eb', borderRadius: '4px' }} 
+                    style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #4a4b4d', borderRadius: '4px', backgroundColor: '#1e1f21', color: '#e5e7eb' }} 
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>End Date</label>
+                  <label style={{ fontSize: '11px', color: '#a2a0a2', display: 'block', marginBottom: '4px' }}>End Date</label>
                   <input 
                     type="date" 
                     value={task.dueDate?.split('T')[0] || ''} 
                     onChange={(e) => handleUpdateDates(task.startDate, e.target.value)} 
-                    style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #e5e7eb', borderRadius: '4px' }} 
+                    style={{ width: '100%', padding: '4px 8px', fontSize: '12px', border: '1px solid #4a4b4d', borderRadius: '4px', backgroundColor: '#1e1f21', color: '#e5e7eb' }} 
                   />
                 </div>
               </div>
             )}
 
-            <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '4px 0' }} />
+            <div style={{ height: '1px', backgroundColor: '#4a4b4d', margin: '4px 0' }} />
 
             {isSuperAdmin && (
               <>
@@ -342,27 +339,27 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
                   Move to Board...
                 </div>
                 {showBoards && (
-                  <div style={{ padding: '6px', backgroundColor: '#f9fafb', borderRadius: '6px', margin: '4px 0', border: '1px solid #f3f4f6', maxHeight: '150px', overflowY: 'auto' }}>
+                  <div style={{ padding: '6px', backgroundColor: '#2a2b2d', borderRadius: '6px', margin: '4px 0', border: '1px solid #4a4b4d', maxHeight: '150px', overflowY: 'auto' }}>
                     {boards.length > 0 ? (
                       boards.map(b => (
                         <div 
                           key={b._id} 
                           onClick={() => handleMoveToBoard(b._id)} 
                           style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }} 
-                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e5e7eb'} 
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#333436'} 
                           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: b.color || '#2558BF' }} />
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: b.color || '#6f6e6f' }} />
                           {b.name}
                         </div>
                       ))
                     ) : (
-                      <div style={{ fontSize: '11px', color: '#9ca3af', padding: '8px', textAlign: 'center' }}>No other boards available</div>
+                      <div style={{ fontSize: '11px', color: '#6f6e6f', padding: '8px', textAlign: 'center' }}>No other boards available</div>
                     )}
                   </div>
                 )}
 
-                <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '4px 0' }} />
+                <div style={{ height: '1px', backgroundColor: '#4a4b4d', margin: '4px 0' }} />
 
                 <div onClick={handleArchive} style={menuItemStyle}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '10px' }}>
@@ -382,48 +379,79 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
         </div>
       )}
 
-      {/* Title */}
-      {isEditingName ? (
-        <input
-          autoFocus
-          value={tempName}
-          onChange={(e) => setTempName(e.target.value)}
-          onBlur={handleRename}
-          onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-          onClick={(e) => e.stopPropagation()}
+      {/* Title with Circle Checkbox - Asana Style */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+        <div
+          onClick={(e) => { e.stopPropagation(); }}
           style={{
-            width: '100%',
-            fontSize: '14px',
-            fontWeight: '500',
-            border: '2px solid #2558BF',
-            borderRadius: '4px',
-            padding: '4px',
-            marginBottom: '8px',
-            outline: 'none'
-          }}
-        />
-      ) : (
-        <h4
-          style={{
-            fontSize: '14px',
-            fontWeight: '500',
-            color: '#111827',
-            margin: '0 0 8px 0',
-            lineHeight: '1.4',
-            paddingRight: '20px'
+            width: '18px',
+            height: '18px',
+            borderRadius: '50%',
+            border: `2px solid ${task.status === 'done' ? '#22c55e' : '#6f6e6f'}`,
+            backgroundColor: task.status === 'done' ? '#22c55e' : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            marginTop: '1px',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
           }}
         >
-          {task.title}
-        </h4>
-      )}
+          {task.status === 'done' && (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isEditingName ? (
+            <input
+              autoFocus
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%',
+                fontSize: '14px',
+                fontWeight: '500',
+                border: '1px solid #a2a0a2',
+                borderRadius: '4px',
+                padding: '2px 4px',
+                marginBottom: '4px',
+                outline: 'none',
+                backgroundColor: '#1e1f21',
+                color: '#f1f1f1',
+              }}
+            />
+          ) : (
+            <h4
+              style={{
+                fontSize: '14px',
+                fontWeight: '400',
+                color: task.status === 'done' ? '#6f6e6f' : '#e5e7eb',
+                margin: '0 0 6px 0',
+                lineHeight: '1.4',
+                paddingRight: '20px',
+                textDecoration: task.status === 'done' ? 'line-through' : 'none',
+              }}
+            >
+              {task.title}
+            </h4>
+          )}
+        </div>
+      </div>
 
       {/* Description Preview */}
       {task.description && (
         <p
           style={{
             fontSize: '12px',
-            color: '#6b7280',
-            margin: '0 0 12px 0',
+            color: '#a2a0a2',
+            margin: '0 0 10px 0',
+            paddingLeft: '28px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             display: '-webkit-box',
@@ -442,7 +470,8 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '8px',
+          gap: '6px',
+          paddingLeft: '28px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -468,7 +497,7 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
-                color: '#6b7280',
+                color: '#a2a0a2',
               }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -486,7 +515,7 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
-                color: isOverdue ? '#dc2626' : '#6b7280',
+                color: isOverdue ? '#ef4444' : '#a2a0a2',
                 fontWeight: isOverdue ? '500' : '400',
               }}
             >
@@ -504,8 +533,8 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
             style={{
               width: '24px',
               height: '24px',
-              borderRadius: '6px',
-              backgroundColor: boardColor || '#2558BF',
+              borderRadius: '50%',
+              backgroundColor: boardColor || '#6f6e6f',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -526,12 +555,13 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
           style={{
             marginTop: '10px',
             paddingTop: '10px',
-            borderTop: '1px solid #e5e7eb',
+            borderTop: '1px solid #353638',
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
-            color: '#6b7280',
+            color: '#a2a0a2',
             fontSize: '11px',
+            paddingLeft: '28px',
           }}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -547,7 +577,7 @@ const TaskCard = ({ task, boardColor, onDragStart, onDragEnd, onClick, onUpdate,
 const menuItemStyle = {
   padding: '10px 12px',
   fontSize: '13px',
-  color: '#374151',
+  color: '#e5e7eb',
   cursor: 'pointer',
   borderRadius: '6px',
   display: 'flex',

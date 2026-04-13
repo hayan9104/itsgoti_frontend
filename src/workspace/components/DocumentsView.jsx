@@ -240,10 +240,10 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
   const currentDocs = activeTab === 'board' ? boardDocs : taskDocs;
 
   return (
-    <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+    <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', backgroundColor: '#2a2b2d' }}>
       {/* Tabs & Actions */}
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', backgroundColor: '#f3f4f6', borderRadius: '8px', padding: '4px' }}>
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid #333436', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', backgroundColor: '#2a2b2d', borderRadius: '8px', padding: '4px' }}>
           <button
             onClick={() => setActiveTab('board')}
             style={{
@@ -287,7 +287,7 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
             }}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#2558BF',
+              backgroundColor: '#6f6e6f',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -320,23 +320,23 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
               <div 
                 key={idx}
                 style={{
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '12px',
                   padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
                   position: 'relative',
-                  backgroundColor: '#fff',
+                  backgroundColor: '#2a2b2d',
                   transition: 'all 0.2s',
                   cursor: 'pointer'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#2558BF';
+                  e.currentTarget.style.borderColor = '#6f6e6f';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.borderColor = '#333436';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
                 onClick={() => window.open(doc.url, '_blank')}
@@ -345,11 +345,11 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
                   {getIcon(doc.type)}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', fontSize: '14px', color: '#111827', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: '600', fontSize: '14px', color: '#f1f1f1', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {doc.name}
                   </div>
                   {activeTab === 'tasks' && doc.taskName && (
-                    <div style={{ fontSize: '12px', color: '#2558BF', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '12px', color: '#6f6e6f', marginBottom: '4px' }}>
                       Task: {doc.taskName}
                     </div>
                   )}
@@ -390,7 +390,7 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
       {/* Add Document Modal */}
       {showAddModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', width: '450px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#2a2b2d', borderRadius: '12px', width: '450px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
                 {activeTab === 'board' ? 'Add Board Document' : 'Upload to Task'}
@@ -404,7 +404,7 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
 
             {activeTab === 'tasks' && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>Select Task</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#e5e7eb', marginBottom: '8px' }}>Select Task</label>
                 <div style={{ position: 'relative' }}>
                   <input 
                     type="text"
@@ -414,11 +414,11 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
                       setTaskSearchQuery(e.target.value);
                       setSelectedTaskId(''); // Reset selection when searching
                     }}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #d1d5db', fontSize: '14px', outline: 'none' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #424244', fontSize: '14px', outline: 'none' }}
                   />
                   
                   {taskSearchQuery && !selectedTaskId && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', marginTop: '4px', maxHeight: '200px', overflowY: 'auto', zIndex: 10, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#2a2b2d', border: '1px solid #333436', borderRadius: '8px', marginTop: '4px', maxHeight: '200px', overflowY: 'auto', zIndex: 10, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                       {allTasks
                         .filter(t => t.title.toLowerCase().includes(taskSearchQuery.toLowerCase()))
                         .map(task => (
@@ -428,11 +428,11 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
                               setSelectedTaskId(task._id);
                               setTaskSearchQuery(task.title);
                             }}
-                            style={{ padding: '10px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #f3f4f6' }}
+                            style={{ padding: '10px 12px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #2a2b2d' }}
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                           >
-                            <div style={{ fontWeight: '500', color: '#111827' }}>{task.title}</div>
+                            <div style={{ fontWeight: '500', color: '#f1f1f1' }}>{task.title}</div>
                             <div style={{ fontSize: '11px', color: '#6b7280' }}>Status: {task.status}</div>
                           </div>
                         ))}
@@ -446,27 +446,27 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
             )}
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>Upload File</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#e5e7eb', marginBottom: '12px' }}>Upload File</label>
               <div 
                 onClick={() => !uploading && !(activeTab === 'tasks' && !selectedTaskId) && document.getElementById('file-upload-input').click()}
                 style={{
-                  border: '2px dashed #e5e7eb',
+                  border: '2px dashed #333436',
                   borderRadius: '12px',
                   padding: '30px 20px',
                   textAlign: 'center',
                   cursor: (uploading || (activeTab === 'tasks' && !selectedTaskId)) ? 'not-allowed' : 'pointer',
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#252628',
                   transition: 'all 0.2s',
                   opacity: (activeTab === 'tasks' && !selectedTaskId) ? 0.6 : 1
                 }}
                 onMouseEnter={(e) => {
                   if (!uploading && !(activeTab === 'tasks' && !selectedTaskId)) {
-                    e.currentTarget.style.borderColor = '#2558BF';
+                    e.currentTarget.style.borderColor = '#6f6e6f';
                     e.currentTarget.style.backgroundColor = '#eff6ff';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.borderColor = '#333436';
                   e.currentTarget.style.backgroundColor = '#f9fafb';
                 }}
               >
@@ -480,7 +480,7 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
                 <div style={{ fontSize: '32px', marginBottom: '12px' }}>
                   {uploading ? '⏳' : '📤'}
                 </div>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#f1f1f1', marginBottom: '4px' }}>
                   {uploading ? 'Uploading...' : 'Click to select a file'}
                 </div>
                 <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
@@ -489,21 +489,21 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>Or Add Link</label>
+            <div style={{ borderTop: '1px solid #333436', paddingTop: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#e5e7eb', marginBottom: '8px' }}>Or Add Link</label>
               <input 
                 type="text"
                 placeholder="Document Name"
                 value={newDoc.name}
                 onChange={(e) => setNewDoc({ ...newDoc, name: e.target.value })}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', marginBottom: '12px', outline: 'none' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #424244', fontSize: '14px', marginBottom: '12px', outline: 'none' }}
               />
               <input 
                 type="text"
                 placeholder="URL (https://...)"
                 value={newDoc.url}
                 onChange={(e) => setNewDoc({ ...newDoc, url: e.target.value })}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', marginBottom: '16px', outline: 'none' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #424244', fontSize: '14px', marginBottom: '16px', outline: 'none' }}
               />
               <button 
                 onClick={handleAddLink}
@@ -511,7 +511,7 @@ const DocumentsView = ({ boardId, boardName, boardColor }) => {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  backgroundColor: (newDoc.name && newDoc.url && (activeTab === 'board' || selectedTaskId)) ? '#2558BF' : '#e5e7eb',
+                  backgroundColor: (newDoc.name && newDoc.url && (activeTab === 'board' || selectedTaskId)) ? '#6f6e6f' : '#333436',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',

@@ -68,27 +68,27 @@ const WorkspaceSidebar = () => {
       style={{
         width: '240px',
         height: '100vh',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#2a2b2d',
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
         left: 0,
         top: 0,
         fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-        borderRight: '1px solid #e5e7eb',
+        borderRight: '1px solid #333436',
       }}
     >
       {/* Logo */}
       <div
         style={{
           padding: '24px 20px',
-          borderBottom: '1px solid #f3f4f6',
+          borderBottom: '1px solid #2a2b2d',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span
             style={{
-              color: '#2558BF',
+              color: '#6f6e6f',
               fontSize: '22px',
               fontWeight: '700',
               letterSpacing: '-0.5px',
@@ -128,7 +128,7 @@ const WorkspaceSidebar = () => {
               borderRadius: '10px',
               marginBottom: '4px',
               color: isActive(item.path) ? '#fff' : '#4b5563',
-              backgroundColor: isActive(item.path) ? '#2558BF' : 'transparent',
+              backgroundColor: isActive(item.path) ? '#6f6e6f' : 'transparent',
               textDecoration: 'none',
               fontSize: '14px',
               fontWeight: '500',
@@ -136,7 +136,7 @@ const WorkspaceSidebar = () => {
             }}
             onMouseEnter={(e) => {
               if (!isActive(item.path)) {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                e.currentTarget.style.backgroundColor = '#353638';
                 e.currentTarget.style.color = '#111827';
               }
             }}
@@ -157,8 +157,8 @@ const WorkspaceSidebar = () => {
       <div
         style={{
           padding: '16px',
-          borderTop: '1px solid #f3f4f6',
-          backgroundColor: '#fafafa',
+          borderTop: '1px solid #2a2b2d',
+          backgroundColor: '#252628',
         }}
       >
         <div
@@ -174,7 +174,7 @@ const WorkspaceSidebar = () => {
               width: '40px',
               height: '40px',
               borderRadius: '10px',
-              backgroundColor: '#2558BF',
+              backgroundColor: '#6f6e6f',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -188,7 +188,7 @@ const WorkspaceSidebar = () => {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
-                color: '#111827',
+                color: '#f1f1f1',
                 fontSize: '14px',
                 fontWeight: '500',
                 margin: 0,
@@ -218,7 +218,7 @@ const WorkspaceSidebar = () => {
           style={{
             width: '100%',
             padding: '10px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             border: '1px solid #fecaca',
             borderRadius: '10px',
             color: '#dc2626',

@@ -296,6 +296,14 @@ export const workspaceBoardsAPI = {
   deleteSettingItem: (boardId, settingType, itemId) => workspaceApi.delete(`/workspace/boards/${boardId}/settings/${settingType}/${itemId}`),
 };
 
+// Workspace Sidebar Items API
+export const workspaceSidebarAPI = {
+  getByBoard: (boardId) => workspaceApi.get(`/workspace/sidebar/board/${boardId}`),
+  create: (boardId, data) => workspaceApi.post(`/workspace/sidebar/board/${boardId}`, data),
+  update: (id, data) => workspaceApi.put(`/workspace/sidebar/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/workspace/sidebar/${id}`),
+};
+
 // Workspace Tasks API
 export const workspaceTasksAPI = {
   // Get tasks for a board

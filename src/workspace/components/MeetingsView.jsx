@@ -323,11 +323,11 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   const filterSelectStyle = {
     padding: '8px 12px',
     borderRadius: '8px',
-    border: '1px solid #e5e7eb',
+    border: '1px solid #333436',
     fontSize: '13px',
     fontWeight: '500',
-    color: '#111827',
-    backgroundColor: '#f9fafb',
+    color: '#f1f1f1',
+    backgroundColor: '#252628',
     cursor: 'pointer',
     outline: 'none',
     minWidth: '130px',
@@ -337,9 +337,9 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     padding: '10px 20px',
     fontSize: '14px',
     fontWeight: '600',
-    color: active ? '#2558BF' : '#6b7280',
-    backgroundColor: active ? '#eff6ff' : '#fff',
-    border: active ? '2px solid #2558BF' : '1px solid #e5e7eb',
+    color: active ? '#f1f1f1' : '#a2a0a2',
+    backgroundColor: active ? '#3a3b3d' : 'transparent',
+    border: active ? '1px solid #4a4b4d' : '1px solid #333436',
     borderRadius: '8px',
     cursor: 'pointer',
     transition: 'all 0.15s',
@@ -352,7 +352,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
         {/* Header */}
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#f1f1f1' }}>
               Meeting Notes
             </h2>
             <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
@@ -367,7 +367,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
               style={{
                 padding: '8px 16px',
                 backgroundColor: '#dc2626',
-                color: '#fff',
+                color: '#1e1f21',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '13px',
@@ -471,11 +471,11 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
           <div style={{
             padding: '60px 20px',
             textAlign: 'center',
-            backgroundColor: '#f9fafb',
+            backgroundColor: '#252628',
             borderRadius: '12px',
-            border: '1px dashed #e5e7eb',
+            border: '1px dashed #333436',
           }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="#d1d5db" style={{ marginBottom: '16px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#424244" style={{ marginBottom: '16px' }}>
               <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
             </svg>
             <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>No meetings yet</p>
@@ -491,8 +491,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 onClick={() => setSelectedMeeting(meeting)}
                 style={{
                   padding: '14px 16px',
-                  backgroundColor: selectedMeeting?._id === meeting._id ? '#eff6ff' : '#fff',
-                  border: selectedMeeting?._id === meeting._id ? '2px solid #2558BF' : '1px solid #e5e7eb',
+                  backgroundColor: selectedMeeting?._id === meeting._id ? '#3a3b3d' : '#2a2b2d',
+                  border: selectedMeeting?._id === meeting._id ? '2px solid #6f6e6f' : '1px solid #333436',
                   borderRadius: '10px',
                   cursor: 'pointer',
                   transition: 'all 0.15s',
@@ -500,7 +500,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>
                       {meeting.title}
                     </h4>
                     <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
@@ -547,9 +547,9 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       {selectedMeeting && (
         <div style={{
           flex: 1,
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '12px',
-          border: '1px solid #e5e7eb',
+          border: '1px solid #333436',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -557,13 +557,13 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
           {/* Detail Header */}
           <div style={{
             padding: '20px 24px',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid #333436',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
           }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
                 {selectedMeeting.title}
               </h3>
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
@@ -582,9 +582,9 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   rel="noopener noreferrer"
                   style={{
                     padding: '8px 14px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    border: '1px solid #e5e7eb',
+                    backgroundColor: '#2a2b2d',
+                    color: '#e5e7eb',
+                    border: '1px solid #333436',
                     borderRadius: '8px',
                     fontSize: '13px',
                     fontWeight: '500',
@@ -605,7 +605,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 disabled={!selectedMeeting.summary}
                 style={{
                   padding: '8px 14px',
-                  backgroundColor: selectedMeeting.summary ? '#059669' : '#e5e7eb',
+                  backgroundColor: selectedMeeting.summary ? '#059669' : '#333436',
                   color: selectedMeeting.summary ? '#fff' : '#9ca3af',
                   border: 'none',
                   borderRadius: '8px',
@@ -628,7 +628,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   style={{
                     padding: '8px 14px',
                     backgroundColor: '#3b82f6',
-                    color: '#fff',
+                    color: '#1e1f21',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '13px',
@@ -651,7 +651,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 12px',
-                  backgroundColor: '#eff6ff',
+                  backgroundColor: '#3a3b3d',
                   borderRadius: '8px',
                   border: '1px solid #bfdbfe',
                 }}>
@@ -659,7 +659,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                     width: '14px',
                     height: '14px',
                     border: '2px solid #bfdbfe',
-                    borderTop: '2px solid #2558BF',
+                    borderTop: '2px solid #6f6e6f',
                     borderRadius: '50%',
                     animation: 'spin 1s linear infinite',
                   }} />
@@ -673,7 +673,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   onClick={() => handleDeleteMeeting(selectedMeeting._id)}
                   style={{
                     padding: '8px 12px',
-                    backgroundColor: '#fff',
+                    backgroundColor: '#2a2b2d',
                     color: '#dc2626',
                     border: '1px solid #fecaca',
                     borderRadius: '8px',
@@ -688,7 +688,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 onClick={() => setSelectedMeeting(null)}
                 style={{
                   padding: '8px',
-                  backgroundColor: '#f3f4f6',
+                  backgroundColor: '#2a2b2d',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
@@ -702,7 +702,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
           </div>
 
           {/* Detail Content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '32px', backgroundColor: '#f9fafb' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '32px', backgroundColor: '#252628' }}>
             {/* Meeting Recording */}
             {(selectedMeeting.localRecordingPath || selectedMeeting.recording?.url) && (() => {
               const rawPath = selectedMeeting.localRecordingPath || selectedMeeting.recording?.url || '';
@@ -711,10 +711,10 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
               return (
                 <div style={{
                   padding: '16px 20px',
-                  backgroundColor: '#fff',
+                  backgroundColor: '#2a2b2d',
                   borderRadius: '10px',
                   marginBottom: '20px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                 }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Meeting Recording
@@ -723,11 +723,11 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   {/* Recording Link — at top */}
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
-                    backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+                    backgroundColor: '#252628', border: '1px solid #333436',
                     borderRadius: '8px', padding: '10px 14px',
                     marginBottom: '12px',
                   }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#2558BF" style={{ flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#6f6e6f" style={{ flexShrink: 0 }}>
                       <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
                     </svg>
                     <a
@@ -735,7 +735,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        flex: 1, fontSize: '12px', color: '#2558BF',
+                        flex: 1, fontSize: '12px', color: '#6f6e6f',
                         minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         textDecoration: 'none',
                       }}
@@ -751,8 +751,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                       }}
                       style={{
                         padding: '6px 14px', fontSize: '12px', fontWeight: '600',
-                        backgroundColor: copiedRecLink ? '#22c55e' : '#2558BF',
-                        color: '#fff', border: 'none',
+                        backgroundColor: copiedRecLink ? '#22c55e' : '#6f6e6f',
+                        color: '#1e1f21', border: 'none',
                         borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
                         transition: 'all 0.2s',
                       }}
@@ -783,7 +783,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
             {selectedMeeting.status === 'processing' && (
               <div style={{
                 padding: '20px',
-                backgroundColor: '#eff6ff',
+                backgroundColor: '#3a3b3d',
                 borderRadius: '10px',
                 marginBottom: '20px',
                 display: 'flex',
@@ -795,7 +795,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   width: '20px',
                   height: '20px',
                   border: '2px solid #bfdbfe',
-                  borderTop: '2px solid #2558BF',
+                  borderTop: '2px solid #6f6e6f',
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite',
                 }} />
@@ -822,19 +822,19 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
             {/* Document Preview Area */}
             {(selectedMeeting.summary || selectedMeeting.keyPoints?.length > 0) ? (
               <div style={{
-                backgroundColor: '#fff',
+                backgroundColor: '#2a2b2d',
                 borderRadius: '8px',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                 padding: '40px',
                 maxWidth: '800px',
                 margin: '0 auto',
                 minHeight: '100%',
-                border: '1px solid #e5e7eb',
+                border: '1px solid #333436',
                 fontFamily: "'Inter', system-ui, sans-serif",
               }}>
                 {/* PDF-like Header */}
-                <div style={{ textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid #f3f4f6', paddingBottom: '24px' }}>
-                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: '#111827', letterSpacing: '-0.025em' }}>
+                <div style={{ textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid #2a2b2d', paddingBottom: '24px' }}>
+                  <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: '#f1f1f1', letterSpacing: '-0.025em' }}>
                     MEETING SUMMARY
                   </h2>
                   <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '14px', color: '#6b7280' }}>
@@ -846,7 +846,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 {/* Summary Section */}
                 {selectedMeeting.summary && (
                   <div style={{ marginBottom: '32px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M4 6h16M4 12h16M4 18h7" />
                       </svg>
@@ -855,7 +855,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                     <p style={{
                       margin: 0,
                       fontSize: '15px',
-                      color: '#374151',
+                      color: '#e5e7eb',
                       lineHeight: '1.7',
                       whiteSpace: 'pre-wrap',
                     }}>
@@ -867,7 +867,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 {/* Key Points Section */}
                 {selectedMeeting.keyPoints?.length > 0 && (
                   <div style={{ marginBottom: '32px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
@@ -875,7 +875,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                     </h4>
                     <ul style={{ margin: 0, paddingLeft: '24px', listStyleType: 'disc' }}>
                       {selectedMeeting.keyPoints.map((point, idx) => (
-                        <li key={idx} style={{ fontSize: '15px', color: '#374151', marginBottom: '10px', lineHeight: '1.5' }}>
+                        <li key={idx} style={{ fontSize: '15px', color: '#e5e7eb', marginBottom: '10px', lineHeight: '1.5' }}>
                           {point}
                         </li>
                       ))}
@@ -886,7 +886,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 {/* Action Items Section */}
                 {selectedMeeting.actionItems?.length > 0 && (
                   <div style={{ marginBottom: '32px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                         <line x1="9" y1="9" x2="15" y2="9" />
@@ -902,8 +902,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                           onClick={() => handleToggleActionItem(selectedMeeting._id, idx)}
                           style={{
                             padding: '14px 16px',
-                            backgroundColor: item.completed ? '#f0fdf4' : '#fff',
-                            border: `1px solid ${item.completed ? '#bbf7d0' : '#e5e7eb'}`,
+                            backgroundColor: item.completed ? '#f0fdf4' : '#1e1f21',
+                            border: `1px solid ${item.completed ? '#bbf7d0' : '#333436'}`,
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -916,7 +916,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                             width: '22px',
                             height: '22px',
                             borderRadius: '6px',
-                            border: `2px solid ${item.completed ? '#22c55e' : '#d1d5db'}`,
+                            border: `2px solid ${item.completed ? '#22c55e' : '#424244'}`,
                             backgroundColor: item.completed ? '#22c55e' : 'transparent',
                             display: 'flex',
                             alignItems: 'center',
@@ -954,7 +954,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 {/* Decisions Section */}
                 {selectedMeeting.decisions?.length > 0 && (
                   <div style={{ marginBottom: '32px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="12" cy="12" r="10" />
                         <line x1="12" y1="8" x2="12" y2="12" />
@@ -968,7 +968,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                           key={idx}
                           style={{
                             padding: '14px 18px',
-                            backgroundColor: '#fffbeb',
+                            backgroundColor: '#2e2a1a',
                             border: '1px solid #fef3c7',
                             borderRadius: '10px',
                             fontSize: '14.5px',
@@ -988,7 +988,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 {/* Participants Section */}
                 {selectedMeeting.participants?.length > 0 && (
                   <div style={{ marginBottom: '32px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
@@ -1003,12 +1003,12 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                           key={idx}
                           style={{
                             padding: '8px 14px',
-                            backgroundColor: '#f3f4f6',
+                            backgroundColor: '#2a2b2d',
                             borderRadius: '20px',
                             fontSize: '13.5px',
-                            color: '#374151',
+                            color: '#e5e7eb',
                             fontWeight: '500',
-                            border: '1px solid #e5e7eb',
+                            border: '1px solid #333436',
                           }}
                         >
                           {participant.name || participant}
@@ -1020,8 +1020,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
 
                 {/* Transcript Section */}
                 {selectedMeeting.transcript && (
-                  <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '32px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ borderTop: '1px solid #2a2b2d', paddingTop: '32px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                       </svg>
@@ -1029,16 +1029,16 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                     </h4>
                     <div style={{
                       padding: '24px',
-                      backgroundColor: '#f9fafb',
+                      backgroundColor: '#252628',
                       borderRadius: '12px',
                       maxHeight: '400px',
                       overflowY: 'auto',
-                      border: '1px solid #f3f4f6',
+                      border: '1px solid #2a2b2d',
                     }}>
                       <pre style={{
                         margin: 0,
                         fontSize: '13.5px',
-                        color: '#4b5563',
+                        color: '#a2a0a2',
                         whiteSpace: 'pre-wrap',
                         fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                         lineHeight: '1.8',
@@ -1093,15 +1093,15 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
           zIndex: 10000,
         }}>
           <div style={{
-            backgroundColor: '#fff', borderRadius: '16px', padding: '32px 40px',
+            backgroundColor: '#2a2b2d', borderRadius: '16px', padding: '32px 40px',
             textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
           }}>
             <div style={{
               width: '40px', height: '40px', margin: '0 auto 16px',
-              border: '4px solid #e5e7eb', borderTop: '4px solid #2558BF',
+              border: '4px solid #333436', borderTop: '4px solid #6f6e6f',
               borderRadius: '50%', animation: 'spin 1s linear infinite',
             }} />
-            <p style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#f1f1f1' }}>
               Saving Recording...
             </p>
             <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>

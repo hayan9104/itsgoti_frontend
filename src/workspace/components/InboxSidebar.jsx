@@ -171,10 +171,10 @@ const InboxSidebar = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#fff' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#2a2b2d' }}>
       {/* Header */}
-      <div style={{ padding: '20px 16px', borderBottom: '1px solid #eee' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1a1a1a', margin: 0 }}>Inbox</h2>
+      <div style={{ padding: '20px 16px', borderBottom: '1px solid #333436' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#f1f1f1', margin: 0 }}>Inbox</h2>
       </div>
 
       {/* Content */}
@@ -185,11 +185,11 @@ const InboxSidebar = ({
           {/* Chats Header */}
           <div style={{
             padding: '12px 16px',
-            borderBottom: '1px solid #f0f0f0',
-            backgroundColor: '#fafafa',
+            borderBottom: '1px solid #333436',
+            backgroundColor: '#252628',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>Chats</span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>Chats</span>
               {unreadChatCount > 0 && (
                 <span style={{
                   minWidth: '18px', height: '18px', padding: '0 5px',
@@ -205,9 +205,9 @@ const InboxSidebar = ({
 
           {/* Chat List */}
           {loading ? (
-            <div style={{ padding: '12px 16px', color: '#999', fontSize: '13px' }}>Loading...</div>
+            <div style={{ padding: '12px 16px', color: '#6f6e6f', fontSize: '13px' }}>Loading...</div>
           ) : conversations.length === 0 ? (
-            <div style={{ padding: '12px 16px', color: '#999', fontSize: '13px' }}>No conversations</div>
+            <div style={{ padding: '12px 16px', color: '#6f6e6f', fontSize: '13px' }}>No conversations</div>
           ) : (
             conversations.map(conv => {
               const participant = conv.user || conv.participant;
@@ -222,17 +222,17 @@ const InboxSidebar = ({
                   style={{
                     padding: '10px 16px',
                     cursor: 'pointer',
-                    backgroundColor: isSelected ? '#e8f0fe' : 'transparent',
-                    borderLeft: isSelected ? '3px solid #2558BF' : '3px solid transparent',
-                    borderBottom: '1px solid #f5f5f5',
+                    backgroundColor: isSelected ? '#3a3b3d' : 'transparent',
+                    borderLeft: isSelected ? '3px solid #6f6e6f' : '3px solid transparent',
+                    borderBottom: '1px solid #2a2b2d',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{
                       width: '36px', height: '36px', borderRadius: '50%',
-                      backgroundColor: '#e0e0e0',
+                      backgroundColor: '#4a4b4d',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#666', fontSize: '12px', fontWeight: '600',
+                      color: '#a2a0a2', fontSize: '12px', fontWeight: '600',
                     }}>
                       {getInitials(participant?.name)}
                     </div>
@@ -241,19 +241,19 @@ const InboxSidebar = ({
                         <span style={{
                           fontSize: '14px',
                           fontWeight: isUnread ? '600' : '500',
-                          color: '#1a1a1a'
+                          color: '#f1f1f1'
                         }}>
                           {participant?.name}
                         </span>
                         {conv.lastMessage && (
-                          <span style={{ fontSize: '11px', color: '#999' }}>
+                          <span style={{ fontSize: '11px', color: '#6f6e6f' }}>
                             {formatTime(conv.lastMessage.createdAt)}
                           </span>
                         )}
                       </div>
                       <p style={{
                         margin: '2px 0 0', fontSize: '12px',
-                        color: '#888',
+                        color: '#6f6e6f',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {conv.lastMessage?.content || 'Tap to start conversation'}
@@ -262,7 +262,7 @@ const InboxSidebar = ({
                     {isUnread && (
                       <div style={{
                         width: '8px', height: '8px', borderRadius: '50%',
-                        backgroundColor: '#2558BF',
+                        backgroundColor: '#6f6e6f',
                       }} />
                     )}
                   </div>
@@ -274,8 +274,8 @@ const InboxSidebar = ({
           {/* Available Users to Chat (Super Admin only) */}
           {isSuperAdmin && availableChatUsers.length > 0 && (
             <>
-              <div style={{ padding: '10px 16px 6px', backgroundColor: '#fafafa' }}>
-                <span style={{ fontSize: '11px', color: '#888', fontWeight: '500', textTransform: 'uppercase' }}>Start new chat</span>
+              <div style={{ padding: '10px 16px 6px', backgroundColor: '#252628' }}>
+                <span style={{ fontSize: '11px', color: '#6f6e6f', fontWeight: '500', textTransform: 'uppercase' }}>Start new chat</span>
               </div>
               {availableChatUsers.map(chatUser => (
                 <div
@@ -285,18 +285,18 @@ const InboxSidebar = ({
                     padding: '8px 16px',
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '10px',
-                    borderBottom: '1px solid #f5f5f5',
+                    borderBottom: '1px solid #2a2b2d',
                   }}
                 >
                   <div style={{
                     width: '32px', height: '32px', borderRadius: '50%',
-                    backgroundColor: '#f0f0f0',
+                    backgroundColor: '#3a3b3d',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#888', fontSize: '11px', fontWeight: '500',
+                    color: '#6f6e6f', fontSize: '11px', fontWeight: '500',
                   }}>
                     {getInitials(chatUser.name)}
                   </div>
-                  <span style={{ fontSize: '13px', color: '#555' }}>{chatUser.name}</span>
+                  <span style={{ fontSize: '13px', color: '#a2a0a2' }}>{chatUser.name}</span>
                 </div>
               ))}
             </>
@@ -315,12 +315,12 @@ const InboxSidebar = ({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 cursor: 'pointer',
-                backgroundColor: '#fafafa',
-                borderBottom: '1px solid #f0f0f0',
+                backgroundColor: '#252628',
+                borderBottom: '1px solid #333436',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>Tasks</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>Tasks</span>
                 {unreadTaskCount > 0 && (
                   <span style={{
                     minWidth: '18px', height: '18px', padding: '0 5px',
@@ -346,7 +346,7 @@ const InboxSidebar = ({
             {/* Tasks List */}
             {tasksExpanded && (
               realTasks.length === 0 ? (
-                <div style={{ padding: '12px 16px', color: '#999', fontSize: '13px' }}>No pending tasks</div>
+                <div style={{ padding: '12px 16px', color: '#6f6e6f', fontSize: '13px' }}>No pending tasks</div>
               ) : (
                 realTasks.map(task => {
                   const isUnread = !readTasks.has(task._id);
@@ -360,9 +360,9 @@ const InboxSidebar = ({
                       style={{
                         padding: '10px 16px',
                         cursor: 'pointer',
-                        backgroundColor: isSelected ? '#e8f0fe' : 'transparent',
-                        borderLeft: isSelected ? '3px solid #2558BF' : '3px solid transparent',
-                        borderBottom: '1px solid #f5f5f5',
+                        backgroundColor: isSelected ? '#3a3b3d' : 'transparent',
+                        borderLeft: isSelected ? '3px solid #6f6e6f' : '3px solid transparent',
+                        borderBottom: '1px solid #2a2b2d',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -377,7 +377,7 @@ const InboxSidebar = ({
                             <span style={{
                               fontSize: '14px',
                               fontWeight: isUnread ? '600' : '500',
-                              color: '#1a1a1a'
+                              color: '#f1f1f1'
                             }}>
                               {task.title}
                             </span>
@@ -387,7 +387,7 @@ const InboxSidebar = ({
                               </span>
                             )}
                           </div>
-                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#888' }}>
+                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#6f6e6f' }}>
                             {task.board?.name}
                             {task.dueDate && ` • Due ${new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                           </p>
@@ -413,11 +413,11 @@ const InboxSidebar = ({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 cursor: 'pointer',
-                backgroundColor: '#fafafa',
-                borderBottom: '1px solid #f0f0f0',
+                backgroundColor: '#252628',
+                borderBottom: '1px solid #333436',
               }}
             >
-              <span style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>Updates</span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>Updates</span>
               <svg
                 width="18" height="18" viewBox="0 0 24 24" fill="#888"
                 style={{
@@ -431,7 +431,7 @@ const InboxSidebar = ({
 
             {/* Updates List */}
             {updatesExpanded && (
-              <div style={{ padding: '12px 16px', color: '#999', fontSize: '13px' }}>
+              <div style={{ padding: '12px 16px', color: '#6f6e6f', fontSize: '13px' }}>
                 No updates yet
               </div>
             )}

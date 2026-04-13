@@ -41,7 +41,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
 
   const handleStatusChange = async (taskId, newStatus) => {
     if (!taskId) return;
-    
+
     // Optimistic update
     const previousTasks = [...tasks];
     const previousSelectedTask = selectedTask ? { ...selectedTask } : null;
@@ -56,11 +56,11 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
       // Update state immediately
       const updatedTasks = tasks.map(t => t._id === taskId ? { ...t, status: newStatus } : t);
       setTasks(updatedTasks);
-      
+
       if (selectedTask && selectedTask._id === taskId) {
         setSelectedTask({ ...selectedTask, status: newStatus });
       }
-      
+
       setDragOverStatus(null);
 
       // Make API call
@@ -131,7 +131,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
 
   if (loading) {
     return (
-      <div style={{ padding: '48px', textAlign: 'center', color: '#6b7280' }}>
+      <div style={{ padding: '48px', textAlign: 'center', color: '#a2a0a2' }}>
         Loading tasks...
       </div>
     );
@@ -151,19 +151,18 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '8px 16px',
-                backgroundColor: '#fff',
-                border: '1px solid #e5e7eb',
+                backgroundColor: '#2a2b2d',
+                border: '1px solid #424244',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                color: '#374151',
+                color: '#f1f1f1',
                 fontSize: '14px',
                 fontWeight: '500',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                 transition: 'all 0.2s',
                 width: 'fit-content'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -171,11 +170,11 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
               Back to List
             </button>
             <div>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#f1f1f1' }}>
                 Change Status
               </h2>
-              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
-                Current task: <span style={{ color: '#2558BF', fontWeight: '600' }}>{selectedTask.title}</span>
+              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#a2a0a2' }}>
+                Current task: <span style={{ color: '#f1f1f1', fontWeight: '600' }}>{selectedTask.title}</span>
               </p>
             </div>
           </div>
@@ -191,7 +190,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
             {['open', 'todo', 'doing', 'done'].map((status) => {
               const isOver = dragOverStatus === status;
               const isActive = selectedTask.status === status;
-              
+
               return (
                 <div
                   key={status}
@@ -200,10 +199,10 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   onDragLeave={handleDragLeave}
                   onDrop={() => handleStatusChange(selectedTask._id, status)}
                   style={{
-                    backgroundColor: isOver ? '#eff6ff' : '#f9fafb',
+                    backgroundColor: isOver ? '#2a2b2d' : '#252628',
                     borderRadius: '16px',
                     padding: '20px',
-                    border: `2px dashed ${isActive ? getStatusColor(status) : (isOver ? '#3b82f6' : '#e5e7eb')}`,
+                    border: `2px dashed ${isActive ? getStatusColor(status) : (isOver ? '#a2a0a2' : '#424244')}`,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '16px',
@@ -211,23 +210,23 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     position: 'relative',
                     transform: isOver ? 'scale(1.02)' : 'scale(1)',
-                    boxShadow: isOver ? '0 10px 15px -3px rgba(0, 0, 0, 0.1)' : 'none',
+                    boxShadow: isOver ? '0 10px 15px -3px rgba(0, 0, 0, 0.3)' : 'none',
                     zIndex: isOver ? 10 : 1
                   }}
                 >
                   {/* Column Header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{ 
-                      width: '10px', 
-                      height: '10px', 
-                      borderRadius: '50%', 
+                    <div style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
                       backgroundColor: getStatusColor(status),
                       boxShadow: isActive ? `0 0 0 4px ${getStatusColor(status)}20` : 'none'
                     }} />
-                    <span style={{ 
-                      fontSize: '14px', 
-                      fontWeight: isActive ? '700' : '600', 
-                      color: isActive ? '#111827' : '#374151' 
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: isActive ? '700' : '600',
+                      color: isActive ? '#f1f1f1' : '#a2a0a2'
                     }}>
                       {getStatusLabel(status)}
                     </span>
@@ -263,14 +262,14 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   )}
 
                   {!isActive && (
-                    <div style={{ 
-                      flex: 1, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      color: isOver ? '#3b82f6' : '#9ca3af', 
-                      fontSize: '13px', 
-                      textAlign: 'center', 
+                    <div style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: isOver ? '#f1f1f1' : '#6f6e6f',
+                      fontSize: '13px',
+                      textAlign: 'center',
                       padding: '0 20px',
                       fontWeight: isOver ? '600' : '400',
                       transition: 'all 0.2s'
@@ -289,10 +288,10 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#f1f1f1' }}>
                 All Tasks
               </h2>
-              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#a2a0a2' }}>
                 {tasks.filter(t => t.type !== 'note').length} task{tasks.filter(t => t.type !== 'note').length !== 1 ? 's' : ''} in {boardName}
               </p>
             </div>
@@ -304,9 +303,9 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '10px 20px',
-                  backgroundColor: '#2558BF',
-                  color: '#fff',
-                  border: 'none',
+                  backgroundColor: '#3a3b3d',
+                  color: '#f1f1f1',
+                  border: '1px solid #4a4b4d',
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -335,9 +334,9 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                 onClick={() => setFilter(tab.id)}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: filter === tab.id ? '#2558BF' : '#f3f4f6',
-                  color: filter === tab.id ? '#fff' : '#4b5563',
-                  border: 'none',
+                  backgroundColor: filter === tab.id ? '#3a3b3d' : 'transparent',
+                  color: filter === tab.id ? '#f1f1f1' : '#a2a0a2',
+                  border: filter === tab.id ? '1px solid #4a4b4d' : '1px solid transparent',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: '500',
@@ -345,12 +344,14 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
+                  transition: 'all 0.15s',
                 }}
               >
                 {tab.label}
                 <span
                   style={{
-                    backgroundColor: filter === tab.id ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
+                    backgroundColor: filter === tab.id ? '#4a4b4d' : '#2a2b2d',
+                    color: filter === tab.id ? '#f1f1f1' : '#6f6e6f',
                     padding: '2px 8px',
                     borderRadius: '10px',
                     fontSize: '11px',
@@ -368,24 +369,24 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
               style={{
                 padding: '60px 40px',
                 textAlign: 'center',
-                backgroundColor: '#f9fafb',
+                backgroundColor: '#252628',
                 borderRadius: '12px',
-                border: '2px dashed #e5e7eb',
+                border: '1px dashed #424244',
               }}
             >
               <svg
                 width="48"
                 height="48"
                 viewBox="0 0 24 24"
-                fill="#d1d5db"
+                fill="#4a4b4d"
                 style={{ margin: '0 auto 16px' }}
               >
                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
               </svg>
-              <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '600', color: '#374151' }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '600', color: '#f1f1f1' }}>
                 No tasks {filter !== 'all' ? `in ${getStatusLabel(filter)}` : 'added yet'}
               </h3>
-              <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#6b7280' }}>
+              <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#a2a0a2' }}>
                 Create your first task to get started
               </p>
               {isSuperAdmin && (
@@ -393,9 +394,9 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   onClick={() => setShowCreateModal(true)}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#2558BF',
-                    color: '#fff',
-                    border: 'none',
+                    backgroundColor: '#3a3b3d',
+                    color: '#f1f1f1',
+                    border: '1px solid #4a4b4d',
                     borderRadius: '8px',
                     fontSize: '14px',
                     cursor: 'pointer',
@@ -408,9 +409,9 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
           ) : (
             <div
               style={{
-                backgroundColor: '#fff',
+                backgroundColor: '#252628',
                 borderRadius: '12px',
-                border: '1px solid #e5e7eb',
+                border: '1px solid #424244',
                 overflow: 'hidden',
               }}
             >
@@ -420,12 +421,13 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   display: 'grid',
                   gridTemplateColumns: '2fr 1fr 1fr 1fr 120px',
                   padding: '12px 16px',
-                  backgroundColor: '#f9fafb',
-                  borderBottom: '1px solid #e5e7eb',
+                  backgroundColor: '#2a2b2d',
+                  borderBottom: '1px solid #424244',
                   fontSize: '12px',
                   fontWeight: '600',
-                  color: '#6b7280',
+                  color: '#6f6e6f',
                   textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
                 }}
               >
                 <div>Task Name</div>
@@ -443,12 +445,12 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                     display: 'grid',
                     gridTemplateColumns: '2fr 1fr 1fr 1fr 120px',
                     padding: '14px 16px',
-                    borderBottom: '1px solid #f3f4f6',
+                    borderBottom: '1px solid #2a2b2d',
                     alignItems: 'center',
                     cursor: 'pointer',
                     transition: 'background-color 0.1s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => setSelectedTask(selectedTask?._id === task._id ? null : task)}
                 >
@@ -459,19 +461,19 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                         width: '8px',
                         height: '8px',
                         borderRadius: '50%',
-                        backgroundColor: boardColor || '#2558BF',
+                        backgroundColor: boardColor || '#6f6e6f',
                         flexShrink: 0,
                       }}
                     />
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#e5e7eb' }}>
                         {task.title}
                       </div>
                       {task.description && (
                         <div
                           style={{
                             fontSize: '12px',
-                            color: '#6b7280',
+                            color: '#6f6e6f',
                             marginTop: '2px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -486,12 +488,12 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   </div>
 
                   {/* Start Date */}
-                  <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                  <div style={{ fontSize: '13px', color: '#a2a0a2' }}>
                     {formatDate(task.scheduledDate)}
                   </div>
 
                   {/* Due Date */}
-                  <div style={{ fontSize: '13px', color: task.dueDate ? '#374151' : '#9ca3af' }}>
+                  <div style={{ fontSize: '13px', color: task.dueDate ? '#333436' : '#6f6e6f' }}>
                     {formatDate(task.dueDate)}
                   </div>
 
@@ -504,7 +506,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                             width: '28px',
                             height: '28px',
                             borderRadius: '50%',
-                            backgroundColor: '#2558BF',
+                            backgroundColor: '#6f6e6f',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -515,12 +517,12 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                         >
                           {task.assignee.name?.substring(0, 2).toUpperCase()}
                         </div>
-                        <span style={{ fontSize: '13px', color: '#374151' }}>
+                        <span style={{ fontSize: '13px', color: '#e5e7eb' }}>
                           {task.assignee.name}
                         </span>
                       </div>
                     ) : (
-                      <span style={{ fontSize: '13px', color: '#9ca3af' }}>Unassigned</span>
+                      <span style={{ fontSize: '13px', color: '#6f6e6f' }}>Unassigned</span>
                     )}
                   </div>
 
@@ -532,7 +534,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                         alignItems: 'center',
                         gap: '6px',
                         padding: '6px 12px',
-                        backgroundColor: getStatusColor(task.status) + '15',
+                        backgroundColor: getStatusColor(task.status) + '20',
                         borderRadius: '6px',
                         fontSize: '12px',
                         fontWeight: '500',

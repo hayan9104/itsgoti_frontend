@@ -198,7 +198,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
 
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>
+        <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f1f1f1', margin: 0 }}>
           Board Settings
         </h2>
         <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
@@ -211,7 +211,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
         display: 'flex',
         gap: '8px',
         marginBottom: '24px',
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: '1px solid #333436',
         paddingBottom: '12px',
       }}>
         {tabs.map((tab) => (
@@ -227,7 +227,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 16px',
-              backgroundColor: activeTab === tab.id ? '#2558BF' : 'transparent',
+              backgroundColor: activeTab === tab.id ? '#6f6e6f' : 'transparent',
               color: activeTab === tab.id ? '#fff' : '#6b7280',
               border: 'none',
               borderRadius: '8px',
@@ -238,7 +238,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
             }}
             onMouseEnter={(e) => {
               if (activeTab !== tab.id) {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                e.currentTarget.style.backgroundColor = '#353638';
                 e.currentTarget.style.color = '#374151';
               }
             }}
@@ -257,9 +257,9 @@ const BoardSettingsView = ({ boardId, boardName }) => {
 
       {/* Content */}
       <div style={{
-        backgroundColor: '#fff',
+        backgroundColor: '#2a2b2d',
         borderRadius: '12px',
-        border: '1px solid #e5e7eb',
+        border: '1px solid #333436',
         overflow: 'hidden',
       }}>
         {/* List Header */}
@@ -268,10 +268,10 @@ const BoardSettingsView = ({ boardId, boardName }) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '16px 20px',
-          borderBottom: '1px solid #e5e7eb',
-          backgroundColor: '#fafafa',
+          borderBottom: '1px solid #333436',
+          backgroundColor: '#252628',
         }}>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>
             {tabs.find(t => t.id === activeTab)?.label} ({getItems().length})
           </span>
           <button
@@ -281,7 +281,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
               alignItems: 'center',
               gap: '6px',
               padding: '8px 14px',
-              backgroundColor: '#2558BF',
+              backgroundColor: '#6f6e6f',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -301,8 +301,8 @@ const BoardSettingsView = ({ boardId, boardName }) => {
         {showAddForm && (
           <div style={{
             padding: '16px 20px',
-            backgroundColor: '#f9fafb',
-            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: '#252628',
+            borderBottom: '1px solid #333436',
           }}>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
               <div style={{ flex: 1 }}>
@@ -322,13 +322,13 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                     width: '100%',
                     padding: '10px 12px',
                     fontSize: '14px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #424244',
                     borderRadius: '6px',
                     outline: 'none',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#2558BF'}
-                  onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                  onFocus={(e) => e.target.style.borderColor = '#6f6e6f'}
+                  onBlur={(e) => e.target.style.borderColor = '#424244'}
                 />
               </div>
               <div>
@@ -360,7 +360,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                   disabled={saving || (!newItem.label && !newItem.name)}
                   style={{
                     padding: '10px 16px',
-                    backgroundColor: saving || (!newItem.label && !newItem.name) ? '#d1d5db' : '#22c55e',
+                    backgroundColor: saving || (!newItem.label && !newItem.name) ? '#424244' : '#22c55e',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '6px',
@@ -380,7 +380,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                     padding: '10px 16px',
                     backgroundColor: 'transparent',
                     color: '#6b7280',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid #424244',
                     borderRadius: '6px',
                     fontSize: '13px',
                     fontWeight: '500',
@@ -414,7 +414,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                   alignItems: 'center',
                   gap: '16px',
                   padding: '14px 20px',
-                  borderBottom: index < getItems().length - 1 ? '1px solid #f3f4f6' : 'none',
+                  borderBottom: index < getItems().length - 1 ? '1px solid #2a2b2d' : 'none',
                 }}
               >
                 {editingItem?.id === item.id ? (
@@ -439,7 +439,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                         flex: 1,
                         padding: '8px 12px',
                         fontSize: '14px',
-                        border: '1px solid #2558BF',
+                        border: '1px solid #6f6e6f',
                         borderRadius: '6px',
                         outline: 'none',
                       }}
@@ -484,7 +484,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                           padding: '6px 12px',
                           backgroundColor: 'transparent',
                           color: '#6b7280',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid #424244',
                           borderRadius: '4px',
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -508,7 +508,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                         justifyContent: 'center',
                       }}
                     />
-                    <span style={{ flex: 1, fontSize: '14px', color: '#374151', fontWeight: '500' }}>
+                    <span style={{ flex: 1, fontSize: '14px', color: '#e5e7eb', fontWeight: '500' }}>
                       {getItemLabel(item)}
                     </span>
                     <span style={{ fontSize: '12px', color: '#9ca3af', fontFamily: 'monospace' }}>
@@ -530,7 +530,7 @@ const BoardSettingsView = ({ boardId, boardName }) => {
                           gap: '4px',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                          e.currentTarget.style.backgroundColor = '#353638';
                           e.currentTarget.style.color = '#374151';
                         }}
                         onMouseLeave={(e) => {

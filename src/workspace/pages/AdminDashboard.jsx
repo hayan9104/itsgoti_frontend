@@ -54,7 +54,7 @@ const HomeDashboard = () => {
     <div>
       {/* Welcome Header */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '600', color: '#111827', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: '600', color: '#f1f1f1', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '32px' }}>👋</span>
           Welcome, {user?.name?.split(' ')[0] || 'User'}!
         </h1>
@@ -69,8 +69,8 @@ const HomeDashboard = () => {
         {loading ? (
           <p style={{ color: '#9ca3af' }}>Loading...</p>
         ) : recentItems.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '12px' }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="#e5e7eb" style={{ margin: '0 auto 12px' }}>
+          <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#2a2b2d', borderRadius: '12px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#4a4b4d" style={{ margin: '0 auto 12px' }}>
               <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
             </svg>
             <p style={{ color: '#9ca3af', margin: 0 }}>No boards assigned yet</p>
@@ -78,7 +78,7 @@ const HomeDashboard = () => {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+              <tr style={{ borderBottom: '1px solid #333436' }}>
                 <th style={{ textAlign: 'left', padding: '12px 0', fontSize: '12px', fontWeight: '500', color: '#9ca3af' }}>Name</th>
                 <th style={{ textAlign: 'left', padding: '12px 0', fontSize: '12px', fontWeight: '500', color: '#9ca3af' }}>Kind</th>
                 <th style={{ textAlign: 'left', padding: '12px 0', fontSize: '12px', fontWeight: '500', color: '#9ca3af' }}>Tasks</th>
@@ -89,9 +89,9 @@ const HomeDashboard = () => {
               {recentItems.map((item) => (
                 <tr
                   key={item._id}
-                  style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                  style={{ borderBottom: '1px solid #2a2b2d', cursor: 'pointer' }}
                   onClick={() => navigate(`/workspace/admin/boards/${item._id}`)}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <td style={{ padding: '16px 0' }}>
@@ -101,7 +101,7 @@ const HomeDashboard = () => {
                           width: '36px',
                           height: '36px',
                           borderRadius: '8px',
-                          backgroundColor: item.color || '#2558BF',
+                          backgroundColor: item.color || '#6f6e6f',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -112,14 +112,14 @@ const HomeDashboard = () => {
                         </svg>
                       </div>
                       <div>
-                        <p style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#111827' }}>{item.name}</p>
+                        <p style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#e5e7eb' }}>{item.name}</p>
                         <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>{item.description || 'No description'}</p>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '16px 0', fontSize: '14px', color: '#4b5563' }}>{item.type}</td>
-                  <td style={{ padding: '16px 0', fontSize: '14px', color: '#4b5563' }}>{item.taskCount || 0}</td>
-                  <td style={{ padding: '16px 0', fontSize: '14px', color: '#4b5563' }}>{formatDate(item.createdAt)}</td>
+                  <td style={{ padding: '16px 0', fontSize: '14px', color: '#a2a0a2' }}>{item.type}</td>
+                  <td style={{ padding: '16px 0', fontSize: '14px', color: '#a2a0a2' }}>{item.taskCount || 0}</td>
+                  <td style={{ padding: '16px 0', fontSize: '14px', color: '#a2a0a2' }}>{formatDate(item.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -139,27 +139,27 @@ const HomeDashboard = () => {
               onClick={option.action}
               style={{
                 padding: '20px 16px',
-                backgroundColor: '#fff',
-                border: '1px solid #e5e7eb',
+                backgroundColor: '#2a2b2d',
+                border: '1px solid #333436',
                 borderRadius: '12px',
                 textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#2558BF';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(37, 88, 191, 0.1)';
+                e.currentTarget.style.borderColor = '#4a4b4d';
+                e.currentTarget.style.backgroundColor = '#2a2b2d';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb';
-                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = '#333436';
+                e.currentTarget.style.backgroundColor = '#2a2b2d';
               }}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="#6b7280" style={{ marginBottom: '12px' }}>
                 {option.icon === 'board' && <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />}
                 {option.icon === 'conversation' && <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />}
               </svg>
-              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>{option.label}</p>
+              <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '500', color: '#e5e7eb' }}>{option.label}</p>
               <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>{option.desc}</p>
             </button>
           ))}
@@ -206,7 +206,7 @@ const MyTasks = () => {
       case 'done': return '#dcfce7';
       case 'doing': return '#fef3c7';
       case 'todo': return '#dbeafe';
-      default: return '#f3f4f6';
+      default: return '#2a2b2d';
     }
   };
 
@@ -222,7 +222,7 @@ const MyTasks = () => {
 
   return (
     <div>
-      <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', marginBottom: '24px' }}>My Tasks</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#f1f1f1', marginBottom: '24px' }}>My Tasks</h1>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
@@ -235,7 +235,7 @@ const MyTasks = () => {
           <div
             key={stat.label}
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: '#2a2b2d',
               borderRadius: '12px',
               padding: '20px',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
@@ -252,14 +252,14 @@ const MyTasks = () => {
       {/* Pending Tasks */}
       <div
         style={{
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '12px',
           padding: '24px',
           boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           marginBottom: '24px',
         }}
       >
-        <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f1f1f1', marginBottom: '16px' }}>
           Pending Tasks ({pendingTasks.length})
         </h2>
 
@@ -267,7 +267,7 @@ const MyTasks = () => {
           <p style={{ color: '#6b7280' }}>Loading...</p>
         ) : pendingTasks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '32px', color: '#6b7280' }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="#d1d5db" style={{ marginBottom: '12px' }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#424244" style={{ marginBottom: '12px' }}>
               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
             </svg>
             <p style={{ fontSize: '15px' }}>All caught up! No pending tasks.</p>
@@ -283,10 +283,10 @@ const MyTasks = () => {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '14px 16px',
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#252628',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  borderLeft: `3px solid ${task.board?.color || '#2558BF'}`,
+                  borderLeft: `3px solid ${task.board?.color || '#6f6e6f'}`,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
@@ -299,7 +299,7 @@ const MyTasks = () => {
                     }}
                   />
                   <div>
-                    <p style={{ margin: 0, fontWeight: '500', color: '#111827', fontSize: '14px' }}>{task.title}</p>
+                    <p style={{ margin: 0, fontWeight: '500', color: '#f1f1f1', fontSize: '14px' }}>{task.title}</p>
                     <p style={{ margin: '2px 0 0', color: '#6b7280', fontSize: '12px' }}>{task.board?.name || 'Unknown Board'}</p>
                   </div>
                 </div>
@@ -326,13 +326,13 @@ const MyTasks = () => {
       {completedTasks.length > 0 && (
         <div
           style={{
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '12px',
             padding: '24px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           }}
         >
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#f1f1f1', marginBottom: '16px' }}>
             Recently Completed ({completedTasks.length})
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -418,17 +418,17 @@ const InboxChat = () => {
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 48px)' }}>
       {/* Chat Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff', borderRadius: '12px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#2a2b2d', borderRadius: '12px' }}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #333436', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div
                 style={{
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  backgroundColor: selectedConversation.participant?.role === 'super_admin' ? '#22c55e' : '#2558BF',
+                  backgroundColor: selectedConversation.participant?.role === 'super_admin' ? '#22c55e' : '#6f6e6f',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -440,13 +440,13 @@ const InboxChat = () => {
                 {selectedConversation.participant?.name?.substring(0, 2).toUpperCase()}
               </div>
               <div>
-                <p style={{ margin: 0, fontWeight: '600', color: '#111827' }}>{selectedConversation.participant?.name}</p>
+                <p style={{ margin: 0, fontWeight: '600', color: '#f1f1f1' }}>{selectedConversation.participant?.name}</p>
                 <p style={{ margin: 0, fontSize: '12px', color: '#9ca3af' }}>{selectedConversation.participant?.role?.replace('_', ' ')}</p>
               </div>
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '20px', backgroundColor: '#f9fafb' }}>
+            <div style={{ flex: 1, overflow: 'auto', padding: '20px', backgroundColor: '#252628' }}>
               {messages.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                   <p>No messages yet. Start the conversation!</p>
@@ -461,7 +461,7 @@ const InboxChat = () => {
                           maxWidth: '70%',
                           padding: '10px 14px',
                           borderRadius: isOwn ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                          backgroundColor: isOwn ? '#2558BF' : '#fff',
+                          backgroundColor: isOwn ? '#6f6e6f' : '#fff',
                           color: isOwn ? '#fff' : '#111827',
                           boxShadow: isOwn ? 'none' : '0 1px 2px rgba(0,0,0,0.1)',
                         }}
@@ -478,7 +478,7 @@ const InboxChat = () => {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSendMessage} style={{ padding: '16px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '12px' }}>
+            <form onSubmit={handleSendMessage} style={{ padding: '16px 20px', borderTop: '1px solid #333436', display: 'flex', gap: '12px' }}>
               <input
                 type="text"
                 value={newMessage}
@@ -488,7 +488,7 @@ const InboxChat = () => {
                   flex: 1,
                   padding: '12px 16px',
                   fontSize: '14px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '10px',
                   outline: 'none',
                 }}
@@ -498,7 +498,7 @@ const InboxChat = () => {
                 disabled={!newMessage.trim()}
                 style={{
                   padding: '12px 24px',
-                  backgroundColor: newMessage.trim() ? '#2558BF' : '#e5e7eb',
+                  backgroundColor: newMessage.trim() ? '#6f6e6f' : '#333436',
                   color: newMessage.trim() ? '#fff' : '#9ca3af',
                   border: 'none',
                   borderRadius: '10px',
@@ -512,9 +512,9 @@ const InboxChat = () => {
             </form>
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#252628' }}>
             <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="#e5e7eb" style={{ margin: '0 auto 16px' }}>
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="#4a4b4d" style={{ margin: '0 auto 16px' }}>
                 <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
               </svg>
               <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '8px' }}>Select a conversation</p>
@@ -533,17 +533,17 @@ const Settings = () => {
 
   return (
     <div>
-      <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827', marginBottom: '24px' }}>Settings</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#f1f1f1', marginBottom: '24px' }}>Settings</h1>
 
-      <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Profile</h2>
+      <div style={{ backgroundColor: '#2a2b2d', borderRadius: '12px', padding: '24px', marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#f1f1f1', marginBottom: '16px' }}>Profile</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div
             style={{
               width: '64px',
               height: '64px',
               borderRadius: '16px',
-              backgroundColor: '#2558BF',
+              backgroundColor: '#6f6e6f',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -555,7 +555,7 @@ const Settings = () => {
             {user?.initials || user?.name?.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <p style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>{user?.name}</p>
+            <p style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>{user?.name}</p>
             <p style={{ margin: '4px 0', fontSize: '14px', color: '#6b7280' }}>{user?.email}</p>
             <span
               style={{
@@ -575,8 +575,8 @@ const Settings = () => {
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>Account</h2>
+      <div style={{ backgroundColor: '#2a2b2d', borderRadius: '12px', padding: '24px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#f1f1f1', marginBottom: '16px' }}>Account</h2>
         <button
           onClick={logout}
           style={{
@@ -632,6 +632,7 @@ const AdminDashboard = () => {
   // Determine active section based on path
   const getActiveSection = () => {
     if (location.pathname.includes('/inbox')) return 'inbox';
+    if (location.pathname.includes('/boards')) return 'boards';
     if (location.pathname.includes('/my-tasks')) return 'tasks';
     if (location.pathname.includes('/calendar')) return 'calendar';
     if (location.pathname.includes('/meetings')) return 'meetings';
@@ -642,7 +643,7 @@ const AdminDashboard = () => {
   // Determine which secondary sidebar to show
   const getSecondarySidebar = () => {
     const section = getActiveSection();
-    if (section === 'home') return <HomeSidebar />;
+    if (section === 'boards') return <HomeSidebar />;
     if (section === 'inbox') return (
       <InboxSidebar
         onSelectConversation={handleSelectConversation}

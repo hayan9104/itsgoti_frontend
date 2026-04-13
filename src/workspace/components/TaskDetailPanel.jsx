@@ -238,7 +238,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
           width: '100%',
           maxWidth: '800px',
           maxHeight: '90vh',
-          backgroundColor: '#fff',
+          backgroundColor: '#2a2b2d',
           borderRadius: '12px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           display: 'flex',
@@ -253,7 +253,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
         <div
           style={{
             padding: '16px 20px',
-            borderBottom: '1px solid #e5e7eb',
+            borderBottom: '1px solid #333436',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -279,7 +279,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 width: '4px',
                 height: '24px',
                 borderRadius: '2px',
-                backgroundColor: boardColor || '#2558BF',
+                backgroundColor: boardColor || '#6f6e6f',
               }}
             />
             <span style={{ fontSize: '14px', color: '#6b7280' }}>Task Details</span>
@@ -290,7 +290,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
               disabled={saving || !hasChanges}
               style={{
                 padding: '6px 12px',
-                backgroundColor: hasChanges ? '#2558BF' : '#f3f4f6',
+                backgroundColor: hasChanges ? '#6f6e6f' : '#2a2b2d',
                 color: hasChanges ? '#fff' : '#9ca3af',
                 border: 'none',
                 borderRadius: '6px',
@@ -365,10 +365,10 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '6px',
                   fontSize: '13px',
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#1e1f21',
                   cursor: 'not-allowed',
                   color: '#6b7280'
                 }}
@@ -391,7 +391,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '6px',
                   fontSize: '13px',
                   backgroundColor: !isSuperAdmin ? '#f9fafb' : '#fff',
@@ -418,7 +418,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '6px',
                   fontSize: '13px',
                   backgroundColor: !isSuperAdmin ? '#f9fafb' : '#fff',
@@ -441,7 +441,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 style={{
                   width: '100%',
                   padding: '8px 12px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   borderRadius: '6px',
                   fontSize: '13px',
                   backgroundColor: !isSuperAdmin ? '#f9fafb' : '#fff',
@@ -465,10 +465,10 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid #333436',
                     borderRadius: '6px',
                     fontSize: '13px',
-                    backgroundColor: '#f9fafb',
+                    backgroundColor: '#1e1f21',
                     cursor: 'not-allowed',
                     color: '#6b7280'
                   }}
@@ -496,7 +496,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                border: '1px solid #e5e7eb',
+                border: '1px solid #333436',
                 borderRadius: '6px',
                 fontSize: '13px',
                 resize: 'vertical',
@@ -522,7 +522,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                     alignItems: 'center',
                     gap: '10px',
                     padding: '8px 12px',
-                    backgroundColor: '#f9fafb',
+                    backgroundColor: '#1e1f21',
                     borderRadius: '6px',
                   }}
                 >
@@ -570,7 +570,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                     style={{
                       flex: 1,
                       padding: '8px 12px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #333436',
                       borderRadius: '6px',
                       fontSize: '13px',
                     }}
@@ -579,7 +579,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                     type="submit"
                     style={{
                       padding: '8px 12px',
-                      backgroundColor: '#f3f4f6',
+                      backgroundColor: '#2a2b2d',
                       border: 'none',
                       borderRadius: '6px',
                       cursor: 'pointer',
@@ -610,7 +610,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                         width: '28px',
                         height: '28px',
                         borderRadius: '6px',
-                        backgroundColor: '#f3f4f6',
+                        backgroundColor: '#2a2b2d',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -623,7 +623,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                       </svg>
                     </div>
                     <div>
-                      <p style={{ fontSize: '13px', color: '#374151', margin: 0 }}>
+                      <p style={{ fontSize: '13px', color: '#e5e7eb', margin: 0 }}>
                         <strong>{log.user?.name}</strong> {log.actionText || log.action.replace(/_/g, ' ')}
                         {!log.actionText && log.changes?.field && (
                           <> - {getFieldName(log.changes.field)}: {formatLogValue(log.changes.field, log.changes.oldValue)} → {formatLogValue(log.changes.field, log.changes.newValue)}</>

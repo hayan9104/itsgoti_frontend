@@ -32,6 +32,7 @@ const BoardsList = () => {
   const handleBoardCreated = (newBoard) => {
     setBoards([newBoard, ...boards]);
     setShowCreateModal(false);
+    window.dispatchEvent(new Event('boards-updated'));
   };
 
   const handleDeleteBoard = async (boardId) => {
@@ -42,6 +43,7 @@ const BoardsList = () => {
     try {
       await workspaceBoardsAPI.delete(boardId);
       setBoards(boards.filter((b) => b._id !== boardId));
+      window.dispatchEvent(new Event('boards-updated'));
     } catch (error) {
       console.error('Failed to delete board:', error);
       alert('Failed to delete board');
@@ -66,7 +68,7 @@ const BoardsList = () => {
         }}
       >
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#f1f1f1', margin: 0 }}>
             {isSuperAdmin ? 'All Boards' : 'My Boards'}
           </h1>
           <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
@@ -81,7 +83,7 @@ const BoardsList = () => {
               alignItems: 'center',
               gap: '8px',
               padding: '10px 20px',
-              backgroundColor: '#2558BF',
+              backgroundColor: '#6f6e6f',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -90,8 +92,8 @@ const BoardsList = () => {
               cursor: 'pointer',
               transition: 'background-color 0.2s',
             }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = '#1e4a9e')}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = '#2558BF')}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = '#5a5a5a')}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = '#6f6e6f')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
@@ -122,9 +124,10 @@ const BoardsList = () => {
               width: '100%',
               padding: '10px 12px 10px 44px',
               fontSize: '14px',
-              border: '1px solid #d1d5db',
+              border: '1px solid #424244',
               borderRadius: '8px',
-              backgroundColor: '#fff',
+              backgroundColor: '#2a2b2d',
+              color: '#e5e7eb',
               outline: 'none',
             }}
           />
@@ -139,7 +142,7 @@ const BoardsList = () => {
           style={{
             textAlign: 'center',
             padding: '48px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '12px',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           }}
@@ -148,12 +151,12 @@ const BoardsList = () => {
             width="64"
             height="64"
             viewBox="0 0 24 24"
-            fill="#d1d5db"
+            fill="#424244"
             style={{ marginBottom: '16px' }}
           >
             <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
           </svg>
-          <h3 style={{ color: '#374151', fontSize: '18px', marginBottom: '8px' }}>
+          <h3 style={{ color: '#e5e7eb', fontSize: '18px', marginBottom: '8px' }}>
             No boards yet
           </h3>
           <p style={{ color: '#6b7280', marginBottom: '24px' }}>
@@ -164,7 +167,7 @@ const BoardsList = () => {
               onClick={() => setShowCreateModal(true)}
               style={{
                 padding: '10px 20px',
-                backgroundColor: '#2558BF',
+                backgroundColor: '#6f6e6f',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
@@ -183,7 +186,7 @@ const BoardsList = () => {
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '12px',
             overflow: 'hidden',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
@@ -197,24 +200,24 @@ const BoardsList = () => {
                 alignItems: 'center',
                 padding: '16px 20px',
                 cursor: 'pointer',
-                borderBottom: index < filteredBoards.length - 1 ? '1px solid #f3f4f6' : 'none',
+                borderBottom: index < filteredBoards.length - 1 ? '1px solid #2a2b2d' : 'none',
                 transition: 'background-color 0.2s',
               }}
               onClick={() => navigate(`${basePath}/boards/${board._id}`)}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f9fafb';
+                e.currentTarget.style.backgroundColor = '#353638';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#fff';
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              {/* Color indicator */}
+              {/* Color dot indicator */}
               <div
                 style={{
-                  width: '4px',
-                  height: '40px',
-                  borderRadius: '2px',
-                  backgroundColor: board.color || '#2558BF',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: board.color || '#6f6e6f',
                   marginRight: '16px',
                   flexShrink: 0,
                 }}
@@ -226,7 +229,7 @@ const BoardsList = () => {
                   style={{
                     fontSize: '15px',
                     fontWeight: '600',
-                    color: '#111827',
+                    color: '#f1f1f1',
                     margin: 0,
                     marginBottom: '4px',
                   }}
@@ -250,10 +253,8 @@ const BoardsList = () => {
                   fontSize: '11px',
                   padding: '4px 10px',
                   borderRadius: '4px',
-                  backgroundColor:
-                    board.visibility === 'private' ? '#f3f4f6' : '#dbeafe',
-                  color:
-                    board.visibility === 'private' ? '#4b5563' : '#1e40af',
+                  backgroundColor: '#353638',
+                  color: '#a2a0a2',
                   marginRight: '16px',
                   flexShrink: 0,
                 }}
@@ -276,8 +277,8 @@ const BoardsList = () => {
                     style={{
                       width: '28px',
                       height: '28px',
-                      borderRadius: '6px',
-                      backgroundColor: board.color || '#2558BF',
+                      borderRadius: '50%',
+                      backgroundColor: '#4a4b4d',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -288,7 +289,7 @@ const BoardsList = () => {
                   >
                     {board.owner.initials || board.owner.name?.substring(0, 2).toUpperCase()}
                   </div>
-                  <span style={{ color: '#6b7280', fontSize: '13px' }}>{board.owner.name}</span>
+                  <span style={{ color: '#a2a0a2', fontSize: '13px' }}>{board.owner.name}</span>
                 </div>
               )}
 
@@ -313,7 +314,7 @@ const BoardsList = () => {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = '#ef4444';
-                    e.currentTarget.style.backgroundColor = '#fef2f2';
+                    e.currentTarget.style.backgroundColor = '#3a1a1a';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = '#9ca3af';

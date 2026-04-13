@@ -417,7 +417,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      padding: '0 24px 24px 24px',
+      padding: '16px 24px 24px 24px',
       overflow: 'hidden',
       height: 'calc(100vh - 48px)'
     }}>
@@ -426,18 +426,18 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#fff',
+        backgroundColor: '#2a2b2d',
         borderRadius: '16px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-        border: '1px solid #e5e7eb',
+        border: '1px solid #333436',
         overflow: 'hidden'
       }}>
 
         {/* Fixed Header with Navigation */}
         <div style={{
           padding: '16px 24px',
-          borderBottom: '1px solid #e5e7eb',
-          backgroundColor: '#fff',
+          borderBottom: '1px solid #333436',
+          backgroundColor: '#2a2b2d',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -445,15 +445,15 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
         }}>
           {/* Left: Month & Today Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
               {getCurrentMonthYear()}
             </h2>
             <button
               onClick={goToToday}
               style={{
-                background: '#2558BF',
+                background: '#6f6e6f',
                 border: 'none',
-                color: '#fff',
+                color: '#1e1f21',
                 padding: '8px 20px',
                 borderRadius: '8px',
                 cursor: 'pointer',
@@ -473,11 +473,11 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                 style={{
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid #333436',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#111827',
-                  backgroundColor: '#f9fafb',
+                  color: '#f1f1f1',
+                  backgroundColor: '#252628',
                   cursor: 'pointer',
                   outline: 'none',
                 }}
@@ -498,9 +498,9 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                border: '1px solid #e5e7eb',
-                backgroundColor: startIndex === 0 ? '#f3f4f6' : '#fff',
-                color: startIndex === 0 ? '#d1d5db' : '#374151',
+                border: '1px solid #333436',
+                backgroundColor: startIndex === 0 ? '#2a2b2d' : '#2a2b2d',
+                color: startIndex === 0 ? '#424244' : '#e5e7eb',
                 cursor: startIndex === 0 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -518,9 +518,9 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                border: '1px solid #e5e7eb',
-                backgroundColor: startIndex >= dates.length - VISIBLE_COLUMNS ? '#f3f4f6' : '#fff',
-                color: startIndex >= dates.length - VISIBLE_COLUMNS ? '#d1d5db' : '#374151',
+                border: '1px solid #333436',
+                backgroundColor: startIndex >= dates.length - VISIBLE_COLUMNS ? '#2a2b2d' : '#2a2b2d',
+                color: startIndex >= dates.length - VISIBLE_COLUMNS ? '#424244' : '#e5e7eb',
                 cursor: startIndex >= dates.length - VISIBLE_COLUMNS ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -537,8 +537,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
         {/* Date Headers Row */}
         <div style={{
           display: 'flex',
-          borderBottom: '2px solid #e5e7eb',
-          backgroundColor: '#f9fafb',
+          borderBottom: '2px solid #333436',
+          backgroundColor: '#252628',
           flexShrink: 0
         }}>
           {visibleDates.map((date, idx) => {
@@ -554,17 +554,17 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   flex: 1,
                   padding: '14px 8px',
                   textAlign: 'center',
-                  borderRight: idx < visibleDates.length - 1 ? '1px solid #e5e7eb' : 'none',
-                  borderLeft: isFirstOfMonth ? '3px solid #2558BF' : 'none',
-                  backgroundColor: today ? '#2558BF' : past ? '#f3f4f6' : '#fff',
-                  color: today ? '#fff' : past ? '#9ca3af' : '#374151'
+                  borderRight: idx < visibleDates.length - 1 ? '1px solid #333436' : 'none',
+                  borderLeft: isFirstOfMonth ? '3px solid #6f6e6f' : 'none',
+                  backgroundColor: today ? '#3a3b3d' : past ? '#1a1a1c' : '#252628',
+                  color: today ? '#f1f1f1' : past ? '#6f6e6f' : '#a2a0a2'
                 }}
               >
                 {isFirstOfMonth && (
                   <div style={{
                     fontSize: '10px',
                     fontWeight: '700',
-                    color: today ? '#bfdbfe' : '#2558BF',
+                    color: today ? '#a2a0a2' : '#6f6e6f',
                     textTransform: 'uppercase',
                     marginBottom: '2px'
                   }}>
@@ -575,7 +575,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   {dayNum} {dayName}
                 </div>
                 {today && (
-                  <div style={{ fontSize: '10px', color: '#bfdbfe', fontWeight: '600', marginTop: '2px' }}>
+                  <div style={{ fontSize: '10px', color: '#a2a0a2', fontWeight: '600', marginTop: '2px' }}>
                     TODAY
                   </div>
                 )}
@@ -603,9 +603,9 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                 onMouseLeave={() => setHoveredCell(null)}
                 style={{
                   flex: 1,
-                  borderRight: idx < visibleDates.length - 1 ? '1px solid #e5e7eb' : 'none',
-                  borderLeft: isFirstOfMonth ? '3px solid #2558BF' : 'none',
-                  backgroundColor: today ? '#eff6ff' : past ? '#fafafa' : '#fff',
+                  borderRight: idx < visibleDates.length - 1 ? '1px solid #333436' : 'none',
+                  borderLeft: isFirstOfMonth ? '3px solid #6f6e6f' : 'none',
+                  backgroundColor: today ? '#252830' : past ? '#1a1a1c' : '#1e1f21',
                   display: 'flex',
                   flexDirection: 'column',
                   position: 'relative',
@@ -622,7 +622,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       onClick={() => setSelectedMeetingDetail(meeting)}
                       style={{
                         padding: '12px',
-                        backgroundColor: '#f0fdf4',
+                        backgroundColor: '#1a2e1a',
                         borderRadius: '10px',
                         fontSize: '13px',
                         color: '#166534',
@@ -662,7 +662,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                         <span style={{
                           fontSize: '10px',
-                          color: '#fff',
+                          color: '#1e1f21',
                           backgroundColor: getMeetingStatusColor(meeting.botStatus),
                           padding: '3px 8px',
                           borderRadius: '4px',
@@ -683,7 +683,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                               borderRadius: '4px',
                               border: 'none',
                               backgroundColor: '#3b82f6',
-                              color: '#fff',
+                              color: '#1e1f21',
                               cursor: 'pointer',
                               fontWeight: '500',
                             }}
@@ -715,8 +715,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                     const labelBg = task._dateType === 'due' ? '#fbbf24'
                       : task._dateType === 'start_due' ? '#c084fc'
                       : '#86efac';
-                    // Past: muted blue-grey, Current/Future: board color
-                    const taskBg = past ? '#94a3b8' : (boardColor || '#2558BF');
+                    // Past: muted, Current/Future: very light version of board color
+                    const taskBg = past ? '#353638' : '#2a3a4a';
                     return (
                       <div
                         key={`${task._id}-${task._dateType}-${tIdx}`}
@@ -724,9 +724,10 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                           padding: '10px 14px',
                           backgroundColor: taskBg,
                           borderRadius: '10px',
+                          borderLeft: `3px solid ${boardColor || '#7ec8e3'}`,
                           fontSize: '13px',
                           fontWeight: '500',
-                          color: '#fff',
+                          color: '#e5e7eb',
                           cursor: 'pointer',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                           opacity: past ? 0.85 : 1,
@@ -738,7 +739,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                           fontSize: '10px',
                           fontWeight: '700',
                           backgroundColor: labelBg,
-                          color: '#111827',
+                          color: '#f1f1f1',
                           padding: '2px 8px',
                           borderRadius: '4px',
                           display: 'inline-block',
@@ -783,8 +784,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       <div style={{
                         marginTop: '8px',
                         fontSize: '11px',
-                        color: '#2558BF',
-                        backgroundColor: '#dbeafe',
+                        color: '#6f6e6f',
+                        backgroundColor: '#1a2a3a',
                         padding: '3px 8px',
                         borderRadius: '4px',
                         display: 'inline-block'
@@ -812,7 +813,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                           borderRadius: '8px',
                           backgroundColor: '#10b981',
                           border: 'none',
-                          color: '#fff',
+                          color: '#1e1f21',
                           cursor: 'pointer',
                           fontSize: '13px',
                           fontWeight: '500',
@@ -830,7 +831,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                           borderRadius: '8px',
                           backgroundColor: '#f59e0b',
                           border: 'none',
-                          color: '#fff',
+                          color: '#1e1f21',
                           cursor: 'pointer',
                           fontSize: '13px',
                           fontWeight: '500',
@@ -847,13 +848,13 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
 
                 {/* Add buttons when there are items (Super Admin only) */}
                 {isSuperAdmin && hasContent && hoveredCell === date.toDateString() && (
-                  <div style={{ padding: '8px 12px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid #333436', display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => handleAddClick(date, 'meeting')}
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: '#f0fdf4',
+                        backgroundColor: '#1a2e1a',
                         border: '1px dashed #86efac',
                         borderRadius: '8px',
                         color: '#166534',
@@ -868,7 +869,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: '#fffbeb',
+                        backgroundColor: '#2e2a1a',
                         border: '1px dashed #fcd34d',
                         borderRadius: '8px',
                         color: '#92400e',
@@ -899,12 +900,12 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
           <div style={{
             position: 'fixed', top: '50%', left: '50%',
             transform: 'translate(-50%, -50%)',
-            backgroundColor: '#fff', borderRadius: '16px',
+            backgroundColor: '#2a2b2d', borderRadius: '16px',
             padding: '28px', width: '420px', maxWidth: '90vw',
             zIndex: 1000, boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
                 {selectedMeetingDetail.title}
               </h3>
               <button
@@ -920,7 +921,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Status</span>
                 <span style={{
-                  fontSize: '12px', fontWeight: '600', color: '#fff',
+                  fontSize: '12px', fontWeight: '600', color: '#1e1f21',
                   backgroundColor: getMeetingStatusColor(selectedMeetingDetail.botStatus),
                   padding: '4px 10px', borderRadius: '6px',
                 }}>
@@ -931,7 +932,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
               {/* Time */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Time</span>
-                <span style={{ fontSize: '14px', color: '#111827' }}>
+                <span style={{ fontSize: '14px', color: '#f1f1f1' }}>
                   {new Date(selectedMeetingDetail.scheduledAt).toLocaleString('en-US', {
                     weekday: 'short', month: 'short', day: 'numeric',
                     hour: '2-digit', minute: '2-digit',
@@ -943,7 +944,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
               {selectedMeetingDetail.platform && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Platform</span>
-                  <span style={{ fontSize: '14px', color: '#111827', textTransform: 'capitalize' }}>
+                  <span style={{ fontSize: '14px', color: '#f1f1f1', textTransform: 'capitalize' }}>
                     {selectedMeetingDetail.platform?.replace('_', ' ')}
                   </span>
                 </div>
@@ -956,7 +957,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {selectedMeetingDetail.visibleTo.map((user, i) => (
                       <span key={i} style={{
-                        fontSize: '12px', backgroundColor: '#eff6ff', color: '#1e40af',
+                        fontSize: '12px', backgroundColor: '#252830', color: '#1e40af',
                         padding: '4px 10px', borderRadius: '6px', fontWeight: '500',
                         border: '1px solid #bfdbfe',
                       }}>
@@ -971,7 +972,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
               {selectedMeetingDetail.createdBy && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px' }}>Created by</span>
-                  <span style={{ fontSize: '14px', color: '#111827' }}>
+                  <span style={{ fontSize: '14px', color: '#f1f1f1' }}>
                     {selectedMeetingDetail.createdBy.name || selectedMeetingDetail.createdBy.email || 'Unknown'}
                   </span>
                 </div>
@@ -981,7 +982,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
               {selectedMeetingDetail.description && (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#6b7280', width: '80px', flexShrink: 0 }}>Note</span>
-                  <span style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5' }}>
+                  <span style={{ fontSize: '13px', color: '#e5e7eb', lineHeight: '1.5' }}>
                     {selectedMeetingDetail.description}
                   </span>
                 </div>
@@ -995,11 +996,11 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   </span>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
-                    backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+                    backgroundColor: '#252628', border: '1px solid #333436',
                     borderRadius: '8px', padding: '10px 12px',
                   }}>
                     <span style={{
-                      flex: 1, fontSize: '13px', color: '#2558BF',
+                      flex: 1, fontSize: '13px', color: '#6f6e6f',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
                       {selectedMeetingDetail.meetingUrl}
@@ -1012,8 +1013,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       }}
                       style={{
                         padding: '6px 14px', fontSize: '12px', fontWeight: '600',
-                        backgroundColor: copiedLink ? '#22c55e' : '#2558BF',
-                        color: '#fff', border: 'none', borderRadius: '6px',
+                        backgroundColor: copiedLink ? '#22c55e' : '#6f6e6f',
+                        color: '#1e1f21', border: 'none', borderRadius: '6px',
                         cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s',
                       }}
                     >
@@ -1026,7 +1027,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
               {/* Recording indicator */}
               {(selectedMeetingDetail.videoUrl || selectedMeetingDetail.recordingUrl) && (
                 <div style={{
-                  backgroundColor: '#f0fdf4', border: '1px solid #86efac',
+                  backgroundColor: '#1a2e1a', border: '1px solid #86efac',
                   borderRadius: '8px', padding: '10px 12px',
                   fontSize: '13px', color: '#166534', fontWeight: '500',
                 }}>
@@ -1057,7 +1058,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
             transform: 'translate(-50%, -50%)',
             width: '100%',
             maxWidth: '500px',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '16px',
             padding: '24px',
             zIndex: 1001,
@@ -1073,8 +1074,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   flex: 1,
                   padding: '12px',
                   borderRadius: '8px',
-                  border: popupType === 'meeting' ? '2px solid #10b981' : '1px solid #e5e7eb',
-                  backgroundColor: popupType === 'meeting' ? '#f0fdf4' : '#fff',
+                  border: popupType === 'meeting' ? '2px solid #10b981' : '1px solid #333436',
+                  backgroundColor: popupType === 'meeting' ? '#f0fdf4' : '#1e1f21',
                   color: popupType === 'meeting' ? '#166534' : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
@@ -1089,8 +1090,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   flex: 1,
                   padding: '12px',
                   borderRadius: '8px',
-                  border: popupType === 'note' ? '2px solid #f59e0b' : '1px solid #e5e7eb',
-                  backgroundColor: popupType === 'note' ? '#fffbeb' : '#fff',
+                  border: popupType === 'note' ? '2px solid #f59e0b' : '1px solid #333436',
+                  backgroundColor: popupType === 'note' ? '#fffbeb' : '#1e1f21',
                   color: popupType === 'note' ? '#92400e' : '#6b7280',
                   cursor: 'pointer',
                   fontWeight: '600',
@@ -1130,7 +1131,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       padding: '12px',
                       border: '1px solid #86efac',
                       borderRadius: '8px',
-                      backgroundColor: '#f0fdf4',
+                      backgroundColor: '#1a2e1a',
                       boxSizing: 'border-box'
                     }}
                   />
@@ -1147,7 +1148,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #333436',
                       borderRadius: '8px',
                       boxSizing: 'border-box'
                     }}
@@ -1166,7 +1167,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #333436',
                       borderRadius: '8px',
                       boxSizing: 'border-box'
                     }}
@@ -1188,7 +1189,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       width: '100%',
                       minHeight: '60px',
                       padding: '12px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #333436',
                       borderRadius: '8px',
                       boxSizing: 'border-box'
                     }}
@@ -1205,7 +1206,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       cursor: 'pointer',
                       fontSize: '14px',
                       fontWeight: '600',
-                      color: '#374151',
+                      color: '#e5e7eb',
                     }}
                   >
                     <input
@@ -1221,7 +1222,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                           setMeetingTaskSearch('');
                         }
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: '#2558BF', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', accentColor: '#6f6e6f', cursor: 'pointer' }}
                     />
                     Assign meeting to a specific task
                   </label>
@@ -1245,7 +1246,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid #333436',
                           borderRadius: '8px',
                           marginBottom: '6px',
                           boxSizing: 'border-box',
@@ -1255,7 +1256,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       <div style={{
                         maxHeight: '120px',
                         overflowY: 'auto',
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid #333436',
                         borderRadius: '8px',
                       }}>
                         {allBoards
@@ -1267,8 +1268,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                               style={{
                                 padding: '10px 12px',
                                 cursor: 'pointer',
-                                backgroundColor: meetingSelectedBoard?._id === b._id ? '#eff6ff' : '#fff',
-                                borderBottom: '1px solid #f3f4f6',
+                                backgroundColor: meetingSelectedBoard?._id === b._id ? '#eff6ff' : '#1e1f21',
+                                borderBottom: '1px solid #2a2b2d',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
@@ -1281,7 +1282,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                                 width: '14px',
                                 height: '14px',
                                 borderRadius: '4px',
-                                backgroundColor: b.color || '#2558BF',
+                                backgroundColor: b.color || '#6f6e6f',
                                 flexShrink: 0,
                               }} />
                               {meetingSelectedBoard?._id === b._id ? '● ' : '○ '}{b.name}
@@ -1310,7 +1311,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid #e5e7eb',
+                            border: '1px solid #333436',
                             borderRadius: '8px',
                             marginBottom: '6px',
                             boxSizing: 'border-box',
@@ -1320,7 +1321,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                         <div style={{
                           maxHeight: '140px',
                           overflowY: 'auto',
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid #333436',
                           borderRadius: '8px',
                         }}>
                           {loadingMeetingTasks ? (
@@ -1336,8 +1337,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                                   style={{
                                     padding: '10px 12px',
                                     cursor: 'pointer',
-                                    backgroundColor: meetingSelectedTask?._id === t._id ? '#eff6ff' : '#fff',
-                                    borderBottom: '1px solid #f3f4f6',
+                                    backgroundColor: meetingSelectedTask?._id === t._id ? '#eff6ff' : '#1e1f21',
+                                    borderBottom: '1px solid #2a2b2d',
                                     fontSize: '13px',
                                   }}
                                   onMouseEnter={(e) => { if (meetingSelectedTask?._id !== t._id) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
@@ -1367,7 +1368,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                     {/* Selected summary */}
                     {meetingSelectedTask && (
                       <div style={{
-                        backgroundColor: '#eff6ff',
+                        backgroundColor: '#252830',
                         border: '1px solid #bfdbfe',
                         borderRadius: '8px',
                         padding: '10px 12px',
@@ -1385,7 +1386,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                 )}
 
                 <div style={{
-                  backgroundColor: '#f0fdf4',
+                  backgroundColor: '#1a2e1a',
                   border: '1px solid #86efac',
                   borderRadius: '8px',
                   padding: '12px',
@@ -1402,8 +1403,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   style={{
                     width: '100%',
                     padding: '14px',
-                    backgroundColor: (!meetingForm.title.trim() || !meetingForm.meetingUrl.trim()) ? '#d1d5db' : '#10b981',
-                    color: '#fff',
+                    backgroundColor: (!meetingForm.title.trim() || !meetingForm.meetingUrl.trim()) ? '#424244' : '#10b981',
+                    color: '#1e1f21',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '15px',
@@ -1431,7 +1432,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #333436',
                       borderRadius: '8px',
                       marginBottom: '8px',
                       boxSizing: 'border-box'
@@ -1440,7 +1441,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   <div style={{
                     maxHeight: '120px',
                     overflowY: 'auto',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid #333436',
                     borderRadius: '8px'
                   }}>
                     {filteredBoardTasks.map(t => (
@@ -1450,8 +1451,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                         style={{
                           padding: '10px 12px',
                           cursor: 'pointer',
-                          backgroundColor: relatedTaskId === t._id ? '#fef3c7' : '#fff',
-                          borderBottom: '1px solid #f3f4f6'
+                          backgroundColor: relatedTaskId === t._id ? '#fef3c7' : '#1e1f21',
+                          borderBottom: '1px solid #2a2b2d'
                         }}
                       >
                         {relatedTaskId === t._id ? '● ' : '○ '}{t.title}
@@ -1477,7 +1478,7 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                       padding: '12px',
                       border: '1px solid #fcd34d',
                       borderRadius: '8px',
-                      backgroundColor: '#fffbeb',
+                      backgroundColor: '#2e2a1a',
                       boxSizing: 'border-box'
                     }}
                   />
@@ -1489,8 +1490,8 @@ const CalendarView = ({ boardId: propBoardId, boardName, boardColor }) => {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    backgroundColor: (!noteContent.trim() || !relatedTaskId) ? '#d1d5db' : '#f59e0b',
-                    color: '#fff',
+                    backgroundColor: (!noteContent.trim() || !relatedTaskId) ? '#424244' : '#f59e0b',
+                    color: '#1e1f21',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '15px',

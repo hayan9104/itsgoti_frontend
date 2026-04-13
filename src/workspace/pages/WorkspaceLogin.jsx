@@ -45,7 +45,7 @@ const WorkspaceLogin = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0F0F0F 0%, #1a1a2e 50%, #2558BF 100%)',
+      background: 'linear-gradient(135deg, #0F0F0F 0%, #1a1a2e 50%, #6f6e6f 100%)',
       fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       padding: '20px',
     },
@@ -64,7 +64,7 @@ const WorkspaceLogin = () => {
     logoText: {
       fontSize: '28px',
       fontWeight: '700',
-      color: '#2558BF',
+      color: '#6f6e6f',
       letterSpacing: '-0.5px',
     },
     title: {
@@ -117,7 +117,7 @@ const WorkspaceLogin = () => {
       boxSizing: 'border-box',
     },
     inputFocus: {
-      borderColor: '#2558BF',
+      borderColor: '#6f6e6f',
       boxShadow: '0 0 0 3px rgba(37, 88, 191, 0.1)',
     },
     passwordWrapper: {
@@ -153,7 +153,7 @@ const WorkspaceLogin = () => {
     button: {
       width: '100%',
       padding: '16px',
-      background: '#2558BF',
+      background: '#6f6e6f',
       color: '#FFFFFF',
       border: 'none',
       borderRadius: '12px',

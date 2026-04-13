@@ -100,7 +100,7 @@ const MembersView = ({ boardId, boardName }) => {
     <div style={{ padding: '24px' }}>
       {/* Header */}
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#f1f1f1' }}>
           Team Members
         </h2>
         <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
@@ -111,12 +111,12 @@ const MembersView = ({ boardId, boardName }) => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         {/* Members List */}
         <div>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb', marginBottom: '16px' }}>
             Members
           </h3>
 
           {members.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: '12px' }}>
+            <div style={{ padding: '40px', textAlign: 'center', backgroundColor: '#252628', borderRadius: '12px' }}>
               <p style={{ color: '#6b7280', fontSize: '14px' }}>No members added yet</p>
             </div>
           ) : (
@@ -132,7 +132,7 @@ const MembersView = ({ boardId, boardName }) => {
                     style={{
                       padding: '14px 16px',
                       backgroundColor: isSelected ? '#eff6ff' : '#fff',
-                      border: isSelected ? '2px solid #2558BF' : '1px solid #e5e7eb',
+                      border: isSelected ? '2px solid #6f6e6f' : '1px solid #333436',
                       borderRadius: '10px',
                       cursor: 'pointer',
                       transition: 'all 0.15s',
@@ -144,7 +144,7 @@ const MembersView = ({ boardId, boardName }) => {
                           width: '40px',
                           height: '40px',
                           borderRadius: '10px',
-                          backgroundColor: member.role === 'super_admin' ? '#22c55e' : '#2558BF',
+                          backgroundColor: member.role === 'super_admin' ? '#22c55e' : '#6f6e6f',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -156,7 +156,7 @@ const MembersView = ({ boardId, boardName }) => {
                         {member.name?.substring(0, 2).toUpperCase()}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>
                           {member.name}
                         </div>
                         <div style={{ fontSize: '12px', color: '#6b7280' }}>
@@ -184,7 +184,7 @@ const MembersView = ({ boardId, boardName }) => {
 
                     {/* Member's Tasks */}
                     {isSelected && memberTasks.length > 0 && (
-                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #333436' }}>
                         <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '8px', fontWeight: '500' }}>
                           Assigned Tasks:
                         </div>
@@ -196,10 +196,10 @@ const MembersView = ({ boardId, boardName }) => {
                               alignItems: 'center',
                               justifyContent: 'space-between',
                               padding: '8px 10px',
-                              backgroundColor: '#fff',
+                              backgroundColor: '#2a2b2d',
                               borderRadius: '6px',
                               marginBottom: '4px',
-                              border: '1px solid #e5e7eb',
+                              border: '1px solid #333436',
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -211,7 +211,7 @@ const MembersView = ({ boardId, boardName }) => {
                                   backgroundColor: getStatusColor(task.status),
                                 }}
                               />
-                              <span style={{ fontSize: '12px', color: '#374151' }}>{task.title}</span>
+                              <span style={{ fontSize: '12px', color: '#e5e7eb' }}>{task.title}</span>
                             </div>
                             {isSuperAdmin && (
                               <button
@@ -243,7 +243,7 @@ const MembersView = ({ boardId, boardName }) => {
 
         {/* Tasks Assignment */}
         <div>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb', marginBottom: '16px' }}>
             Task Assignments
           </h3>
 
@@ -276,9 +276,9 @@ const MembersView = ({ boardId, boardName }) => {
                 style={{
                   padding: '20px',
                   textAlign: 'center',
-                  backgroundColor: '#f9fafb',
+                  backgroundColor: '#252628',
                   borderRadius: '8px',
-                  border: '1px dashed #e5e7eb',
+                  border: '1px dashed #333436',
                 }}
               >
                 <p style={{ color: '#9ca3af', fontSize: '13px', margin: 0 }}>All tasks are assigned</p>
@@ -290,14 +290,14 @@ const MembersView = ({ boardId, boardName }) => {
                     key={task._id}
                     style={{
                       padding: '12px 14px',
-                      backgroundColor: '#fff',
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: '#2a2b2d',
+                      border: '1px solid #333436',
                       borderRadius: '8px',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#111827' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#f1f1f1' }}>
                           {task.title}
                         </div>
                         <span
@@ -319,7 +319,7 @@ const MembersView = ({ boardId, boardName }) => {
                             onClick={() => setAssigningTask(assigningTask === task._id ? null : task._id)}
                             style={{
                               padding: '6px 12px',
-                              backgroundColor: '#2558BF',
+                              backgroundColor: '#6f6e6f',
                               color: '#fff',
                               border: 'none',
                               borderRadius: '6px',
@@ -339,7 +339,7 @@ const MembersView = ({ boardId, boardName }) => {
                                 top: '100%',
                                 right: 0,
                                 marginTop: '4px',
-                                backgroundColor: '#fff',
+                                backgroundColor: '#2a2b2d',
                                 borderRadius: '8px',
                                 boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
                                 padding: '8px',
@@ -362,7 +362,7 @@ const MembersView = ({ boardId, boardName }) => {
                                     borderRadius: '6px',
                                     cursor: 'pointer',
                                   }}
-                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
                                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                 >
                                   <div
@@ -370,7 +370,7 @@ const MembersView = ({ boardId, boardName }) => {
                                       width: '24px',
                                       height: '24px',
                                       borderRadius: '6px',
-                                      backgroundColor: member.role === 'super_admin' ? '#22c55e' : '#2558BF',
+                                      backgroundColor: member.role === 'super_admin' ? '#22c55e' : '#6f6e6f',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -381,7 +381,7 @@ const MembersView = ({ boardId, boardName }) => {
                                   >
                                     {member.name?.substring(0, 2).toUpperCase()}
                                   </div>
-                                  <span style={{ fontSize: '12px', color: '#374151' }}>
+                                  <span style={{ fontSize: '12px', color: '#e5e7eb' }}>
                                     {member.name} <span style={{ color: '#9ca3af', fontSize: '11px' }}>({member.role === 'super_admin' ? 'Super Admin' : 'Admin'})</span>
                                   </span>
                                 </div>

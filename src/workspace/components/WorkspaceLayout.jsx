@@ -24,7 +24,6 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
       }
     };
     fetchUnreadCount();
-    // Refresh every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -32,54 +31,55 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
   // Main navigation items (icon sidebar)
   const mainNavItems = isSuperAdmin
     ? [
-        { id: 'home', path: '', icon: 'home', label: 'Home' },
-        { id: 'inbox', path: '/inbox', icon: 'inbox', label: 'Inbox' },
+        { id: 'boards', path: '/boards', icon: 'boards', label: 'Work' },
         { id: 'admins', path: '/admins', icon: 'users', label: 'Team' },
-        { id: 'tasks', path: '/all-tasks', icon: 'tasks', label: 'Tasks' },
         { id: 'calendar', path: '/calendar', icon: 'calendar', label: 'Calendar' },
         { id: 'meetings', path: '/meetings', icon: 'meetings', label: 'Meetings' },
       ]
     : [
-        { id: 'home', path: '', icon: 'home', label: 'Home' },
-        { id: 'inbox', path: '/inbox', icon: 'inbox', label: 'Inbox' },
-        { id: 'tasks', path: '/my-tasks', icon: 'tasks', label: 'Tasks' },
+        { id: 'boards', path: '/boards', icon: 'boards', label: 'Work' },
         { id: 'calendar', path: '/calendar', icon: 'calendar', label: 'Calendar' },
         { id: 'meetings', path: '/meetings', icon: 'meetings', label: 'Meetings' },
       ];
 
   const icons = {
     home: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
       </svg>
     ),
     inbox: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z" />
       </svg>
     ),
     users: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
       </svg>
     ),
+    boards: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+      </svg>
+    ),
     tasks: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
       </svg>
     ),
     calendar: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm-8 4H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z" />
       </svg>
     ),
     meetings: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
       </svg>
     ),
     settings: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
       </svg>
     ),
@@ -91,20 +91,20 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
 
   return (
     <div
+      data-workspace="true"
       style={{
         display: 'flex',
         minHeight: '100vh',
-        backgroundColor: '#f5f6f8',
+        backgroundColor: '#1a1a1c',
         fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       }}
     >
-      {/* Icon Sidebar */}
+      {/* ═══ LEFT: Icon Sidebar ═══ */}
       <div
         style={{
-          width: '80px',
+          width: '68px',
           height: '100vh',
-          backgroundColor: '#ffffff',
-          borderRight: '1px solid #e5e7eb',
+          backgroundColor: '#1a1a1c',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -114,70 +114,72 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           zIndex: 100,
         }}
       >
-        {/* Logo */}
+        {/* Hamburger Menu */}
         <div
           style={{
-            width: '48px',
-            height: '48px',
-            margin: '16px 0',
-            backgroundColor: '#2558BF',
-            borderRadius: '12px',
+            width: '36px',
+            height: '36px',
+            margin: '16px 0 12px 0',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            transition: 'all 0.15s',
           }}
           onClick={() => navigate(basePath)}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#2e2f31'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#a2a0a2">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
           </svg>
         </div>
 
-        {/* Main Nav Icons */}
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '8px', width: '100%' }}>
+        {/* Nav Icons */}
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '4px', width: '100%' }}>
           {mainNavItems.map((item) => (
             <NavLink
               key={item.id}
               to={basePath + item.path}
               style={{
-                width: '64px',
-                height: '56px',
-                borderRadius: '12px',
+                width: '52px',
+                height: '52px',
+                borderRadius: '10px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '6px',
-                color: isActiveSection(item.id) ? '#2558BF' : '#6b7280',
-                backgroundColor: isActiveSection(item.id) ? '#eff6ff' : 'transparent',
+                marginBottom: '4px',
+                color: isActiveSection(item.id) ? '#ffffff' : '#6f6e6f',
+                backgroundColor: isActiveSection(item.id) ? '#2e2f31' : 'transparent',
                 textDecoration: 'none',
-                transition: 'all 0.2s',
+                transition: 'all 0.15s',
                 position: 'relative',
               }}
               title={item.label}
             >
               {icons[item.icon]}
-              <span style={{ fontSize: '11px', marginTop: '4px', fontWeight: '500' }}>{item.label}</span>
+              <span style={{ fontSize: '9px', marginTop: '3px', fontWeight: '500', letterSpacing: '0.2px' }}>{item.label}</span>
               {/* Unread badge for Inbox */}
               {item.id === 'inbox' && unreadCount > 0 && (
                 <div
                   style={{
                     position: 'absolute',
-                    top: '6px',
-                    right: '6px',
-                    minWidth: '18px',
-                    height: '18px',
+                    top: '4px',
+                    right: '2px',
+                    minWidth: '16px',
+                    height: '16px',
                     backgroundColor: '#ef4444',
-                    borderRadius: '9px',
+                    borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: '#fff',
-                    fontSize: '10px',
+                    fontSize: '9px',
                     fontWeight: '700',
-                    padding: '0 4px',
-                    border: '2px solid #fff',
+                    padding: '0 3px',
+                    border: '2px solid #1a1a1c',
                   }}
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
@@ -187,63 +189,218 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           ))}
         </nav>
 
-        {/* Bottom Icons */}
-        <div style={{ paddingBottom: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          {/* Settings */}
+        {/* Settings at bottom */}
+        <div style={{ paddingBottom: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <NavLink
             to={basePath + '/settings'}
             style={{
-              width: '64px',
-              height: '56px',
-              borderRadius: '12px',
+              width: '52px',
+              height: '52px',
+              borderRadius: '10px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: isActiveSection('settings') ? '#2558BF' : '#6b7280',
-              backgroundColor: isActiveSection('settings') ? '#eff6ff' : 'transparent',
+              color: isActiveSection('settings') ? '#ffffff' : '#6f6e6f',
+              backgroundColor: isActiveSection('settings') ? '#2e2f31' : 'transparent',
               textDecoration: 'none',
+              transition: 'all 0.15s',
             }}
             title="Settings"
           >
             {icons.settings}
-            <span style={{ fontSize: '11px', marginTop: '4px', fontWeight: '500' }}>Settings</span>
+            <span style={{ fontSize: '9px', marginTop: '3px', fontWeight: '500' }}>Settings</span>
           </NavLink>
         </div>
       </div>
 
-      {/* Secondary Sidebar */}
-      {secondarySidebar && (
-        <div
-          style={{
-            width: '300px',
-            height: '100vh',
-            backgroundColor: '#ffffff',
-            borderRight: '1px solid #e5e7eb',
-            position: 'fixed',
-            left: '80px',
-            top: 0,
-            overflow: 'auto',
-            zIndex: 90, // Ensure it's below the icon sidebar but above content
-          }}
-        >
-          {secondarySidebar}
-        </div>
-      )}
-
-      {/* Main Content */}
-      <main
+      {/* ═══ RIGHT SIDE ═══ */}
+      <div
         style={{
-          flex: 1,
-          marginLeft: secondarySidebar ? '380px' : '80px',
-          padding: '24px',
-          minHeight: '100vh',
-          position: 'relative',
-          zIndex: 1, // Keep main content at a low z-index
+          position: 'fixed',
+          left: '68px',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 1,
+          backgroundColor: '#1a1a1c',
         }}
       >
-        {children}
-      </main>
+        {/* ── Top Bar (OUTSIDE the rounded container) ── */}
+        <div
+          style={{
+            height: '48px',
+            minHeight: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px',
+            backgroundColor: '#1a1a1c',
+          }}
+        >
+          {/* Left: Create Button */}
+          {isSuperAdmin && (
+            <button
+              onClick={() => navigate(basePath)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                backgroundColor: '#e8655a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d4504a'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8655a'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+              Create
+            </button>
+          )}
+          {!isSuperAdmin && <div />}
+
+          {/* Center: Search Bar */}
+          <div style={{ flex: 1, maxWidth: '480px', margin: '0 24px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '7px 14px',
+                backgroundColor: '#2e2f31',
+                borderRadius: '20px',
+                border: '1px solid #3a3b3d',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#6f6e6f">
+                <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+              </svg>
+              <span style={{ fontSize: '13px', color: '#6f6e6f', userSelect: 'none' }}>Search</span>
+            </div>
+          </div>
+
+          {/* Right: Brand */}
+          <span style={{ fontSize: '15px', fontWeight: '700', color: '#6f6e6f', letterSpacing: '0.5px' }}>
+            ItsGoti
+          </span>
+        </div>
+
+        {/* ── Rounded Container (below top bar) ── */}
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            backgroundColor: '#252628',
+            borderRadius: '20px 0 0 0',
+            overflow: 'hidden',
+            boxShadow: '-2px -2px 20px rgba(0,0,0,0.15)',
+          }}
+        >
+          {/* Sidebar — ALWAYS visible */}
+          <div
+            style={{
+              width: '280px',
+              height: '100%',
+              backgroundColor: '#252628',
+              borderRight: '1px solid #333436',
+              overflow: 'auto',
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* Permanent: Home + Inbox */}
+            <div style={{ padding: '12px 12px 0 12px' }}>
+              <NavLink
+                to={basePath}
+                end
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  marginBottom: '2px',
+                  color: isActiveSection('home') ? '#ffffff' : '#a2a0a2',
+                  backgroundColor: isActiveSection('home') ? '#3a3b3d' : 'transparent',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: isActiveSection('home') ? '500' : '400',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                </svg>
+                Home
+              </NavLink>
+              <NavLink
+                to={basePath + '/inbox'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  marginBottom: '2px',
+                  color: isActiveSection('inbox') ? '#ffffff' : '#a2a0a2',
+                  backgroundColor: isActiveSection('inbox') ? '#3a3b3d' : 'transparent',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: isActiveSection('inbox') ? '500' : '400',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 3H4.99c-1.11 0-1.98.89-1.98 2L3 19c0 1.1.88 2 1.99 2H19c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 12h-4c0 1.66-1.35 3-3 3s-3-1.34-3-3H4.99V5H19v10z" />
+                </svg>
+                Inbox
+                {unreadCount > 0 && (
+                  <span style={{
+                    minWidth: '18px', height: '18px', padding: '0 5px',
+                    backgroundColor: '#ef4444', borderRadius: '9px',
+                    color: '#fff', fontSize: '10px', fontWeight: '700',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginLeft: 'auto',
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </NavLink>
+            </div>
+
+            {/* Separator */}
+            <div style={{ height: '1px', backgroundColor: '#333436', margin: '8px 16px' }} />
+
+            {/* Contextual sidebar content (boards, inbox chats, etc.) */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              {secondarySidebar}
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <main
+            style={{
+              flex: 1,
+              overflow: 'auto',
+              backgroundColor: '#1e1f21',
+              padding: '24px',
+            }}
+          >
+            {children}
+          </main>
+        </div>
+      </div>
     </div>
   );
 };

@@ -216,9 +216,9 @@ const Inbox = ({
           style={{
             flex: 1,
             display: 'flex',
-            backgroundColor: '#fff',
+            backgroundColor: '#2a2b2d',
             borderRadius: '8px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #333436',
             overflow: 'hidden',
             minHeight: 0,
           }}
@@ -234,7 +234,8 @@ const Inbox = ({
                 <div
                   style={{
                     padding: '10px 16px',
-                    backgroundColor: '#2558BF',
+                    backgroundColor: '#2a2b2d',
+                    borderBottom: '1px solid #333436',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
@@ -244,9 +245,9 @@ const Inbox = ({
                     <div
                       style={{
                         width: '45px', height: '45px', borderRadius: '50%',
-                        backgroundColor: chatPartner?.role === 'super_admin' ? '#22c55e' : '#fff',
+                        backgroundColor: chatPartner?.role === 'super_admin' ? '#22c55e' : '#4a4b4d',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: chatPartner?.role === 'super_admin' ? '#fff' : '#2558BF',
+                        color: '#fff',
                         fontSize: '14px', fontWeight: '600',
                       }}
                     >
@@ -256,7 +257,7 @@ const Inbox = ({
                       position: 'absolute', bottom: '2px', right: '2px',
                       width: '12px', height: '12px',
                       backgroundColor: '#22c55e', borderRadius: '50%',
-                      border: '2px solid #2558BF',
+                      border: '2px solid #6f6e6f',
                     }} />
                   </div>
                   <div style={{ flex: 1 }}>
@@ -271,8 +272,7 @@ const Inbox = ({
                 <div
                   style={{
                     flex: 1, overflow: 'auto', padding: '16px',
-                    backgroundColor: '#e5ddd5',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4ccc4' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    backgroundColor: '#0b141a',
                   }}
                 >
                   {loadingMessages ? (
@@ -285,7 +285,7 @@ const Inbox = ({
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         margin: '0 auto 16px',
                       }}>
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="#2558BF">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="#6f6e6f">
                           <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
                         </svg>
                       </div>
@@ -297,9 +297,9 @@ const Inbox = ({
                       <div key={date}>
                         <div style={{ textAlign: 'center', margin: '16px 0' }}>
                           <span style={{
-                            backgroundColor: 'rgba(225, 218, 208, 0.9)',
+                            backgroundColor: 'rgba(42, 43, 45, 0.9)',
                             padding: '5px 12px', borderRadius: '8px',
-                            fontSize: '12px', color: '#54656f', fontWeight: '500',
+                            fontSize: '12px', color: '#8696a0', fontWeight: '500',
                             boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
                           }}>
                             {formatDate(date)}
@@ -315,11 +315,11 @@ const Inbox = ({
                               <div style={{
                                 maxWidth: '65%', padding: '8px 12px',
                                 borderRadius: isOwnMessage ? '8px 8px 0 8px' : '8px 8px 8px 0',
-                                backgroundColor: isOwnMessage ? '#dcf8c6' : '#fff',
-                                boxShadow: '0 1px 1px rgba(0,0,0,0.1)',
+                                backgroundColor: isOwnMessage ? '#005c4b' : '#1e2a2e',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
                                 position: 'relative',
                               }}>
-                                <p style={{ margin: 0, fontSize: '14.5px', lineHeight: '1.4', color: '#111b21', wordBreak: 'break-word', paddingRight: '20px' }}>
+                                <p style={{ margin: 0, fontSize: '14.5px', lineHeight: '1.4', color: '#e9edef', wordBreak: 'break-word', paddingRight: '20px' }}>
                                   {msg.content}
                                 </p>
                                 <div style={{ 
@@ -331,7 +331,7 @@ const Inbox = ({
                                   marginLeft: 'auto',
                                   width: 'fit-content'
                                 }}>
-                                  <span style={{ fontSize: '11px', color: '#667781' }}>{formatTime(msg.createdAt)}</span>
+                                  <span style={{ fontSize: '11px', color: '#8696a0' }}>{formatTime(msg.createdAt)}</span>
                                   {isOwnMessage && (
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill={msg.read ? '#53bdeb' : '#667781'}>
                                       <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z" />
@@ -349,19 +349,19 @@ const Inbox = ({
                 </div>
 
                 {/* Message Input */}
-                <div style={{ padding: '8px 12px', backgroundColor: '#f0f2f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '8px 12px', backgroundColor: '#1e1f21', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {/* Emoji */}
                   <div style={{ position: 'relative' }}>
                     <button onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowAttachMenu(false); }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex' }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="#54656f">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="#8696a0">
                         <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
                       </svg>
                     </button>
                     {showEmojiPicker && (
                       <div style={{
                         position: 'absolute', bottom: '50px', left: '0',
-                        backgroundColor: '#fff', borderRadius: '8px',
+                        backgroundColor: '#2a2b2d', borderRadius: '8px',
                         boxShadow: '0 2px 10px rgba(0,0,0,0.2)', padding: '8px',
                         display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '4px', zIndex: 100,
                       }}>
@@ -382,14 +382,14 @@ const Inbox = ({
                         background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex',
                         transform: showAttachMenu ? 'rotate(45deg)' : 'rotate(0deg)', transition: 'transform 0.2s',
                       }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="#54656f">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="#8696a0">
                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                       </svg>
                     </button>
                     {showAttachMenu && (
                       <div style={{
                         position: 'absolute', bottom: '50px', left: '0',
-                        backgroundColor: '#fff', borderRadius: '12px',
+                        backgroundColor: '#2a2b2d', borderRadius: '12px',
                         boxShadow: '0 2px 10px rgba(0,0,0,0.2)', padding: '12px',
                         display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 100, minWidth: '150px',
                       }}>
@@ -424,7 +424,7 @@ const Inbox = ({
                         }
                       }}
                       placeholder="Type a message"
-                      style={{ flex: 1, padding: '10px 16px', fontSize: '15px', border: 'none', borderRadius: '8px', backgroundColor: '#fff', outline: 'none' }}
+                      style={{ flex: 1, padding: '10px 16px', fontSize: '15px', border: 'none', borderRadius: '8px', backgroundColor: '#2a2b2d', outline: 'none', color: '#e5e7eb' }}
                       onClick={() => { setShowEmojiPicker(false); setShowAttachMenu(false); }}
                     />
                   </form>
@@ -446,13 +446,13 @@ const Inbox = ({
                 </div>
               </>
             )})() : (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f2f5' }}>
-                <div style={{ textAlign: 'center', color: '#667781' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e1f21' }}>
+                <div style={{ textAlign: 'center', color: '#8696a0' }}>
                   <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: 'rgba(37, 88, 191, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                    <svg width="50" height="50" viewBox="0 0 24 24" fill="#2558BF"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" /></svg>
+                    <svg width="50" height="50" viewBox="0 0 24 24" fill="#6f6e6f"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" /></svg>
                   </div>
                   <h2 style={{ fontSize: '28px', fontWeight: '300', color: '#41525d', margin: '0 0 12px' }}>It's Goti Web</h2>
-                  <p style={{ fontSize: '14px', color: '#667781', maxWidth: '400px', lineHeight: '1.5' }}>
+                  <p style={{ fontSize: '14px', color: '#8696a0', maxWidth: '400px', lineHeight: '1.5' }}>
                     Select a conversation from the sidebar to start chatting.
                   </p>
                 </div>
@@ -463,7 +463,7 @@ const Inbox = ({
 
         {/* TASK DETAILS VIEW */}
         {activeSection === 'tasks' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#2a2b2d' }}>
             {selectedTask ? (
               <div style={{ flex: 1, padding: '32px', overflow: 'auto' }}>
                 {/* Header with status and priority */}
@@ -478,7 +478,7 @@ const Inbox = ({
                   {selectedTask.priority && (
                     <span style={{
                       padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: '500',
-                      backgroundColor: selectedTask.priority === 'urgent' || selectedTask.priority === 'high' ? '#fef2f2' : '#f3f4f6',
+                      backgroundColor: selectedTask.priority === 'urgent' || selectedTask.priority === 'high' ? '#fef2f2' : '#2a2b2d',
                       color: selectedTask.priority === 'urgent' || selectedTask.priority === 'high' ? '#dc2626' : '#6b7280',
                       textTransform: 'capitalize',
                     }}>
@@ -555,7 +555,7 @@ const Inbox = ({
                       {selectedTask.tags.map((tag, i) => (
                         <span key={i} style={{
                           padding: '4px 10px', borderRadius: '4px', fontSize: '12px',
-                          backgroundColor: '#f3f4f6', color: '#555',
+                          backgroundColor: '#2a2b2d', color: '#555',
                         }}>
                           {tag}
                         </span>
@@ -568,7 +568,7 @@ const Inbox = ({
                 {selectedTask.description && (
                   <div style={{ marginBottom: '24px' }}>
                     <p style={{ fontSize: '11px', color: '#888', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</p>
-                    <div style={{ padding: '14px', backgroundColor: '#fafafa', borderRadius: '8px', border: '1px solid #eee' }}>
+                    <div style={{ padding: '14px', backgroundColor: '#252628', borderRadius: '8px', border: '1px solid #333436' }}>
                       <p style={{ fontSize: '14px', color: '#333', margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
                         {selectedTask.description}
                       </p>
@@ -586,12 +586,12 @@ const Inbox = ({
                       {selectedTask.subtasks.map((subtask, i) => (
                         <div key={i} style={{
                           display: 'flex', alignItems: 'center', gap: '10px',
-                          padding: '10px 12px', backgroundColor: '#fafafa', borderRadius: '6px', border: '1px solid #eee',
+                          padding: '10px 12px', backgroundColor: '#252628', borderRadius: '6px', border: '1px solid #333436',
                         }}>
                           {isSuperAdmin && (
                             <div style={{
                               width: '18px', height: '18px', borderRadius: '4px',
-                              border: subtask.completed ? 'none' : '2px solid #ccc',
+                              border: subtask.completed ? 'none' : '2px solid #424244',
                               backgroundColor: subtask.completed ? '#22c55e' : 'transparent',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
@@ -624,7 +624,7 @@ const Inbox = ({
                       {selectedTask.attachments.map((file, i) => (
                         <div key={i} style={{
                           display: 'flex', alignItems: 'center', gap: '10px',
-                          padding: '10px 12px', backgroundColor: '#fafafa', borderRadius: '6px', border: '1px solid #eee',
+                          padding: '10px 12px', backgroundColor: '#252628', borderRadius: '6px', border: '1px solid #333436',
                         }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="#888">
                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
@@ -642,7 +642,7 @@ const Inbox = ({
                   onClick={handleGoToTask}
                   style={{
                     padding: '10px 20px',
-                    backgroundColor: '#2558BF',
+                    backgroundColor: '#6f6e6f',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '6px',
@@ -663,7 +663,7 @@ const Inbox = ({
             ) : (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', color: '#999' }}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="#ddd" style={{ marginBottom: '16px' }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="#4a4b4d" style={{ marginBottom: '16px' }}>
                     <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z" />
                   </svg>
                   <p style={{ fontSize: '15px', fontWeight: '500', margin: '0 0 4px', color: '#666' }}>No task selected</p>
@@ -676,9 +676,9 @@ const Inbox = ({
 
         {/* UPDATES VIEW */}
         {activeSection === 'updates' && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2a2b2d' }}>
             <div style={{ textAlign: 'center', color: '#999' }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="#ddd" style={{ marginBottom: '16px' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="#4a4b4d" style={{ marginBottom: '16px' }}>
                 <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
               </svg>
               <p style={{ fontSize: '15px', fontWeight: '500', margin: '0 0 4px', color: '#666' }}>No updates yet</p>
