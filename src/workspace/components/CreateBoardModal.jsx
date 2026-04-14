@@ -12,6 +12,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [visibility, setVisibility] = useState('private');
+  const [showVisibilityPopup, setShowVisibilityPopup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -221,7 +222,7 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
           </div>
 
           {/* Visibility */}
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '24px', position: 'relative' }}>
             <label
               style={{
                 display: 'block',
@@ -233,29 +234,109 @@ const CreateBoardModal = ({ onClose, onCreated }) => {
             >
               Visibility
             </label>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              {['private', 'shared', 'internal'].map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setVisibility(v)}
-                  style={{
-                    flex: 1,
-                    padding: '10px 16px',
-                    borderRadius: '8px',
-                    border: visibility === v ? '2px solid #6f6e6f' : '1px solid #424244',
-                    backgroundColor: visibility === v ? '#3a3b3d' : '#1e1f21',
-                    color: visibility === v ? '#f1f1f1' : '#a2a0a2',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
+            
+            <button
+              type="button"
+              onClick={() => setShowVisibilityPopup(!showVisibilityPopup)}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                backgroundColor: '#1e1f21',
+                border: '1px solid #424244',
+                borderRadius: '8px',
+                color: '#f1f1f1',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#2a2b2d';
+                e.currentTarget.style.borderColor = '#6f6e6f';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#1e1f21';
+                e.currentTarget.style.borderColor = '#424244';
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ textTransform: 'capitalize', fontWeight: '600' }}>{visibility}</span>
+                <span style={{ color: '#6f6e6f' }}>Sharing & Permissions</span>
+              </span>
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="currentColor" 
+                style={{ 
+                  color: '#6f6e6f',
+                  transform: showVisibilityPopup ? 'rotate(90deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s'
+                }}
+              >
+                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
+              </svg>
+            </button>
+
+            {/* Visibility Popup */}
+            {showVisibilityPopup && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: '0',
+                  right: '0',
+                  marginTop: '4px',
+                  backgroundColor: '#2a2b2d',
+                  borderRadius: '8px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                  padding: '4px',
+                  zIndex: 100,
+                  border: '1px solid #3a3b3d',
+                }}
+              >
+                {['private', 'shared', 'internal']
+                  .filter((v) => v !== visibility)
+                  .map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => {
+                        setVisibility(v);
+                        setShowVisibilityPopup(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '10px 12px',
+                        fontSize: '13px',
+                        color: '#e5e7eb',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        textTransform: 'capitalize',
+                        transition: 'background-color 0.2s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#353638')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <span style={{ fontWeight: '500' }}>{v}</span>
+                      <span style={{ fontSize: '11px', color: '#6f6e6f' }}>
+                        {v === 'private' && 'Only you can see this board'}
+                        {v === 'shared' && 'Board visible to assigned members'}
+                        {v === 'internal' && 'Visible to all workspace users'}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            )}
+            
             <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '8px' }}>
               {visibility === 'private' && 'Only you can see this board'}
               {visibility === 'shared' && 'Board visible to assigned members'}

@@ -25,13 +25,29 @@ body {
 
 [data-workspace] input::placeholder,
 [data-workspace] textarea::placeholder {
-  color: #6f6e6f !important;
+  color: #9ca3af !important;
+}
+
+/* Dark placeholder for ALL workspace inputs (modals render inside React tree) */
+.workspace-dark input::placeholder,
+.workspace-dark textarea::placeholder {
+  color: #9ca3af !important;
+}
+.workspace-dark input,
+.workspace-dark select,
+.workspace-dark textarea {
+  background-color: #1e1f21 !important;
+  color: #e5e7eb !important;
 }
 
 [data-workspace] select option {
   background-color: #2a2b2d;
   color: #e5e7eb;
 }
+
+/* Hidden scrollbar utility */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Custom scrollbar - dark */
 ::-webkit-scrollbar {

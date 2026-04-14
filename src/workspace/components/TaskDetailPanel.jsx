@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { workspaceTasksAPI, workspaceUsersAPI } from '../../services/api';
+import { workspaceTasksAPI, workspaceUsersAPI, workspaceUploadAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
 const PRIORITY_OPTIONS = [
@@ -33,7 +33,17 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
   const [logs, setLogs] = useState([]);
   const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+  const [assigneeSearchText, setAssigneeSearchText] = useState('');
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
+  const [activeLogTab, setActiveLogTab] = useState('activity');
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [attachments, setAttachments] = useState(task.attachments || []);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const attachmentFileRef = useRef(null);
 
   // Ensure component is mounted before rendering portal
   useEffect(() => {
@@ -44,6 +54,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
   useEffect(() => {
     if (isSuperAdmin) loadUsers();
     loadLogs();
+    loadComments();
 
     // Ensure state is synced with prop when task changes
     setTitle(task.title);
@@ -54,6 +65,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
     setStartDate(task.scheduledDate ? task.scheduledDate.split('T')[0] : '');
     setAssigneeId(task.assignee?._id || '');
     setSubtasks(task.subtasks || []);
+    setAttachments(task.attachments || []);
   }, [task]);
 
   const loadUsers = async () => {
@@ -75,6 +87,98 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
     } finally {
       setLoadingLogs(false);
     }
+  };
+
+  const loadComments = async () => {
+    setLoadingComments(true);
+    try {
+      const response = await workspaceTasksAPI.getComments(task._id);
+      if (response.data.success) setComments(response.data.data);
+    } catch (error) {
+      console.error('Failed to load comments:', error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    setSendingComment(true);
+    try {
+      const response = await workspaceTasksAPI.addComment(task._id, {
+        content: newComment.trim(),
+        attachments: [],
+      });
+      if (response.data.success) {
+        setComments([response.data.data, ...comments]);
+        setNewComment('');
+      }
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+    } finally {
+      setSendingComment(false);
+    }
+  };
+
+  const handleAttachmentFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    e.target.value = '';
+    setUploadingAttachment(true);
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await workspaceUploadAPI.uploadFile(formData);
+        if (uploadRes.data.success) {
+          const ext = file.name.split('.').pop().toLowerCase();
+          const typeMap = { jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image', mp4: 'video', webm: 'video', mov: 'video', mp3: 'audio', wav: 'audio', ogg: 'audio', pdf: 'pdf', doc: 'word', docx: 'word', xls: 'excel', xlsx: 'excel', ppt: 'ppt', pptx: 'ppt' };
+          const response = await workspaceTasksAPI.addDocument(task._id, {
+            name: file.name,
+            url: uploadRes.data.url,
+            type: typeMap[ext] || 'file',
+            size: file.size,
+          });
+          if (response.data.success) {
+            const newAtt = {
+              ...response.data.data,
+              uploadedBy: response.data.data.uploadedBy || { _id: user?._id, name: user?.name },
+            };
+            setAttachments(prev => [...prev, newAtt]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to upload attachment:', error);
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attId) => {
+    if (!window.confirm('Remove this attachment?')) return;
+    try {
+      const response = await workspaceTasksAPI.deleteDocument(task._id, attId);
+      if (response.data.success) {
+        setAttachments(prev => prev.filter(a => a._id !== attId));
+      }
+    } catch (error) {
+      console.error('Failed to delete attachment:', error);
+    }
+  };
+
+  const getFileIcon = (name) => {
+    const ext = name?.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '🖼';
+    if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext)) return '🎬';
+    if (['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext)) return '🎵';
+    if (ext === 'pdf') return '📄';
+    if (['doc', 'docx'].includes(ext)) return '📝';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return '📊';
+    if (['ppt', 'pptx'].includes(ext)) return '📋';
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '🗜';
+    if (['txt', 'md', 'log'].includes(ext)) return '📃';
+    return '📎';
   };
 
   const handleSave = async () => {
@@ -234,6 +338,7 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
       onClick={onClose}
     >
       <div
+        className="workspace-dark"
         style={{
           width: '100%',
           maxWidth: '800px',
@@ -358,10 +463,8 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 Status
               </label>
               <select
-                disabled
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                title="Change status via Board or List view"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -369,8 +472,8 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                   borderRadius: '6px',
                   fontSize: '13px',
                   backgroundColor: '#1e1f21',
-                  cursor: 'not-allowed',
-                  color: '#6b7280'
+                  cursor: 'pointer',
+                  color: '#e5e7eb'
                 }}
               >
                 {STATUS_OPTIONS.map((s) => (
@@ -385,7 +488,6 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                 Priority
               </label>
               <select
-                disabled={!isSuperAdmin}
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
                 style={{
@@ -394,9 +496,9 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
                   border: '1px solid #333436',
                   borderRadius: '6px',
                   fontSize: '13px',
-                  backgroundColor: !isSuperAdmin ? '#f9fafb' : '#fff',
-                  color: !isSuperAdmin ? '#6b7280' : 'inherit',
-                  cursor: !isSuperAdmin ? 'not-allowed' : 'pointer',
+                  backgroundColor: '#1e1f21',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
                 }}
               >
                 {PRIORITY_OPTIONS.map((p) => (
@@ -452,32 +554,69 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
             </div>
 
             {/* Assignee */}
-            {isSuperAdmin && (
+            {(
               <div>
                 <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '6px' }}>
                   Assignee
                 </label>
-                <select
-                  disabled
-                  value={assigneeId}
-                  onChange={(e) => setAssigneeId(e.target.value)}
-                  title="Assign members from the Members view"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #333436',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    backgroundColor: '#1e1f21',
-                    cursor: 'not-allowed',
-                    color: '#6b7280'
-                  }}
-                >
-                  <option value="">Unassigned</option>
-                  {users.map((u) => (
-                    <option key={u._id} value={u._id}>{u.name}</option>
-                  ))}
-                </select>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    onClick={() => setShowAssigneeDropdown(!showAssigneeDropdown)}
+                    style={{
+                      width: '100%', padding: '8px 12px',
+                      border: '1px solid #333436', borderRadius: '6px',
+                      fontSize: '13px', backgroundColor: '#1e1f21',
+                      cursor: 'pointer', color: '#e5e7eb',
+                      display: 'flex', alignItems: 'center', gap: '8px', boxSizing: 'border-box',
+                    }}
+                  >
+                    {assigneeId ? (
+                      <>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '8px', fontWeight: '600' }}>
+                          {users.find(u => u._id === assigneeId)?.name?.substring(0, 2).toUpperCase()}
+                        </div>
+                        <span style={{ flex: 1 }}>{users.find(u => u._id === assigneeId)?.name}</span>
+                        <div onClick={(e) => { e.stopPropagation(); setAssigneeId(''); }} style={{ cursor: 'pointer', color: '#6f6e6f' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'} onMouseLeave={(e) => e.currentTarget.style.color = '#6f6e6f'}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+                        </div>
+                      </>
+                    ) : (
+                      <span style={{ color: '#6f6e6f' }}>Unassigned</span>
+                    )}
+                  </div>
+                  {showAssigneeDropdown && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                      backgroundColor: '#2a2b2d', borderRadius: '8px', border: '1px solid #3a3b3d',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 100, overflow: 'hidden',
+                    }}>
+                      <div style={{ padding: '8px', borderBottom: '1px solid #333436' }}>
+                        <input
+                          autoFocus
+                          value={assigneeSearchText}
+                          onChange={(e) => setAssigneeSearchText(e.target.value)}
+                          placeholder="Search by name..."
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ width: '100%', padding: '7px 10px', fontSize: '13px', border: '1px solid #4a4b4d', borderRadius: '6px', backgroundColor: '#1e1f21', color: '#e5e7eb', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ maxHeight: '150px', overflowY: 'auto' }} className="hide-scrollbar">
+                        {users.filter(u => u.name.toLowerCase().includes(assigneeSearchText.toLowerCase())).map(u => (
+                          <div key={u._id} onClick={() => { setAssigneeId(u._id); setShowAssigneeDropdown(false); setAssigneeSearchText(''); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: '#e5e7eb' }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '9px', fontWeight: '600' }}>
+                              {u.name?.substring(0, 2).toUpperCase()}
+                            </div>
+                            {u.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -592,50 +731,270 @@ const TaskDetailPanel = ({ task, boardColor, onClose, onUpdate, onDelete }) => {
             </div>
           </div>
 
-          {/* Activity Log */}
+          {/* Activity / Comments Tabs */}
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '10px' }}>
-              Activity Log {logs.length > 0 && `(${logs.length})`}
-            </label>
-            {loadingLogs ? (
-              <p style={{ color: '#6b7280', fontSize: '13px' }}>Loading...</p>
-            ) : logs.length === 0 ? (
-              <p style={{ color: '#9ca3af', fontSize: '13px' }}>No activity yet</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto' }}>
-                {logs.map((log) => (
-                  <div key={log._id} style={{ display: 'flex', gap: '10px' }}>
-                    <div
+            {/* Tab buttons */}
+            <div style={{ display: 'flex', gap: '0', marginBottom: '12px', borderBottom: '1px solid #333436' }}>
+              {[
+                { id: 'activity', label: 'Activity', count: logs.length },
+                { id: 'comments', label: 'Comments', count: comments.length },
+                { id: 'attachments', label: 'Attachments', count: attachments.length },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveLogTab(tab.id)}
+                  style={{
+                    padding: '8px 16px', fontSize: '13px', fontWeight: '500',
+                    color: activeLogTab === tab.id ? '#f1f1f1' : '#6f6e6f',
+                    backgroundColor: 'transparent', border: 'none',
+                    borderBottom: activeLogTab === tab.id ? '2px solid #f1f1f1' : '2px solid transparent',
+                    cursor: 'pointer', marginBottom: '-1px',
+                  }}
+                >
+                  {tab.label} {tab.count > 0 && <span style={{ color: '#6f6e6f', fontSize: '11px' }}>({tab.count})</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Activity Tab */}
+            {activeLogTab === 'activity' && (
+              <>
+                {loadingLogs ? (
+                  <p style={{ color: '#6b7280', fontSize: '13px' }}>Loading...</p>
+                ) : logs.length === 0 ? (
+                  <p style={{ color: '#6f6e6f', fontSize: '13px' }}>No activity yet</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '250px', overflowY: 'auto' }} className="hide-scrollbar">
+                    {logs.map((log) => (
+                      <div key={log._id} style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#2a2b2d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', flexShrink: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '13px', color: '#e5e7eb', margin: 0 }}>
+                            <strong>{log.user?.name}</strong> {log.actionText || log.action.replace(/_/g, ' ')}
+                            {!log.actionText && log.changes?.field && (
+                              <> - {getFieldName(log.changes.field)}: {formatLogValue(log.changes.field, log.changes.oldValue)} → {formatLogValue(log.changes.field, log.changes.newValue)}</>
+                            )}
+                          </p>
+                          <span style={{ fontSize: '11px', color: '#6f6e6f' }}>{formatTime(log.createdAt)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Comments Tab */}
+            {activeLogTab === 'comments' && (
+              <>
+                {/* Add comment input */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: '600', flexShrink: 0 }}>
+                    {user?.name?.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Write a comment..."
+                      rows={2}
                       style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '6px',
-                        backgroundColor: '#2a2b2d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#6b7280',
-                        flexShrink: 0,
+                        width: '100%', padding: '10px 12px', fontSize: '13px',
+                        border: '1px solid #333436', borderRadius: '8px',
+                        backgroundColor: '#1e1f21', color: '#e5e7eb',
+                        outline: 'none', resize: 'vertical', fontFamily: 'inherit',
+                        boxSizing: 'border-box',
                       }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: '13px', color: '#e5e7eb', margin: 0 }}>
-                        <strong>{log.user?.name}</strong> {log.actionText || log.action.replace(/_/g, ' ')}
-                        {!log.actionText && log.changes?.field && (
-                          <> - {getFieldName(log.changes.field)}: {formatLogValue(log.changes.field, log.changes.oldValue)} → {formatLogValue(log.changes.field, log.changes.newValue)}</>
-                        )}
-                      </p>
-                      <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-                        {formatTime(log.createdAt)}
-                      </span>
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                      <button
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim() || sendingComment}
+                        style={{
+                          padding: '6px 14px', fontSize: '12px', fontWeight: '500',
+                          backgroundColor: newComment.trim() ? '#3b82f6' : '#333436',
+                          color: newComment.trim() ? '#fff' : '#6f6e6f',
+                          border: 'none', borderRadius: '6px', cursor: newComment.trim() ? 'pointer' : 'default',
+                        }}
+                      >
+                        {sendingComment ? 'Sending...' : 'Comment'}
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+
+                {/* Comments list */}
+                {loadingComments ? (
+                  <p style={{ color: '#6f6e6f', fontSize: '13px' }}>Loading...</p>
+                ) : comments.length === 0 ? (
+                  <p style={{ color: '#6f6e6f', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>No comments yet. Be the first to comment!</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '250px', overflowY: 'auto' }} className="hide-scrollbar">
+                    {comments.map((comment) => (
+                      <div key={comment._id} style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: '600', flexShrink: 0 }}>
+                          {comment.user?.name?.substring(0, 2).toUpperCase() || '??'}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#e5e7eb' }}>{comment.user?.name || 'Unknown'}</span>
+                            <span style={{ fontSize: '11px', color: '#6f6e6f' }}>{formatTime(comment.createdAt)}</span>
+                          </div>
+                          {comment.content && comment.content !== '📎 Attachment' && (
+                            <p style={{ margin: 0, fontSize: '13px', color: '#a2a0a2', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                              {comment.content}
+                            </p>
+                          )}
+                          {/* Attachments */}
+                          {comment.attachments && comment.attachments.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                              {comment.attachments.map((att, ai) => {
+                                const isImage = att.type === 'image';
+                                return (
+                                  <a key={ai} href={att.url} target="_blank" rel="noopener noreferrer"
+                                    style={{ textDecoration: 'none' }}>
+                                    {isImage ? (
+                                      <img src={att.url} alt={att.name}
+                                        style={{ maxWidth: '200px', maxHeight: '140px', borderRadius: '8px', border: '1px solid #333436', objectFit: 'cover', cursor: 'pointer' }}
+                                      />
+                                    ) : (
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', backgroundColor: '#1e1f21', borderRadius: '8px', border: '1px solid #333436', cursor: 'pointer' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.borderColor = '#4a4b4d'}
+                                        onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333436'}
+                                      >
+                                        <span style={{ fontSize: '16px' }}>{getFileIcon(att.name)}</span>
+                                        <div>
+                                          <div style={{ fontSize: '12px', color: '#e5e7eb', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</div>
+                                          <div style={{ fontSize: '10px', color: '#6f6e6f' }}>{att.size ? (att.size / 1024).toFixed(1) + ' KB' : att.type}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Attachments Tab */}
+            {activeLogTab === 'attachments' && (
+              <>
+                <input
+                  ref={attachmentFileRef}
+                  type="file"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={handleAttachmentFileSelect}
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.csv,.md"
+                />
+                {/* Upload button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                  <button
+                    onClick={() => attachmentFileRef.current?.click()}
+                    disabled={uploadingAttachment}
+                    style={{
+                      padding: '6px 14px', fontSize: '12px', fontWeight: '500',
+                      backgroundColor: '#333436',
+                      color: uploadingAttachment ? '#6f6e6f' : '#e5e7eb',
+                      border: 'none', borderRadius: '6px',
+                      cursor: uploadingAttachment ? 'default' : 'pointer',
+                    }}
+                  >
+                    {uploadingAttachment ? 'Uploading...' : 'Add Attachment'}
+                  </button>
+                </div>
+
+                {/* Attachments list */}
+                {attachments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: '#6f6e6f' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>📎</div>
+                    <p style={{ margin: 0, fontSize: '13px' }}>No attachments yet</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }} className="hide-scrollbar">
+                    {attachments.map((att) => {
+                      const isImage = att.type === 'image';
+                      const canDelete = true;
+                      return (
+                        <div key={att._id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', backgroundColor: '#1e1f21', borderRadius: '8px', border: '1px solid #333436' }}>
+                          {/* Thumbnail or icon */}
+                          {isImage ? (
+                            <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
+                              <img src={att.url} alt={att.name} style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #333436' }} />
+                            </a>
+                          ) : (
+                            <div style={{ width: '40px', height: '40px', borderRadius: '6px', backgroundColor: '#2a2b2d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                              {getFileIcon(att.name)}
+                            </div>
+                          )}
+
+                          {/* File info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                              <div style={{ fontSize: '13px', color: '#e5e7eb', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#e5e7eb'}
+                              >
+                                {att.name}
+                              </div>
+                            </a>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                              {att.size > 0 && (
+                                <span style={{ fontSize: '11px', color: '#6f6e6f' }}>
+                                  {att.size >= 1024 * 1024 ? (att.size / (1024 * 1024)).toFixed(1) + ' MB' : (att.size / 1024).toFixed(1) + ' KB'}
+                                </span>
+                              )}
+                              {att.uploadedBy?.name && (
+                                <>
+                                  <span style={{ fontSize: '11px', color: '#4a4b4d' }}>•</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#fff', fontWeight: '600', flexShrink: 0 }}>
+                                      {att.uploadedBy.name.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <span style={{ fontSize: '11px', color: '#6f6e6f' }}>{att.uploadedBy.name}</span>
+                                  </div>
+                                </>
+                              )}
+                              {att.uploadedAt && (
+                                <>
+                                  <span style={{ fontSize: '11px', color: '#4a4b4d' }}>•</span>
+                                  <span style={{ fontSize: '11px', color: '#6f6e6f' }}>{formatTime(att.uploadedAt)}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Delete button */}
+                          {canDelete && (
+                            <button
+                              onClick={() => handleDeleteAttachment(att._id)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6f6e6f', padding: '4px', borderRadius: '4px', flexShrink: 0 }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = '#6f6e6f'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              title="Remove attachment"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

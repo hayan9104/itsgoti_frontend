@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { workspaceTasksAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 import CreateTaskModal from './CreateTaskModal';
 import TaskCard from './TaskCard';
 import TaskDetailPanel from './TaskDetailPanel';
+import InlineAssigneePicker from './InlineAssigneePicker';
 
 const TasksListView = ({ boardId, boardName, boardColor }) => {
+  const [searchParams] = useSearchParams();
+  const listId = searchParams.get('listId');
   const { isSuperAdmin } = useWorkspaceAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,14 +21,17 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
 
   useEffect(() => {
     loadTasks();
-  }, [boardId]);
+  }, [boardId, listId]);
 
   const loadTasks = async () => {
     try {
       const response = await workspaceTasksAPI.getByBoard(boardId);
       if (response.data.success) {
-        // Filter out items of type 'note' or items with a parentTask - these stay in the Calendar only
-        const filteredTasks = response.data.data.filter(task => task.type !== 'note' && !task.parentTask && !task.title.toLowerCase().includes('connect with me'));
+        let filteredTasks = response.data.data.filter(task => task.type !== 'note' && !task.parentTask && !task.title.toLowerCase().includes('connect with me'));
+        // If a specific list is selected, only show tasks for that list
+        if (listId) {
+          filteredTasks = filteredTasks.filter(task => task.sidebarList === listId);
+        }
         setTasks(filteredTasks);
       }
     } catch (error) {
@@ -452,7 +459,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                  onClick={() => setSelectedTask(selectedTask?._id === task._id ? null : task)}
+                  onClick={() => setDetailTask(task)}
                 >
                   {/* Task Name */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -499,31 +506,12 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
 
                   {/* Assignee */}
                   <div>
-                    {task.assignee ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            backgroundColor: '#6f6e6f',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            fontSize: '10px',
-                            fontWeight: '600',
-                          }}
-                        >
-                          {task.assignee.name?.substring(0, 2).toUpperCase()}
-                        </div>
-                        <span style={{ fontSize: '13px', color: '#e5e7eb' }}>
-                          {task.assignee.name}
-                        </span>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '13px', color: '#6f6e6f' }}>Unassigned</span>
-                    )}
+                    <InlineAssigneePicker
+                      task={task}
+                      onUpdate={(updatedTask) => {
+                        setTasks(tasks.map(t => t._id === updatedTask._id ? updatedTask : t));
+                      }}
+                    />
                   </div>
 
                   {/* Status */}
@@ -564,6 +552,7 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
         <CreateTaskModal
           boardId={boardId}
           boardName={boardName}
+          sidebarList={listId || undefined}
           initialStatus="open"
           onClose={() => setShowCreateModal(false)}
           onCreated={handleTaskCreated}

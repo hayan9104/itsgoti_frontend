@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
-import { workspaceBoardsAPI, workspaceSidebarAPI } from '../../services/api';
+import { workspaceBoardsAPI, workspaceSidebarAPI, workspaceTasksAPI } from '../../services/api';
 import CreateBoardModal from './CreateBoardModal';
 import CreateTaskModal from './CreateTaskModal';
+import SharingModal from './SharingModal';
 
 // ─── Recursive SidebarTreeItem ───
-const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, onCreateTask, isSuperAdmin }) => {
+const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, onCreateTask, isSuperAdmin, accessLevel = 'board' }) => {
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
@@ -14,10 +15,24 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(item.name);
+  const [showSharing, setShowSharing] = useState(false);
   const location = useLocation();
 
   const isFolder = item.type === 'folder';
+  const isList = item.type === 'list';
+  const isTask = item.type === 'task';
   const children = item.children || [];
+
+  // Permission: can this user see +/dots on this item?
+  // board access = can do everything
+  // folder access = can add lists inside folders, can add tasks in lists, but NOT create new folders
+  // list access = can only add tasks in lists, NO folder/list creation
+  // task access = nothing
+  const canShowActions = isSuperAdmin || (
+    (accessLevel === 'board') ||
+    (accessLevel === 'folder' && (isFolder || isList)) ||
+    (accessLevel === 'list' && isList)
+  );
   const paddingLeft = 16 + depth * 16;
 
   const handleDotsClick = (e) => {
@@ -50,7 +65,7 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
   const handleCreate = async (type) => {
     setPlusMenuOpen(false);
     if (type === 'task') {
-      onCreateTask(boardId);
+      onCreateTask(boardId, item._id);
       return;
     }
     const name = type === 'folder' ? 'New Folder' : 'New List';
@@ -88,11 +103,17 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={() => {
-          if (isFolder) {
-            setExpanded(!expanded);
-          } else {
-            navigate(`${basePath}/boards/${boardId}?view=list`);
+          if (isTask) {
+            navigate(`${basePath}/boards/${boardId}?view=list&listId=${item.sidebarList || ''}`);
+            return;
           }
+          if (isList) {
+            navigate(`${basePath}/boards/${boardId}?view=list&listId=${item._id}`);
+          }
+          if (isFolder) {
+            navigate(`${basePath}/boards/${boardId}?view=list&folderId=${item._id}`);
+          }
+          setExpanded(!expanded);
         }}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -103,11 +124,25 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
           backgroundColor: hovered ? '#2e2f31' : 'transparent',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-          {isFolder ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="#a2a0a2"
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+          {/* Expand arrow (not for tasks) */}
+          {!isTask ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#6f6e6f"
               style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}>
               <path d="M7 10l5 5 5-5z" />
+            </svg>
+          ) : (
+            <span style={{ width: '14px', flexShrink: 0 }} />
+          )}
+          {/* Type icon */}
+          {isFolder ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#a2a0a2" style={{ flexShrink: 0 }}>
+              <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+            </svg>
+          ) : isTask ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={item.status === 'done' ? '#22c55e' : '#6f6e6f'} strokeWidth="2" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="9" />
+              {item.status === 'done' && <path d="M9 12l2 2 4-4" />}
             </svg>
           ) : (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#6f6e6f" style={{ flexShrink: 0 }}>
@@ -131,9 +166,9 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
           )}
         </div>
 
-        {/* Actions: dots (hover) + plus (always when hovered) */}
+        {/* Actions: dots (hover) + plus (always when hovered) — only if permitted */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, position: 'relative' }}>
-          {hovered && (
+          {hovered && !isTask && canShowActions && (
             <>
               <div
                 onClick={handleDotsClick}
@@ -188,7 +223,30 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" /></svg>
               Remove
             </div>
+            <div style={{ height: '1px', backgroundColor: '#333436', margin: '4px 0' }} />
+            <div
+              onClick={() => { setDotsMenuOpen(false); setShowSharing(true); }}
+              style={{ padding: '8px 12px', fontSize: '13px', color: '#e5e7eb', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
+              Sharing & Permissions
+            </div>
           </div>
+        )}
+
+        {/* Sharing Modal */}
+        {showSharing && (
+          <SharingModal
+            itemName={item.name}
+            itemType={isFolder ? 'Folder' : 'List'}
+            boardId={boardId}
+            sidebarItemId={item._id}
+            visibility={item.visibility || 'private'}
+            onVisibilityChange={() => {}}
+            onClose={() => setShowSharing(false)}
+          />
         )}
 
         {/* Plus dropdown */}
@@ -218,8 +276,8 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
         )}
       </div>
 
-      {/* Children (if folder and expanded) */}
-      {isFolder && expanded && children.length > 0 && (
+      {/* Children (when expanded — for both folders and lists) */}
+      {expanded && children.length > 0 && (
         children.map(child => (
           <SidebarTreeItem
             key={child._id}
@@ -231,11 +289,9 @@ const SidebarTreeItem = ({ item, depth, boardId, basePath, navigate, onRefresh, 
             onRefresh={onRefresh}
             onCreateTask={onCreateTask}
             isSuperAdmin={isSuperAdmin}
+            accessLevel={accessLevel}
           />
         ))
-      )}
-      {isFolder && expanded && children.length === 0 && (
-        <div style={{ paddingLeft: paddingLeft + 22, fontSize: '11px', color: '#4a4b4d', padding: '4px 0 4px ' + (paddingLeft + 22) + 'px' }}>Empty</div>
       )}
     </>
   );
@@ -286,12 +342,29 @@ const HomeSidebar = () => {
   const [boardDotsPos, setBoardDotsPos] = useState({ top: 0, left: 0 });
   const [renamingBoardId, setRenamingBoardId] = useState(null);
   const [boardRenameValue, setBoardRenameValue] = useState('');
+  const [sharingBoardId, setSharingBoardId] = useState(null);
   const [sidebarItems, setSidebarItems] = useState({}); // { boardId: [items] }
+  const [accessStructure, setAccessStructure] = useState(null); // { type: 'all' } or { type: 'filtered', structure: [...] }
   const [expandedBoards, setExpandedBoards] = useState(new Set());
   const [createTaskBoardId, setCreateTaskBoardId] = useState(null);
+  const [createTaskListId, setCreateTaskListId] = useState(null);
+  const [showVisibilityPopup, setShowVisibilityPopup] = useState(null); // boardId of board with open visibility popup
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => { loadBoards(); }, [location.pathname]);
+  useEffect(() => { loadBoards(); loadAccessInfo(); }, [location.pathname]);
+
+  const loadAccessInfo = async () => {
+    if (isSuperAdmin) {
+      setAccessStructure({ type: 'all' });
+      return;
+    }
+    try {
+      const res = await workspaceSidebarAPI.getMyAccess();
+      if (res.data.success) setAccessStructure(res.data.data);
+    } catch (err) {
+      console.error('Failed to load access info:', err);
+    }
+  };
 
   useEffect(() => {
     const handler = () => loadBoards();
@@ -306,11 +379,24 @@ const HomeSidebar = () => {
       setBoardDotsMenu(null);
       setShowSortMenu(false);
       setShowPlusMenu(false);
+      setShowVisibilityPopup(null);
     };
     // Use click (not mousedown) so menu item clicks fire before close
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, []);
+
+  const updateBoardVisibility = async (boardId, visibility) => {
+    try {
+      const res = await workspaceBoardsAPI.update(boardId, { visibility });
+      if (res.data.success) {
+        setBoards(prev => prev.map(b => b._id === boardId ? { ...b, visibility } : b));
+        setShowVisibilityPopup(null);
+      }
+    } catch (err) {
+      console.error('Failed to update board visibility:', err);
+    }
+  };
 
   const loadBoards = async () => {
     try {
@@ -325,10 +411,13 @@ const HomeSidebar = () => {
 
   const loadSidebarItems = useCallback(async (boardId) => {
     try {
-      const res = await workspaceSidebarAPI.getByBoard(boardId);
-      if (res.data.success) {
-        // Build tree from flat list
-        const flat = res.data.data;
+      const [sidebarRes, tasksRes] = await Promise.all([
+        workspaceSidebarAPI.getByBoard(boardId),
+        workspaceTasksAPI.getByBoard(boardId),
+      ]);
+
+      if (sidebarRes.data.success) {
+        const flat = sidebarRes.data.data;
         const map = {};
         flat.forEach(item => { map[item._id] = { ...item, children: [] }; });
         const roots = [];
@@ -339,11 +428,26 @@ const HomeSidebar = () => {
             roots.push(map[item._id]);
           }
         });
-        setSidebarItems(prev => {
-          const next = { ...prev };
-          next[boardId] = roots;
-          return next;
-        });
+
+        // Attach tasks as children to their respective lists
+        if (tasksRes.data.success) {
+          const tasks = tasksRes.data.data.filter(t => t.sidebarList && t.type !== 'note');
+          tasks.forEach(task => {
+            if (map[task.sidebarList]) {
+              map[task.sidebarList].children.push({
+                _id: task._id,
+                name: task.title,
+                type: 'task',
+                status: task.status,
+                board: boardId,
+                sidebarList: task.sidebarList,
+                children: [],
+              });
+            }
+          });
+        }
+
+        setSidebarItems(prev => ({ ...prev, [boardId]: roots }));
         setRefreshKey(k => k + 1);
       }
     } catch (err) {
@@ -505,10 +609,20 @@ const HomeSidebar = () => {
           <div style={{ marginTop: '2px' }}>
             {loading ? <div style={{ padding: '8px 16px', color: '#6f6e6f', fontSize: '13px' }}>Loading...</div>
             : boards.length === 0 ? <div style={{ padding: '8px 16px', color: '#6f6e6f', fontSize: '13px' }}>No boards yet</div>
-            : boards.slice(0, 10).map((board) => {
+            : boards.filter(board => {
+              // Super admin sees all boards
+              if (isSuperAdmin || !accessStructure || accessStructure.type === 'all') return true;
+              // Admin only sees boards they have access to or internal boards
+              return board.visibility === 'internal' || accessStructure.structure?.some(s => s.boardId === board._id);
+            }).slice(0, 10).map((board) => {
               const isCurrentBoard = location.pathname.includes(board._id);
               const isExpanded = expandedBoards.has(board._id);
               const items = sidebarItems[board._id] || [];
+              // Get access level for this board (for admin permission control)
+              const boardAccess = accessStructure?.structure?.find(s => s.boardId === board._id);
+              const accessLevel = isSuperAdmin ? 'board' : (boardAccess?.level || 'board');
+              // Can create folders/lists at board level?
+              const canCreateAtBoard = isSuperAdmin || accessLevel === 'board';
 
               return (
                 <div key={board._id}>
@@ -549,9 +663,9 @@ const HomeSidebar = () => {
                         )}
                       </div>
 
-                      {/* Right: dots + plus */}
+                      {/* Right: dots + plus (only if board-level access) */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, position: 'relative' }}>
-                        {hoveredBoardId === board._id && (
+                        {hoveredBoardId === board._id && canCreateAtBoard && (
                           <div onClick={(e) => {
                               e.stopPropagation();
                               if (boardDotsMenu === board._id) { setBoardDotsMenu(null); return; }
@@ -586,6 +700,51 @@ const HomeSidebar = () => {
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58z" /></svg>
                               Settings
                             </div>
+                            
+                            <div style={{ position: 'relative' }}>
+                              <div 
+                                onClick={(e) => { e.stopPropagation(); setShowVisibilityPopup(board._id); }}
+                                style={{ padding: '8px 12px', fontSize: '13px', color: '#e5e7eb', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                    {board.visibility === 'private' ? (
+                                      <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM8.9 6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2H8.9V6zM18 20H6V10h12v10z"/>
+                                    ) : board.visibility === 'shared' ? (
+                                      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+                                    ) : (
+                                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                    )}
+                                  </svg>
+                                  <span style={{ textTransform: 'capitalize' }}>{board.visibility}</span>
+                                </div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+                              </div>
+
+                              {showVisibilityPopup === board._id && (
+                                <div style={{ position: 'absolute', top: 0, left: '100%', marginLeft: '8px', backgroundColor: '#2a2b2d', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', padding: '4px', minWidth: '140px', zIndex: 10000, border: '1px solid #3a3b3d' }}>
+                                  {['private', 'shared', 'internal'].filter(v => v !== board.visibility).map(v => (
+                                    <div key={v} onClick={(e) => { e.stopPropagation(); updateBoardVisibility(board._id, v); }}
+                                      style={{ padding: '8px 12px', fontSize: '13px', color: '#e5e7eb', borderRadius: '6px', cursor: 'pointer', textTransform: 'capitalize' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                    >
+                                      {v}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {board.visibility !== 'private' && (
+                              <div onClick={() => { setBoardDotsMenu(null); setSharingBoardId(board._id); }}
+                                style={{ padding: '8px 12px', fontSize: '13px', color: '#e5e7eb', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
+                                Sharing & Permissions
+                              </div>
+                            )}
                             <div style={{ height: '1px', backgroundColor: '#333436', margin: '4px 0' }} />
                             <div onClick={() => { setBoardDotsMenu(null); handleBoardDelete(board._id); }}
                               style={{ padding: '8px 12px', fontSize: '13px', color: '#ef4444', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
@@ -596,28 +755,32 @@ const HomeSidebar = () => {
                             </div>
                           </div>
                         )}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (boardPlusMenu === board._id) { setBoardPlusMenu(null); return; }
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setBoardPlusPos({ top: rect.top, left: rect.right + 8 });
-                            setBoardPlusMenu(board._id);
-                          }}
-                          style={{ width: '22px', height: '22px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6f6e6f', cursor: 'pointer' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#3a3b3d'; e.currentTarget.style.color = '#f1f1f1'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6f6e6f'; }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" /></svg>
-                        </div>
-                        {boardPlusMenu === board._id && (
-                          <div onClick={(e) => e.stopPropagation()}
-                            style={{ position: 'fixed', top: boardPlusPos.top, left: boardPlusPos.left, backgroundColor: '#2a2b2d', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', padding: '4px', minWidth: '200px', zIndex: 9999, border: '1px solid #3a3b3d' }}
-                          >
-                            <div style={{ padding: '6px 10px 4px', fontSize: '11px', color: '#6f6e6f', fontWeight: '500' }}>Create</div>
-                            <MenuItem icon={<FolderIcon />} label="Folder" desc="Group Lists, Docs & more" onClick={() => handleBoardPlusCreate(board._id, 'folder')} />
-                            <MenuItem icon={<ListIcon />} label="List" desc="Track tasks, projects & more" onClick={() => handleBoardPlusCreate(board._id, 'list')} />
-                          </div>
+                        {canCreateAtBoard && (
+                          <>
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (boardPlusMenu === board._id) { setBoardPlusMenu(null); return; }
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setBoardPlusPos({ top: rect.top, left: rect.right + 8 });
+                                setBoardPlusMenu(board._id);
+                              }}
+                              style={{ width: '22px', height: '22px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6f6e6f', cursor: 'pointer' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#3a3b3d'; e.currentTarget.style.color = '#f1f1f1'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#6f6e6f'; }}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" /></svg>
+                            </div>
+                            {boardPlusMenu === board._id && (
+                              <div onClick={(e) => e.stopPropagation()}
+                                style={{ position: 'fixed', top: boardPlusPos.top, left: boardPlusPos.left, backgroundColor: '#2a2b2d', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', padding: '4px', minWidth: '200px', zIndex: 9999, border: '1px solid #3a3b3d' }}
+                              >
+                                <div style={{ padding: '6px 10px 4px', fontSize: '11px', color: '#6f6e6f', fontWeight: '500' }}>Create</div>
+                                <MenuItem icon={<FolderIcon />} label="Folder" desc="Group Lists, Docs & more" onClick={() => handleBoardPlusCreate(board._id, 'folder')} />
+                                <MenuItem icon={<ListIcon />} label="List" desc="Track tasks, projects & more" onClick={() => handleBoardPlusCreate(board._id, 'list')} />
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -635,14 +798,11 @@ const HomeSidebar = () => {
                           basePath={basePath}
                           navigate={navigate}
                           onRefresh={() => loadSidebarItems(board._id)}
-                          onCreateTask={(bId) => setCreateTaskBoardId(bId)}
+                          onCreateTask={(bId, listId) => { setCreateTaskBoardId(bId); setCreateTaskListId(listId); }}
                           isSuperAdmin={isSuperAdmin}
+                          accessLevel={accessLevel}
                         />
-                      )) : (
-                        <div style={{ padding: '4px 0 4px 48px', fontSize: '11px', color: '#4a4b4d' }}>
-                          No items yet — click + to add
-                        </div>
-                      )}
+                      )) : null}
                     </>
                   )}
                 </div>
@@ -680,9 +840,29 @@ const HomeSidebar = () => {
       {createTaskBoardId && (
         <CreateTaskModal
           boardId={createTaskBoardId}
+          sidebarList={createTaskListId}
           initialStatus="open"
-          onClose={() => setCreateTaskBoardId(null)}
-          onCreated={() => setCreateTaskBoardId(null)}
+          onClose={() => { setCreateTaskBoardId(null); setCreateTaskListId(null); }}
+          onCreated={() => {
+            const bId = createTaskBoardId;
+            setCreateTaskBoardId(null);
+            setCreateTaskListId(null);
+            // Refresh sidebar to show the new task under its list
+            if (bId) loadSidebarItems(bId);
+          }}
+        />
+      )}
+      {/* Board Sharing Modal */}
+      {sharingBoardId && (
+        <SharingModal
+          itemName={boards.find(b => b._id === sharingBoardId)?.name || ''}
+          itemType="Board"
+          boardId={sharingBoardId}
+          visibility={boards.find(b => b._id === sharingBoardId)?.visibility || 'private'}
+          onVisibilityChange={(v) => {
+            setBoards(boards.map(b => b._id === sharingBoardId ? { ...b, visibility: v } : b));
+          }}
+          onClose={() => setSharingBoardId(null)}
         />
       )}
     </div>

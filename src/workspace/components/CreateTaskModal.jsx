@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { workspaceTasksAPI, uploadAPI } from '../../services/api';
+import { workspaceTasksAPI, workspaceUsersAPI, uploadAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
 // Default options (used when board has no custom settings)
@@ -48,7 +48,7 @@ const TIME_OPTIONS = [
   { value: '480', label: '8 hours' },
 ];
 
-const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'open', onClose, onCreated }) => {
+const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'open', sidebarList, onClose, onCreated }) => {
   const { user } = useWorkspaceAuth();
   const fileInputRef = useRef(null);
   const subtaskInputRef = useRef(null);
@@ -85,6 +85,9 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
   // Ensure component is mounted before rendering portal
   useEffect(() => {
     setMounted(true);
+    workspaceUsersAPI.getAll().then(res => {
+      if (res.data.success) setAssigneeUsers(res.data.data);
+    }).catch(() => {});
     return () => setMounted(false);
   }, []);
 
@@ -104,6 +107,13 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
   // Dropdowns
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showCalendar, setShowCalendar] = useState(null);
+
+  // Assignee search
+  const [assignee, setAssignee] = useState('');
+  const [selectedAssignee, setSelectedAssignee] = useState(null);
+  const [showAssigneeSearch, setShowAssigneeSearch] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState('');
+  const [assigneeUsers, setAssigneeUsers] = useState([]);
   const [showCustomTime, setShowCustomTime] = useState(false);
   const [customTimeInput, setCustomTimeInput] = useState('');
 
@@ -168,6 +178,8 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
         scheduledDate: scheduleDate || undefined,
         subtasks: subtasks.map(s => ({ title: s.title, completed: false })),
         attachments: uploadedAttachments,
+        ...(sidebarList ? { sidebarList } : {}),
+        ...(assignee ? { assignee } : {}),
       };
 
       const response = await workspaceTasksAPI.create(boardId, taskData);
@@ -662,6 +674,7 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
       />
       {/* Modal */}
       <div
+        className="workspace-dark"
         style={{
           position: 'fixed',
           top: '50%',
@@ -1428,12 +1441,13 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
             </div>
           </div>
 
-          {/* Assignee - Disabled, managed from Members view */}
-          <div style={{ marginBottom: '20px' }}>
+          {/* Assignee - Searchable */}
+          <div style={{ marginBottom: '20px', position: 'relative' }}>
             <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
               Assignee
             </label>
             <div
+              onClick={() => setShowAssigneeSearch(!showAssigneeSearch)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1441,31 +1455,66 @@ const CreateTaskModal = ({ boardId, boardName, boardSettings, initialStatus = 'o
                 padding: '10px 14px',
                 backgroundColor: '#1e1f21',
                 borderRadius: '8px',
-                cursor: 'not-allowed',
-                opacity: 0.7,
+                cursor: 'pointer',
+                border: '1px solid #333436',
               }}
-              title="Assign members from the Members view"
             >
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  backgroundColor: '#333436',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#9ca3af',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                }}
-              >
-                ?
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '50%',
+                backgroundColor: selectedAssignee ? '#4a4b4d' : '#333436',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: '10px', fontWeight: '600',
+              }}>
+                {selectedAssignee ? selectedAssignee.name?.substring(0, 2).toUpperCase() : '?'}
               </div>
-              <span style={{ fontSize: '14px', fontWeight: '500', color: '#9ca3af' }}>
-                Unassigned
+              <span style={{ fontSize: '14px', fontWeight: '500', color: selectedAssignee ? '#e5e7eb' : '#9ca3af', flex: 1 }}>
+                {selectedAssignee ? selectedAssignee.name : 'Unassigned'}
               </span>
+              {selectedAssignee && (
+                <div onClick={(e) => { e.stopPropagation(); setSelectedAssignee(null); setAssignee(''); }}
+                  style={{ cursor: 'pointer', color: '#6f6e6f', display: 'flex' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#6f6e6f'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+                </div>
+              )}
             </div>
+            {showAssigneeSearch && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                backgroundColor: '#2a2b2d', borderRadius: '8px', border: '1px solid #3a3b3d',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 100, overflow: 'hidden',
+              }}>
+                <div style={{ padding: '8px', borderBottom: '1px solid #333436' }}>
+                  <input
+                    autoFocus
+                    value={assigneeSearch}
+                    onChange={(e) => setAssigneeSearch(e.target.value)}
+                    placeholder="Search by name..."
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '13px', border: '1px solid #4a4b4d', borderRadius: '6px', backgroundColor: '#1e1f21', color: '#e5e7eb', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ maxHeight: '150px', overflowY: 'auto' }} className="hide-scrollbar">
+                  {assigneeUsers.filter(u => u.name.toLowerCase().includes(assigneeSearch.toLowerCase())).map(u => (
+                    <div key={u._id} onClick={() => { setSelectedAssignee(u); setAssignee(u._id); setShowAssigneeSearch(false); setAssigneeSearch(''); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: '#e5e7eb' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#353638'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: '600' }}>
+                        {u.name?.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '500' }}>{u.name}</div>
+                        <div style={{ fontSize: '11px', color: '#6f6e6f' }}>{u.email}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Schedule */}

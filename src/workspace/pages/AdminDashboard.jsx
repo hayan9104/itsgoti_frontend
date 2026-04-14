@@ -633,7 +633,7 @@ const AdminDashboard = () => {
   const getActiveSection = () => {
     if (location.pathname.includes('/inbox')) return 'inbox';
     if (location.pathname.includes('/boards')) return 'boards';
-    if (location.pathname.includes('/my-tasks')) return 'tasks';
+    if (location.pathname.includes('/my-tasks')) return 'boards';
     if (location.pathname.includes('/calendar')) return 'calendar';
     if (location.pathname.includes('/meetings')) return 'meetings';
     if (location.pathname.includes('/settings')) return 'settings';

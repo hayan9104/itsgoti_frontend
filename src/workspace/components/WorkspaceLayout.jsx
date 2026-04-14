@@ -1,13 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 import { workspaceMessagesAPI } from '../../services/api';
 
 const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
-  const { user, isSuperAdmin } = useWorkspaceAuth();
+  const { user, accounts, isSuperAdmin, canSwitchRole, viewMode, switchViewMode, switchAccount, removeAccount, login, linkNewAccount, switchingAccount } = useWorkspaceAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [accountToRemove, setAccountToRemove] = useState(null);
+  
+  // Inline login states
+  const [showInlineLogin, setShowInlineLogin] = useState(false);
+  const [inlineEmail, setInlineEmail] = useState('');
+  const [inlinePassword, setInlinePassword] = useState('');
+  const [inlineLoading, setInlineLoading] = useState(false);
+  const [inlineError, setInlineError] = useState(null);
+  
+  const accountPickerRef = useRef(null);
+
+  const handleAddAccount = () => {
+    setShowInlineLogin(true);
+    setInlineError(null);
+  };
+
+  const handleInlineLogin = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!inlineEmail || !inlinePassword) {
+      setInlineError('Email and password required');
+      return;
+    }
+
+    setInlineLoading(true);
+    setInlineError(null);
+    
+    const result = await linkNewAccount(inlineEmail, inlinePassword);
+    setInlineLoading(false);
+    
+    if (result.success) {
+      setShowInlineLogin(false);
+      setInlineEmail('');
+      setInlinePassword('');
+      // The context update will trigger the list to refresh
+    } else {
+      setInlineError(result.message || 'Login failed');
+    }
+  };
+
+  const handleRemoveAccount = () => {
+    if (accountToRemove) {
+      removeAccount(accountToRemove._id);
+      setShowRemoveConfirm(false);
+      setAccountToRemove(null);
+      setShowAccountPicker(false);
+    }
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (accountPickerRef.current && !accountPickerRef.current.contains(e.target)) {
+        setShowAccountPicker(false);
+      }
+    };
+    if (showAccountPicker) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAccountPicker]);
 
   const basePath = isSuperAdmin ? '/workspace/super-admin' : '/workspace/admin';
 
@@ -99,6 +161,27 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
         fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       }}
     >
+      {/* Global Switching Overlay */}
+      {switchingAccount && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(17, 18, 20, 0.95)', zIndex: 9999,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          backdropFilter: 'blur(10px)', transition: 'all 0.5s ease'
+        }}>
+          <div style={{ 
+            width: '40px', height: '40px', border: '3px solid #333436', borderTop: '3px solid #3b82f6', 
+            borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' 
+          }}></div>
+          <style>{`
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          `}</style>
+          <div style={{ fontSize: '14px', fontWeight: '500', color: '#e5e7eb', letterSpacing: '0.5px' }}>
+            Switching account...
+          </div>
+        </div>
+      )}
+
       {/* ═══ LEFT: Icon Sidebar ═══ */}
       <div
         style={{
@@ -114,27 +197,241 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           zIndex: 100,
         }}
       >
-        {/* Hamburger Menu */}
-        <div
-          style={{
-            width: '36px',
-            height: '36px',
-            margin: '16px 0 12px 0',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-          onClick={() => navigate(basePath)}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#2e2f31'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#a2a0a2">
-            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-          </svg>
+        {/* Account Switcher */}
+        <div ref={accountPickerRef} style={{ margin: '16px 0 12px 0', position: 'relative' }}>
+          {/* Trigger button */}
+          <button
+            onClick={() => setShowAccountPicker(p => !p)}
+            style={{
+              width: '36px', height: '36px', borderRadius: '8px', border: 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: viewMode === 'super_admin' ? 'rgba(232,101,90,0.15)' : 'rgba(59,130,246,0.15)',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.75'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+            title="Switch account"
+          >
+            <span style={{ fontSize: '10px', fontWeight: '800', color: viewMode === 'super_admin' ? '#e8655a' : '#3b82f6', lineHeight: 1 }}>
+              {viewMode === 'super_admin' ? 'SA' : 'A'}
+            </span>
+          </button>
+
+          {/* Dropdown */}
+          {showAccountPicker && (
+            <div style={{
+              position: 'fixed', left: '76px', top: '16px',
+              width: '240px', backgroundColor: '#2a2b2d',
+              borderRadius: '12px', border: '1px solid #333436',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              zIndex: 99999, overflow: 'hidden',
+            }}>
+              {/* User info header */}
+              <div style={{ padding: '16px', borderBottom: '1px solid #333436' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: '#fff', flexShrink: 0 }}>
+                    {user?.name?.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#e5e7eb' }}>{user?.name}</div>
+                    <div style={{ fontSize: '11px', color: '#6f6e6f' }}>{user?.email}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Accounts list */}
+              <div style={{ padding: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '600', color: '#6f6e6f', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '4px 8px 6px 8px' }}>
+                  Accounts
+                </div>
+
+                {accounts.map((acc) => {
+                  const isCurrent = acc.isCurrent;
+                  const accUser = acc.user;
+                  const isSA = accUser.role === 'super_admin';
+                  
+                  return (
+                    <div key={accUser._id} style={{ display: 'flex', alignItems: 'center', borderRadius: '8px', overflow: 'hidden', marginBottom: '2px' }}
+                      onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#333436'; }}
+                      onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      <button
+                        onClick={() => { if (!isCurrent) switchAccount(accUser._id); }}
+                        style={{
+                          flex: 1, display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '8px 10px', border: 'none', cursor: isCurrent ? 'default' : 'pointer',
+                          backgroundColor: isCurrent ? 'rgba(59,130,246,0.12)' : 'transparent', textAlign: 'left',
+                        }}
+                      >
+                        <div style={{ 
+                          width: '30px', height: '30px', borderRadius: '8px', 
+                          backgroundColor: isSA ? 'rgba(232,101,90,0.2)' : 'rgba(59,130,246,0.2)', 
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+                        }}>
+                          <span style={{ fontSize: '10px', fontWeight: '800', color: isSA ? '#e8655a' : '#3b82f6' }}>
+                            {isSA ? 'SA' : 'A'}
+                          </span>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#e5e7eb' }}>
+                              {isSA ? 'Super Admin' : 'Admin'}
+                            </span>
+                            {isCurrent && (
+                              <span style={{ fontSize: '9px', fontWeight: '600', color: isSA ? '#e8655a' : '#3b82f6', backgroundColor: isSA ? 'rgba(232,101,90,0.15)' : 'rgba(59,130,246,0.15)', padding: '1px 5px', borderRadius: '4px' }}>Active</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '10px', color: '#6f6e6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accUser.email}</div>
+                        </div>
+                        {isCurrent && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill={isSA ? "#e8655a" : "#3b82f6"} style={{ flexShrink: 0 }}><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add account + divider */}
+              <div style={{ borderTop: '1px solid #333436', padding: '8px' }}>
+                {!showInlineLogin ? (
+                  <button
+                    onClick={handleAddAccount}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '8px 10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                      backgroundColor: 'transparent', textAlign: 'left', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333436'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', backgroundColor: '#333436', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#a2a0a2"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '500', color: '#a2a0a2' }}>Add account</span>
+                  </button>
+                ) : (
+                  <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    style={{ padding: '4px 8px' }}
+                  >
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#e5e7eb', marginBottom: '8px' }}>Add Account</div>
+                    
+                    <input 
+                      type="email" 
+                      placeholder="Email" 
+                      value={inlineEmail}
+                      onChange={(e) => setInlineEmail(e.target.value)}
+                      style={{ 
+                        width: '100%', padding: '8px', marginBottom: '8px', borderRadius: '6px', 
+                        backgroundColor: '#1e1f21', border: '1px solid #333436', color: '#e5e7eb', fontSize: '12px' 
+                      }}
+                    />
+                    
+                    <input 
+                      type="password" 
+                      placeholder="Password" 
+                      value={inlinePassword}
+                      onChange={(e) => setInlinePassword(e.target.value)}
+                      style={{ 
+                        width: '100%', padding: '8px', marginBottom: '8px', borderRadius: '6px', 
+                        backgroundColor: '#1e1f21', border: '1px solid #333436', color: '#e5e7eb', fontSize: '12px' 
+                      }}
+                    />
+
+                    {inlineError && (
+                      <div style={{ color: '#ef4444', fontSize: '10px', marginBottom: '8px' }}>{inlineError}</div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowInlineLogin(false); }}
+                        style={{ 
+                          flex: 1, padding: '6px', borderRadius: '6px', border: 'none', 
+                          backgroundColor: '#333436', color: '#e5e7eb', fontSize: '11px', cursor: 'pointer' 
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleInlineLogin}
+                        disabled={inlineLoading}
+                        style={{ 
+                          flex: 1, padding: '6px', borderRadius: '6px', border: 'none', 
+                          backgroundColor: '#3b82f6', color: 'white', fontSize: '11px', cursor: 'pointer',
+                          opacity: inlineLoading ? 0.7 : 1
+                        }}
+                      >
+                        {inlineLoading ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Remove Account Confirmation Modal */}
+        {showRemoveConfirm && (
+          <div
+            style={{
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 999999,
+            }}
+            onClick={() => setShowRemoveConfirm(false)}
+          >
+            <div
+              style={{
+                backgroundColor: '#2a2b2d', borderRadius: '12px', border: '1px solid #333436',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.5)', padding: '24px', width: '300px',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>Remove Account</div>
+                  <div style={{ fontSize: '11px', color: '#6f6e6f' }}>{accountToRemove?.email}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: '13px', color: '#a2a0a2', margin: '12px 0 20px 0', lineHeight: '1.5' }}>
+                Are you sure you want to remove <strong style={{ color: '#e5e7eb' }}>{accountToRemove?.name}</strong>? You will be signed out of this account.
+              </p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => { setShowRemoveConfirm(false); setAccountToRemove(null); }}
+                  style={{
+                    padding: '7px 16px', fontSize: '13px', fontWeight: '500',
+                    backgroundColor: '#333436', color: '#e5e7eb',
+                    border: 'none', borderRadius: '8px', cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3d3e40'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#333436'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRemoveAccount}
+                  style={{
+                    padding: '7px 16px', fontSize: '13px', fontWeight: '500',
+                    backgroundColor: '#ef4444', color: '#fff',
+                    border: 'none', borderRadius: '8px', cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Nav Icons */}
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '4px', width: '100%' }}>
@@ -240,34 +537,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
             backgroundColor: '#1a1a1c',
           }}
         >
-          {/* Left: Create Button */}
-          {isSuperAdmin && (
-            <button
-              onClick={() => navigate(basePath)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                backgroundColor: '#e8655a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '20px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d4504a'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8655a'; }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-              </svg>
-              Create
-            </button>
-          )}
-          {!isSuperAdmin && <div />}
+          <div />
 
           {/* Center: Search Bar */}
           <div style={{ flex: 1, maxWidth: '480px', margin: '0 24px' }}>

@@ -264,6 +264,8 @@ export const workspaceAuthAPI = {
   register: (data) => workspaceApi.post('/workspace/auth/register', data),
   getMe: () => workspaceApi.get('/workspace/auth/me'),
   changePassword: (data) => workspaceApi.put('/workspace/auth/change-password', data),
+  linkAccount: (data) => workspaceApi.post('/workspace/auth/link-account', data),
+  switchAccount: (id) => workspaceApi.post(`/workspace/auth/switch-account/${id}`),
 };
 
 // Workspace Users API (Admin Management)
@@ -298,10 +300,16 @@ export const workspaceBoardsAPI = {
 
 // Workspace Sidebar Items API
 export const workspaceSidebarAPI = {
+  getMyAccess: () => workspaceApi.get('/workspace/sidebar/my-access'),
   getByBoard: (boardId) => workspaceApi.get(`/workspace/sidebar/board/${boardId}`),
   create: (boardId, data) => workspaceApi.post(`/workspace/sidebar/board/${boardId}`, data),
   update: (id, data) => workspaceApi.put(`/workspace/sidebar/${id}`, data),
   delete: (id) => workspaceApi.delete(`/workspace/sidebar/${id}`),
+  // Sharing
+  getSharingInfo: (id) => workspaceApi.get(`/workspace/sidebar/${id}/sharing`),
+  toggleVisibility: (id) => workspaceApi.put(`/workspace/sidebar/${id}/visibility`),
+  addMember: (id, userId) => workspaceApi.post(`/workspace/sidebar/${id}/members`, { userId }),
+  removeMember: (id, userId) => workspaceApi.delete(`/workspace/sidebar/${id}/members/${userId}`),
 };
 
 // Workspace Tasks API

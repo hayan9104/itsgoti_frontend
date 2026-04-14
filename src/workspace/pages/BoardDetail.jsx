@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { workspaceBoardsAPI, workspaceTasksAPI } from '../../services/api';
+import { workspaceBoardsAPI, workspaceTasksAPI, workspaceSidebarAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 import TaskCard from '../components/TaskCard';
 import CreateTaskModal from '../components/CreateTaskModal';
@@ -11,6 +11,7 @@ import CalendarView from '../components/CalendarView';
 import DocumentsView from '../components/DocumentsView';
 import BoardSettingsView from '../components/BoardSettingsView';
 import MeetingsView from '../components/MeetingsView';
+import BoardsList from './BoardsList';
 
 // Default columns if board has no custom statuses
 const DEFAULT_COLUMNS = [
@@ -33,8 +34,10 @@ const BoardDetail = () => {
   const [createInColumn, setCreateInColumn] = useState('open');
   const [selectedTask, setSelectedTask] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
+  const [folderListIds, setFolderListIds] = useState([]);
 
   const viewMode = searchParams.get('view') || 'kanban';
+  const listId = searchParams.get('listId');
   const basePath = isSuperAdmin ? '/workspace/super-admin' : '/workspace/admin';
 
   const setViewMode = (mode) => {
@@ -50,7 +53,31 @@ const BoardDetail = () => {
 
   useEffect(() => {
     loadBoardAndTasks();
-  }, [boardId]);
+  }, [boardId, listId]);
+
+  // Load folder's child list IDs when folderId changes
+  const folderId = searchParams.get('folderId');
+  useEffect(() => {
+    if (!folderId) { setFolderListIds([]); return; }
+    workspaceSidebarAPI.getByBoard(boardId).then(res => {
+      if (res.data.success) {
+        // Find all lists that are children of this folder (recursively)
+        const items = res.data.data;
+        const childIds = new Set();
+        const findChildren = (parentId) => {
+          items.forEach(item => {
+            const pid = item.parent?.toString() || item.parent;
+            if (pid === parentId) {
+              childIds.add(item._id);
+              findChildren(item._id);
+            }
+          });
+        };
+        findChildren(folderId);
+        setFolderListIds([...childIds]);
+      }
+    }).catch(() => {});
+  }, [folderId, boardId]);
 
   // Reload board data when leaving settings view (to get updated settings)
   useEffect(() => {
@@ -128,7 +155,14 @@ const BoardDetail = () => {
     }
   };
 
-  const isRealTask = (t) => t.type !== 'note' && !t.parentTask && !t.title.toLowerCase().includes('connect with me');
+  const isRealTask = (t) => {
+    if (t.type === 'note' || t.parentTask || t.title.toLowerCase().includes('connect with me')) return false;
+    // Scope: list = only that list's tasks
+    if (listId && t.sidebarList !== listId) return false;
+    // Scope: folder = tasks in any list inside that folder
+    if (folderId && !listId && folderListIds.length > 0 && !folderListIds.includes(t.sidebarList)) return false;
+    return true;
+  };
 
   const getTasksByStatus = (status) => {
     return tasks.filter((t) => t.status === status && isRealTask(t)).sort((a, b) => a.order - b.order);
@@ -166,6 +200,7 @@ const BoardDetail = () => {
     );
   }
 
+  // ═══ Always show tabs — scope depends on listId/folderId ═══
   return (
     <div style={{
       height: 'calc(100vh - 48px)',
@@ -734,6 +769,7 @@ const BoardDetail = () => {
           boardId={boardId}
           boardName={board?.name}
           boardSettings={board?.settings}
+          sidebarList={listId || undefined}
           initialStatus={createInColumn}
           onClose={() => setShowCreateModal(false)}
           onCreated={handleCreateTask}
