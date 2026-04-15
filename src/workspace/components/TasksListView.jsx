@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { workspaceTasksAPI } from '../../services/api';
+import { workspaceTasksAPI, workspaceSidebarAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 import CreateTaskModal from './CreateTaskModal';
 import TaskCard from './TaskCard';
@@ -10,6 +10,7 @@ import InlineAssigneePicker from './InlineAssigneePicker';
 const TasksListView = ({ boardId, boardName, boardColor }) => {
   const [searchParams] = useSearchParams();
   const listId = searchParams.get('listId');
+  const folderId = searchParams.get('folderId');
   const { isSuperAdmin } = useWorkspaceAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,10 +19,33 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
   const [detailTask, setDetailTask] = useState(null);
   const [filter, setFilter] = useState('all');
   const [dragOverStatus, setDragOverStatus] = useState(null);
+  const [folderListIds, setFolderListIds] = useState([]);
+
+  // When folderId changes, collect all list IDs that belong to that folder (recursively)
+  useEffect(() => {
+    if (!folderId) { setFolderListIds([]); return; }
+    workspaceSidebarAPI.getByBoard(boardId).then(res => {
+      if (res.data.success) {
+        const items = res.data.data;
+        const childIds = new Set();
+        const findChildren = (parentId) => {
+          items.forEach(item => {
+            const pid = item.parent?.toString() || item.parent;
+            if (pid === parentId) {
+              childIds.add(item._id.toString());
+              findChildren(item._id.toString());
+            }
+          });
+        };
+        findChildren(folderId);
+        setFolderListIds([...childIds]);
+      }
+    }).catch(() => {});
+  }, [folderId, boardId]);
 
   useEffect(() => {
     loadTasks();
-  }, [boardId, listId]);
+  }, [boardId, listId, folderId]);
 
   const loadTasks = async () => {
     try {
@@ -122,7 +146,12 @@ const TasksListView = ({ boardId, boardName, boardColor }) => {
     });
   };
 
-  const isRealTask = (t) => t.type !== 'note' && !t.title.toLowerCase().includes('connect with me');
+  const isRealTask = (t) => {
+    if (t.type === 'note' || t.title.toLowerCase().includes('connect with me')) return false;
+    // Folder selected: only show tasks whose list is inside that folder
+    if (folderId && !listId && folderListIds.length > 0 && !folderListIds.includes(t.sidebarList?.toString() || t.sidebarList)) return false;
+    return true;
+  };
 
   const filteredTasks = filter === 'all'
     ? tasks.filter(isRealTask)
