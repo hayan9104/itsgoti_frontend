@@ -5,6 +5,17 @@ const PlutioCopyAuthContext = createContext(null);
 export const PlutioCopyAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState([
+    { 
+      id: '1', 
+      name: 'Nand aaa', 
+      email: 'hayanpatel449104@gmail.com', 
+      role: 'Contributor', 
+      company: '', 
+      status: 'Inactive',
+      phone: '9773' 
+    }
+  ]);
 
   useEffect(() => {
     const stored = localStorage.getItem('plutiocopy_user');
@@ -31,7 +42,7 @@ export const PlutioCopyAuthProvider = ({ children }) => {
   };
 
   return (
-    <PlutioCopyAuthContext.Provider value={{ user, loading, login, logout }}>
+    <PlutioCopyAuthContext.Provider value={{ user, loading, login, logout, members, setMembers }}>
       {children}
     </PlutioCopyAuthContext.Provider>
   );

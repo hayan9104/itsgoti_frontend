@@ -19,6 +19,7 @@ const AdminDashboard = lazy(() => import('./admin/Dashboard'));
 const PlutioCopyLogin = lazy(() => import('./plutiocopy/pages/PlutioCopyLogin'));
 const PlutioCopyHome = lazy(() => import('./plutiocopy/pages/Home'));
 const PlutioCopyTasks = lazy(() => import('./plutiocopy/pages/Tasks'));
+const PlutioCopyContacts = lazy(() => import('./plutiocopy/pages/Contacts'));
 import { PlutioCopyAuthProvider, usePlutioCopyAuth } from './plutiocopy/context/PlutioCopyAuthContext';
 
 // Workspace (Project Management) - Lazy loaded
@@ -403,6 +404,16 @@ function App() {
                 <Suspense fallback={<PageLoader />}>
                   <PlutioCopyProtectedRoute>
                     <PlutioCopyTasks />
+                  </PlutioCopyProtectedRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/plutiocopy/contacts"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PlutioCopyProtectedRoute>
+                    <PlutioCopyContacts />
                   </PlutioCopyProtectedRoute>
                 </Suspense>
               }

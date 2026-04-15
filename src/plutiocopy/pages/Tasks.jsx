@@ -18,6 +18,7 @@ const ICONS = {
   today:       'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zm-7-7h5v5h-5z',
   project:     'M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z',
   info:        'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z',
+  help:        'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-3h-2c0-3.25 3-3 3-5 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 2.5-3 2.75-3 5z',
   plus:        'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
   search:      'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
   kanban:      'M4 4h4v16H4zm6 0h4v10h-4zm6 0h4v6h-4z',
@@ -41,9 +42,15 @@ const ICONS = {
   export:      'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
   archive:     'M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5z',
   delete:      'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+  enter:       'M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7h-2z',
+  userPlus:    'M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+  toggleOn:    'M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z',
+  toggleOff:   'M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm-10 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z',
+  check:       'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
 };
 
 const TASK_SET_COLORS = ['#6366f1', '#4b5563', '#22c55e', '#f97316', '#eab308', '#3b82f6', '#f1f1f1', '#e5e7eb'];
+const ROLES = ['Client', 'Co-owner', 'Contributor'];
 
 /* ─── Modal Component ─── */
 const Modal = ({ title, onClose, children, footer, width = '540px' }) => (
@@ -57,19 +64,27 @@ const Modal = ({ title, onClose, children, footer, width = '540px' }) => (
       boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden',
     }}>
       <div style={{
-        padding: '20px 24px',
+        padding: '24px 32px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>{title}</h3>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#9ca3af' }}>
-          <Icon d={ICONS.close} size={20} />
+        <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#111827' }}>{title}</h3>
+        <button onClick={onClose} style={{ 
+          background: 'none', border: '1px solid #f3f4f6', cursor: 'pointer', 
+          padding: '6px', color: '#9ca3af', borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.2s'
+        }} onMouseEnter={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}>
+          <Icon d={ICONS.close} size={14} />
         </button>
       </div>
-      <div style={{ padding: '0 24px 24px' }}>
+      <div style={{ padding: '0 32px 32px' }}>
         {children}
       </div>
       {footer && (
-        <div style={{ padding: '16px 24px', background: '#f9fafb', display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f3f4f6' }}>
+        <div style={{ 
+          padding: '16px 32px 32px', background: '#fff', 
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' 
+        }}>
           {footer}
         </div>
       )}
@@ -230,7 +245,7 @@ const TasksMiddlePanel = ({ activeView, projects, taskSets, onNavigate, onCreate
 };
 
 /* ─── Toolbar ─── */
-const Toolbar = ({ onCreateTask }) => {
+const Toolbar = ({ onCreateTask, hideCreate = false }) => {
   const [view, setView] = useState('table');
   return (
     <div style={{
@@ -260,18 +275,20 @@ const Toolbar = ({ onCreateTask }) => {
         <Icon d={ICONS.chevDown} size={14} color="#9ca3af" />
       </div>
 
-      <button 
-        onClick={onCreateTask}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '5px',
-          padding: '5px 12px', border: 'none', borderRadius: '6px',
-          background: '#6d28d9', cursor: 'pointer', fontSize: '12px', color: '#fff',
-          whiteSpace: 'nowrap', fontWeight: '600',
-        }}
-      >
-        <Icon d={ICONS.plus} size={13} color="#fff" />
-        Create task
-      </button>
+      {!hideCreate && (
+        <button 
+          onClick={onCreateTask}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '5px',
+            padding: '5px 12px', border: 'none', borderRadius: '6px',
+            background: '#6d28d9', cursor: 'pointer', fontSize: '12px', color: '#fff',
+            whiteSpace: 'nowrap', fontWeight: '600',
+          }}
+        >
+          <Icon d={ICONS.plus} size={13} color="#fff" />
+          Create task
+        </button>
+      )}
 
       {[
         { label: 'Edit view', icon: 'editView' },
@@ -379,7 +396,7 @@ const TasksTable = ({ columns, rows }) => (
 const Tasks = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = usePlutioCopyAuth();
+  const { logout, members, setMembers } = usePlutioCopyAuth();
 
   // State for dynamic items
   const [projects, setProjects] = useState([]);
@@ -392,12 +409,92 @@ const Tasks = () => {
   const [showTaskSetModal, setShowTaskSetModal] = useState(false);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   
   const [newProjectName, setNewProjectName] = useState('');
+  const [projectMembersInput, setProjectMembersInput] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [projectClient, setProjectClient] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [deadline, setDeadline] = useState('');
+
   const [newTaskSetName, setNewTaskSetName] = useState('');
   const [newTaskSetColor, setNewTaskSetColor] = useState(TASK_SET_COLORS[0]);
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskProject, setNewTaskProject] = useState('');
+
+  // Profile Modal State
+  const [profileFirstName, setProfileFirstName] = useState('');
+  const [profileLastName, setProfileLastName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
+  const [profileCompany, setProfileCompany] = useState('');
+  const [profileRole, setProfileRole] = useState('');
+  const [isManager, setIsManager] = useState(false);
+  const [inviteToWorkspace, setInviteToWorkspace] = useState(false);
+
+  const filteredMembers = projectMembersInput.trim() 
+    ? members.filter(m => m.name.toLowerCase().includes(projectMembersInput.toLowerCase()))
+    : [];
+
+  const handleCreateProject = (e) => {
+    e.preventDefault();
+    if (!newProjectName.trim()) return;
+    const newProj = { 
+      id: Date.now().toString(), 
+      name: newProjectName.trim(),
+      members: selectedMembers,
+      client: projectClient,
+      startDate,
+      deadline
+    };
+    setProjects([...projects, newProj]);
+    // Reset state
+    setNewProjectName('');
+    setProjectMembersInput('');
+    setSelectedMembers([]);
+    setProjectClient('');
+    setStartDate('');
+    setDeadline('');
+    setShowProjectModal(false);
+  };
+
+  const openProfileModal = (nameFromInput) => {
+    setProfileFirstName(nameFromInput);
+    setShowProfileModal(true);
+    // We don't close showProjectModal, just show Profile on top
+  };
+
+  const handleCreateProfile = (e) => {
+    e.preventDefault();
+    if (!profileFirstName.trim()) return;
+    // Logic to save profile globally
+    const newMember = {
+      id: Date.now().toString(),
+      name: `${profileFirstName} ${profileLastName}`.trim(),
+      email: profileEmail,
+      phone: profilePhone,
+      company: profileCompany,
+      role: profileRole || 'Client', // Default from image
+      status: 'Inactive' // Default from image
+    };
+    setMembers([...members, newMember]);
+    // Optionally add this new member to the current project modal selected members
+    setSelectedMembers([...selectedMembers, newMember]);
+    
+    // Clear profile state
+    setProfileFirstName('');
+    setProfileLastName('');
+    setProfileEmail('');
+    setProfilePhone('');
+    setProfileCompany('');
+    setProfileRole('');
+    setShowRoleDropdown(false);
+    
+    // Close profile modal and return to project modal
+    setShowProfileModal(false);
+  };
 
   // Determine active view
   const getView = () => {
@@ -413,15 +510,6 @@ const Tasks = () => {
   
   const currentBoardId = view === 'board' ? location.pathname.split('/board/')[1] : null;
   const currentBoard = taskSets.find(s => s.id === currentBoardId);
-
-  const handleCreateProject = (e) => {
-    e.preventDefault();
-    if (!newProjectName.trim()) return;
-    const newProj = { id: Date.now().toString(), name: newProjectName.trim() };
-    setProjects([...projects, newProj]);
-    setNewProjectName('');
-    setShowProjectModal(false);
-  };
 
   const handleCreateTaskSet = (e) => {
     e.preventDefault();
@@ -490,41 +578,31 @@ const Tasks = () => {
     switch (view) {
       case 'board':
         return (
-          <div style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-              {/* Template column */}
-              <div style={{ width: '280px', flexShrink: 0 }}>
-                <div style={{ background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', overflow: 'hidden' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f7', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', border: '2px solid #9ca3af' }} />
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#1f2937' }}>Template 1</span>
-                  </div>
-                  <div style={{ padding: '12px' }}>
-                    <button 
-                      onClick={() => setShowTaskModal(true)}
-                      style={{ width: '100%', padding: '8px', background: 'none', border: '1.5px dashed #d1d5db', borderRadius: '8px', color: '#6b7280', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
-                    >
-                      <Icon d={ICONS.plus} size={14} />
-                      Create task
-                    </button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Create group column */}
-              <div style={{ width: '280px', flexShrink: 0 }}>
-                <div style={{ background: '#fff', borderRadius: '12px', border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px' }}>
+          <>
+            <Toolbar onCreateTask={() => setShowTaskModal(true)} hideCreate={true} />
+            <div style={{ padding: '24px', flex: 1, background: '#f5f5f8' }}>
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                {/* 
+                  If we want it to look exactly like the second image when empty, 
+                  we can conditionally show columns or just the "Create task group" bar.
+                */}
+                <div style={{
+                  background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '12px 20px', width: 'fit-content', minWidth: '240px',
+                  color: '#9ca3af', cursor: 'pointer',
+                }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', border: '2px solid #d1d5db' }} />
-                  <span style={{ fontSize: '14px', color: '#9ca3af' }}>Create task group</span>
+                  <span style={{ fontSize: '14px' }}>Create task group</span>
                 </div>
               </div>
             </div>
-          </div>
+          </>
         );
       case 'all':
         return (
           <>
-            <Toolbar onCreateTask={() => setShowTaskModal(true)} />
+            <Toolbar onCreateTask={() => setShowTaskModal(true)} hideCreate={true} />
             <TasksTable columns={allTasksCols} rows={tasks} />
           </>
         );
@@ -540,7 +618,7 @@ const Tasks = () => {
       case 'following':
         return (
           <>
-            <Toolbar onCreateTask={() => setShowTaskModal(true)} />
+            <Toolbar onCreateTask={() => setShowTaskModal(true)} hideCreate={true} />
             <TasksTable columns={allTasksCols} rows={tasks} />
           </>
         );
@@ -588,86 +666,66 @@ const Tasks = () => {
             <Icon d={ICONS.info} size={15} color="#c4b5fd" />
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <button 
-              onClick={() => setShowActionsDropdown(!showActionsDropdown)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                padding: '6px 14px', border: '1px solid #e5e7eb', borderRadius: '6px',
-                background: '#fff', fontSize: '13px', color: '#374151', cursor: 'pointer',
-              }}
-            >
-              Actions
-              <Icon d={ICONS.chevDown} size={14} color="#6b7280" />
-            </button>
+          {view === 'board' && (
+            <div style={{ position: 'relative' }}>
+              <button 
+                onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '6px 14px', border: '1px solid #e5e7eb', borderRadius: '6px',
+                  background: '#fff', fontSize: '13px', color: '#374151', cursor: 'pointer',
+                }}
+              >
+                Actions
+                <Icon d={ICONS.chevDown} size={14} color="#6b7280" />
+              </button>
 
-            {showActionsDropdown && (
-              <div style={{
-                position: 'absolute', top: '100%', right: 0, marginTop: '8px',
-                background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                border: '1px solid #f0f0f7', width: '220px', zIndex: 1000, padding: '8px',
-              }}>
-                <div style={{ display: 'flex', gap: '6px', padding: '8px 12px', borderBottom: '1px solid #f3f4f6', marginBottom: '4px' }}>
-                  {TASK_SET_COLORS.slice(0, 6).map(c => (
-                    <div key={c} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c }} />
+              {showActionsDropdown && (
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                  background: '#fff', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                  border: '1px solid #f0f0f7', width: '220px', zIndex: 1000, padding: '8px',
+                }}>
+                  <div style={{ display: 'flex', gap: '6px', padding: '8px 12px', borderBottom: '1px solid #f3f4f6', marginBottom: '4px' }}>
+                    {TASK_SET_COLORS.slice(0, 6).map(c => (
+                      <div key={c} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c }} />
+                    ))}
+                  </div>
+                  {[
+                    { label: 'Rename', icon: 'rename' },
+                    { label: 'Default settings', icon: 'settings' },
+                    { label: 'Duplicate', icon: 'duplicate' },
+                    { label: 'Copy', icon: 'copy' },
+                    { label: 'Move', icon: 'move' },
+                    { label: 'Save to templates', icon: 'template' },
+                    { label: 'Apply template', icon: 'template' },
+                    { label: 'Export task board', icon: 'export' },
+                    { label: 'Archive task board', icon: 'archive' },
+                    { label: 'Delete task board', icon: 'delete', color: '#ef4444' },
+                  ].map((act) => (
+                    <button
+                      key={act.label}
+                      onClick={() => {
+                        setShowActionsDropdown(false);
+                        if (act.label === 'Delete task board') setShowDeleteModal(true);
+                      }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '8px 12px', borderRadius: '8px', border: 'none',
+                        background: 'none', cursor: 'pointer', fontSize: '13px',
+                        color: act.color || '#374151', textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <Icon d={ICONS[act.icon]} size={14} color={act.color || "#6b7280"} />
+                      {act.label}
+                    </button>
                   ))}
                 </div>
-                {[
-                  { label: 'Rename', icon: 'rename' },
-                  { label: 'Default settings', icon: 'settings' },
-                  { label: 'Duplicate', icon: 'duplicate' },
-                  { label: 'Copy', icon: 'copy' },
-                  { label: 'Move', icon: 'move' },
-                  { label: 'Save to templates', icon: 'template' },
-                  { label: 'Apply template', icon: 'template' },
-                  { label: 'Export task board', icon: 'export' },
-                  { label: 'Archive task board', icon: 'archive' },
-                  { label: 'Delete task board', icon: 'delete', color: '#ef4444' },
-                ].map((act) => (
-                  <button
-                    key={act.label}
-                    onClick={() => {
-                      setShowActionsDropdown(false);
-                      if (act.label === 'Delete task board') setShowDeleteModal(true);
-                    }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '8px 12px', borderRadius: '8px', border: 'none',
-                      background: 'none', cursor: 'pointer', fontSize: '13px',
-                      color: act.color || '#374151', textAlign: 'left',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                  >
-                    <Icon d={ICONS[act.icon]} size={14} color={act.color || "#6b7280"} />
-                    {act.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '12px 20px', borderBottom: '1px solid #e0e0ec',
-          background: '#fff', flexWrap: 'wrap',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#f9fafb', minWidth: '140px' }}>
-            <Icon d={ICONS.search} size={14} color="#9ca3af" />
-            <span style={{ fontSize: '12px', color: '#9ca3af' }}>Search</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', color: '#374151', background: '#fff' }}>
-            <Icon d={ICONS.kanban} size={14} color="#6b7280" />
-            <span>Kanban</span>
-            <Icon d={ICONS.chevDown} size={14} color="#9ca3af" />
-          </div>
-          {['Edit view', 'Filter', 'Order', 'Archived', 'Import / Export'].map(l => (
-            <button key={l} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', border: '1px solid #e5e7eb', borderRadius: '6px', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>
-              <Icon d={ICONS[l.includes('Filter') ? 'filter' : l.includes('Order') ? 'order' : l.includes('Archived') ? 'archive' : l.includes('Export') ? 'export' : 'editView']} size={13} color="#6b7280" />
-              {l}
-            </button>
-          ))}
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -677,14 +735,325 @@ const Tasks = () => {
 
         {/* Create Project Modal */}
         {showProjectModal && (
-          <Modal title="Create New Project" onClose={() => setShowProjectModal(false)}>
-            <form onSubmit={handleCreateProject}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Project Name</label>
-                <input autoFocus value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} placeholder="e.g. Website Redesign" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none', boxSizing: 'border-box' }} />
+          <Modal 
+            title="Create project" 
+            onClose={() => setShowProjectModal(false)}
+            footer={
+              <>
+                <button onClick={() => setShowProjectModal(false)} style={{ background: '#f3f4f6', border: 'none', padding: '10px 24px', borderRadius: '8px', color: '#4b5563', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleCreateProject} style={{ background: '#22c55e', border: 'none', padding: '10px 24px', borderRadius: '8px', color: '#fff', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  Create project <Icon d={ICONS.arrowRight} size={16} color="#fff" />
+                </button>
+              </>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Project name */}
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Project name</label>
+                <input 
+                  autoFocus 
+                  value={newProjectName} 
+                  onChange={(e) => setNewProjectName(e.target.value)} 
+                  placeholder="New project" 
+                  style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', fontWeight: '500', color: '#1f2937' }} 
+                />
               </div>
-              <button type="submit" style={{ width: '100%', padding: '10px', background: '#6d28d9', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>Create Project</button>
-            </form>
+
+              {/* Project members */}
+              <div style={{ position: 'relative' }}>
+                <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Project members</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {selectedMembers.map(m => (
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f3f4f6', padding: '2px 8px', borderRadius: '16px', fontSize: '13px' }}>
+                          {m.name}
+                          <button onClick={() => setSelectedMembers(selectedMembers.filter(sm => sm.id !== m.id))} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, color: '#9ca3af' }}><Icon d={ICONS.close} size={14} /></button>
+                        </div>
+                      ))}
+                      <input 
+                        value={projectMembersInput}
+                        onChange={(e) => setProjectMembersInput(e.target.value)}
+                        placeholder={selectedMembers.length === 0 ? "Select members" : ""}
+                        style={{ border: 'none', outline: 'none', fontSize: '15px', color: '#1f2937', minWidth: '100px', background: 'transparent' }} 
+                      />
+                    </div>
+                  </div>
+                  <Icon d={ICONS.info} size={16} color="#3b82f6" />
+                </div>
+
+                {/* Suggestions dropdown */}
+                {projectMembersInput.trim() && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                    background: '#fff', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    border: '1px solid #e5e7eb', zIndex: 1000, overflow: 'hidden'
+                  }}>
+                    {filteredMembers.map(m => (
+                      <div 
+                        key={m.id}
+                        onClick={() => {
+                          if (!selectedMembers.find(sm => sm.id === m.id)) {
+                            setSelectedMembers([...selectedMembers, m]);
+                          }
+                          setProjectMembersInput('');
+                        }}
+                        style={{ padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f3f4f6' }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#6d28d9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>{m.name[0]}</div>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>{m.name}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>({m.email})</div>
+                        </div>
+                        <Icon d={ICONS.enter} size={14} color="#9ca3af" style={{ marginLeft: 'auto' }} />
+                      </div>
+                    ))}
+                    {/* Create new suggestion */}
+                    <div 
+                      onClick={() => openProfileModal(projectMembersInput)}
+                      style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', color: '#1f2937' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                    >
+                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon d={ICONS.plus} size={14} color="#1f2937" />
+                      </div>
+                      <span style={{ fontSize: '14px', fontWeight: '600' }}>Create {projectMembersInput}</span>
+                      <Icon d={ICONS.enter} size={14} color="#9ca3af" style={{ marginLeft: 'auto' }} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Project client */}
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Project client</label>
+                  <input 
+                    value={projectClient} 
+                    onChange={(e) => setProjectClient(e.target.value)} 
+                    placeholder="Select client" 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#1f2937' }} 
+                  />
+                </div>
+                <Icon d={ICONS.info} size={16} color="#3b82f6" />
+              </div>
+
+              {/* Dates */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Start date</label>
+                  <input 
+                    type="date"
+                    value={startDate} 
+                    onChange={(e) => setStartDate(e.target.value)} 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '14px', color: '#1f2937' }} 
+                  />
+                </div>
+                <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Deadline</label>
+                  <input 
+                    type="date"
+                    value={deadline} 
+                    onChange={(e) => setDeadline(e.target.value)} 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '14px', color: '#1f2937' }} 
+                  />
+                </div>
+              </div>
+
+              {/* More options */}
+              <div style={{ marginTop: '12px' }}>
+                <span style={{ fontSize: '13px', color: '#6b7280', display: 'block', marginBottom: '16px' }}>More options</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px' }}>
+                    <input disabled placeholder="Select template" style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent' }} />
+                  </div>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1f2937' }}>
+                      <Icon d={ICONS.plus} size={14} />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>Add custom field</span>
+                    </div>
+                    <Icon d={ICONS.info} size={16} color="#3b82f6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Create Profile Modal */}
+        {showProfileModal && (
+          <Modal 
+            title="Create profile" 
+            onClose={() => setShowProfileModal(false)}
+            footer={
+              <>
+                <button onClick={() => setShowProfileModal(false)} style={{ 
+                  background: 'none', border: 'none', padding: '10px 24px', 
+                  borderRadius: '8px', color: '#6b7280', fontWeight: '600', 
+                  cursor: 'pointer', fontSize: '15px' 
+                }}>Cancel</button>
+                <button 
+                  onClick={handleCreateProfile} 
+                  style={{ 
+                    background: profileFirstName.trim() ? '#22c55e' : '#f3f4f6', 
+                    border: 'none', padding: '12px 32px', borderRadius: '8px', 
+                    color: profileFirstName.trim() ? '#fff' : '#9ca3af', 
+                    fontWeight: '600', cursor: profileFirstName.trim() ? 'pointer' : 'not-allowed', 
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    transition: 'all 0.2s', fontSize: '15px', minWidth: '240px',
+                    justifyContent: 'center'
+                  }}
+                  disabled={!profileFirstName.trim()}
+                >
+                  {profileFirstName.trim() ? 'Create profile' : 'Enter first name to continue'} <Icon d={ICONS.arrowRight} size={16} color="currentColor" />
+                </button>
+              </>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ flex: 1, padding: '12px 16px', borderRight: '1px solid #e5e7eb' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>First name*</label>
+                  <input 
+                    autoFocus
+                    value={profileFirstName} 
+                    onChange={(e) => setProfileFirstName(e.target.value)} 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827' }} 
+                  />
+                </div>
+                <div style={{ flex: 1, padding: '12px 16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Last name</label>
+                  <input 
+                    value={profileLastName} 
+                    onChange={(e) => setProfileLastName(e.target.value)} 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827' }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                <div 
+                  onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                  style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>User role</label>
+                    <div style={{ fontSize: '15px', color: '#111827', fontWeight: '500' }}>{profileRole || 'Client'}</div>
+                  </div>
+                  <Icon d={ICONS.help} size={16} color="#3b82f6" />
+                </div>
+
+                {showRoleDropdown && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                    background: '#fff', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                    border: '1px solid #e5e7eb', zIndex: 1000, overflow: 'hidden'
+                  }}>
+                    {ROLES.map(role => (
+                      <div 
+                        key={role}
+                        onClick={() => {
+                          setProfileRole(role);
+                          setShowRoleDropdown(false);
+                        }}
+                        style={{ 
+                          padding: '14px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          fontSize: '14px', color: (profileRole || 'Client') === role ? '#111827' : '#6b7280',
+                          background: '#fff', borderBottom: '1px solid #f3f4f6'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                      >
+                        <span>{role}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {role === 'Client' && <Icon d={ICONS.enter} size={14} color="#d1d5db" />}
+                          {(profileRole || 'Client') === role && <Icon d={ICONS.check} size={14} color="#6d28d9" />}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Email address</label>
+                <input 
+                  value={profileEmail} 
+                  onChange={(e) => setProfileEmail(e.target.value)} 
+                  style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827' }} 
+                />
+              </div>
+
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 16px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Phone number</label>
+                <input 
+                  value={profilePhone} 
+                  onChange={(e) => setProfilePhone(e.target.value)} 
+                  style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ flex: 2, padding: '12px 16px', borderRight: '1px solid #e5e7eb' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Company name</label>
+                  <input 
+                    value={profileCompany} 
+                    onChange={(e) => setProfileCompany(e.target.value)} 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827' }} 
+                  />
+                </div>
+                <div style={{ flex: 1, padding: '12px 16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#6b7280', marginBottom: '4px' }}>Role</label>
+                  <input 
+                    value={profileRole} 
+                    onChange={(e) => setProfileRole(e.target.value)} 
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '15px', color: '#111827' }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ border: '1px solid #e5e7eb', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#111827' }}>
+                  <Icon d={ICONS.plus} size={14} />
+                  <span style={{ fontSize: '14px', fontWeight: '600' }}>Add custom field</span>
+                </div>
+                <Icon d={ICONS.help} size={16} color="#3b82f6" />
+              </div>
+
+              <div style={{ marginTop: '12px', borderTop: '1px dashed #e5e7eb', paddingTop: '24px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#9ca3af', display: 'block', marginBottom: '20px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>More options</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <button 
+                        onClick={() => setIsManager(!isManager)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      >
+                        <Icon d={isManager ? ICONS.toggleOn : ICONS.toggleOff} size={32} color={isManager ? '#22c55e' : '#d1d5db'} />
+                      </button>
+                      <span style={{ fontSize: '15px', fontWeight: '600', color: '#374151' }}>Manager</span>
+                      <Icon d={ICONS.help} size={16} color="#3b82f6" />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <button 
+                        onClick={() => setInviteToWorkspace(!inviteToWorkspace)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      >
+                        <Icon d={inviteToWorkspace ? ICONS.toggleOn : ICONS.toggleOff} size={32} color={inviteToWorkspace ? '#22c55e' : '#d1d5db'} />
+                      </button>
+                      <span style={{ fontSize: '15px', fontWeight: '600', color: '#374151' }}>Invite to workspace</span>
+                      <Icon d={ICONS.help} size={16} color="#3b82f6" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </Modal>
         )}
 
