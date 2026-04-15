@@ -15,6 +15,12 @@ const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const AdminLogin = lazy(() => import('./admin/Login'));
 const AdminDashboard = lazy(() => import('./admin/Dashboard'));
 
+// PlutioCopy System - Project Management System
+const PlutioCopyLogin = lazy(() => import('./plutiocopy/pages/PlutioCopyLogin'));
+const PlutioCopyHome = lazy(() => import('./plutiocopy/pages/Home'));
+const PlutioCopyTasks = lazy(() => import('./plutiocopy/pages/Tasks'));
+import { PlutioCopyAuthProvider, usePlutioCopyAuth } from './plutiocopy/context/PlutioCopyAuthContext';
+
 // Workspace (Project Management) - Lazy loaded
 const WorkspaceLogin = lazy(() => import('./workspace/pages/WorkspaceLogin'));
 const SuperAdminDashboard = lazy(() => import('./workspace/pages/SuperAdminDashboard'));
@@ -56,6 +62,14 @@ const WorkspaceProtectedRoute = ({ children, requireSuperAdmin = false }) => {
     return <Navigate to="/workspace/admin" replace />;
   }
 
+  return children;
+};
+
+// PlutioCopy Protected Route Component
+const PlutioCopyProtectedRoute = ({ children }) => {
+  const { user, loading } = usePlutioCopyAuth();
+  if (loading) return <PageLoader />;
+  if (!user) return <Navigate to="/plutiocopy/login" replace />;
   return children;
 };
 
@@ -312,69 +326,94 @@ function App() {
   return (
     <Router>
       <WorkspaceAuthProvider>
-        <BookingModalProvider>
-          <PageSlugsProvider>
-            <ScrollToTop />
-            <Routes>
-          {/* Public Routes - LandingPage3 loads instantly */}
-          <Route path="/" element={<DefaultLandingRouter />} />
+        <PlutioCopyAuthProvider>
+          <BookingModalProvider>
+            <PageSlugsProvider>
+              <ScrollToTop />
+              <Routes>
+            {/* Public Routes - LandingPage3 loads instantly */}
+            <Route path="/" element={<DefaultLandingRouter />} />
 
-          {/* Case study detail - must be before /:slug */}
-          <Route
-            path="/case-studies/:slug"
-            element={<CaseStudyWrapper />}
-          />
+            {/* Case study detail - must be before /:slug */}
+            <Route
+              path="/case-studies/:slug"
+              element={<CaseStudyWrapper />}
+            />
 
-          {/* Footer Preview Route (for visual editor) */}
-          <Route path="/footer-preview" element={<Suspense fallback={<PageLoader />}><FooterPreview /></Suspense>} />
+            {/* Footer Preview Route (for visual editor) */}
+            <Route path="/footer-preview" element={<Suspense fallback={<PageLoader />}><FooterPreview /></Suspense>} />
 
-          {/* Booking Page Route */}
-          <Route path="/book" element={<Suspense fallback={<PageLoader />}><BookingPage /></Suspense>} />
+            {/* Booking Page Route */}
+            <Route path="/book" element={<Suspense fallback={<PageLoader />}><BookingPage /></Suspense>} />
 
-          {/* Slot Change Page Route (WhatsApp link) */}
-          <Route path="/book/change/:token" element={<Suspense fallback={<PageLoader />}><ChangeSlotPage /></Suspense>} />
+            {/* Slot Change Page Route (WhatsApp link) */}
+            <Route path="/book/change/:token" element={<Suspense fallback={<PageLoader />}><ChangeSlotPage /></Suspense>} />
 
-          {/* Admin Routes - /goti/admin */}
-          <Route path="/goti/admin/login" element={<Suspense fallback={<PageLoader />}><AdminLogin /></Suspense>} />
-          <Route
-            path="/goti/admin/*"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              </Suspense>
-            }
-          />
+            {/* Admin Routes - /goti/admin */}
+            <Route path="/goti/admin/login" element={<Suspense fallback={<PageLoader />}><AdminLogin /></Suspense>} />
+            <Route
+              path="/goti/admin/*"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                </Suspense>
+              }
+            />
 
-          {/* Workspace Routes - Project Management System */}
-          <Route path="/workspace/login" element={<Suspense fallback={<PageLoader />}><WorkspaceLogin /></Suspense>} />
-          <Route
-            path="/workspace/super-admin/*"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <WorkspaceProtectedRoute requireSuperAdmin={true}>
-                  <SuperAdminDashboard />
-                </WorkspaceProtectedRoute>
-              </Suspense>
-            }
-          />
-          <Route
-            path="/workspace/admin/*"
-            element={
-              <Suspense fallback={<PageLoader />}>
-                <WorkspaceProtectedRoute>
-                  <WorkspaceAdminDashboard />
-                </WorkspaceProtectedRoute>
-              </Suspense>
-            }
-          />
+            {/* Workspace Routes - Project Management System */}
+            <Route path="/workspace/login" element={<Suspense fallback={<PageLoader />}><WorkspaceLogin /></Suspense>} />
+            <Route
+              path="/workspace/super-admin/*"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <WorkspaceProtectedRoute requireSuperAdmin={true}>
+                    <SuperAdminDashboard />
+                  </WorkspaceProtectedRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/workspace/admin/*"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <WorkspaceProtectedRoute>
+                    <WorkspaceAdminDashboard />
+                  </WorkspaceProtectedRoute>
+                </Suspense>
+              }
+            />
 
-          {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
-          <Route path="/:slug" element={<DynamicPageRouter />} />
-          </Routes>
-          </PageSlugsProvider>
-        </BookingModalProvider>
+            {/* PlutioCopy Routes - NEW System */}
+            <Route path="/plutiocopy/login" element={<Suspense fallback={<PageLoader />}><PlutioCopyLogin /></Suspense>} />
+            <Route
+              path="/plutiocopy/home"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PlutioCopyProtectedRoute>
+                    <PlutioCopyHome />
+                  </PlutioCopyProtectedRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/plutiocopy/tasks/*"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PlutioCopyProtectedRoute>
+                    <PlutioCopyTasks />
+                  </PlutioCopyProtectedRoute>
+                </Suspense>
+              }
+            />
+
+            {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
+            <Route path="/:slug" element={<DynamicPageRouter />} />
+            </Routes>
+            </PageSlugsProvider>
+          </BookingModalProvider>
+        </PlutioCopyAuthProvider>
       </WorkspaceAuthProvider>
     </Router>
   );
