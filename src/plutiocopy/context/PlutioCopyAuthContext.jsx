@@ -16,6 +16,15 @@ export const PlutioCopyAuthProvider = ({ children }) => {
           const res = await workspaceAuthAPI.getMe();
           if (res.data.success) {
             setUser(res.data.data);
+            // Only fetch members after successful authentication
+            try {
+              const membersRes = await plutioContactsAPI.getAll();
+              if (membersRes.data.success) {
+                setMembers(membersRes.data.data);
+              }
+            } catch (error) {
+              console.error('Failed to fetch plutio contacts:', error);
+            }
           }
         } catch (error) {
           console.error('Failed to fetch user:', error);
@@ -26,19 +35,7 @@ export const PlutioCopyAuthProvider = ({ children }) => {
       setLoading(false);
     };
 
-    const fetchMembers = async () => {
-      try {
-        const res = await plutioContactsAPI.getAll();
-        if (res.data.success) {
-          setMembers(res.data.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch plutio contacts:', error);
-      }
-    };
-
     fetchUser();
-    fetchMembers();
   }, []);
 
   const login = async (email, password) => {

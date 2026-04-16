@@ -252,7 +252,12 @@ workspaceApi.interceptors.response.use(
 
     if (error.response?.status === 401 && !skipAutoLogout) {
       localStorage.removeItem('workspace_token');
-      window.location.href = '/workspace/login';
+      // Redirect to the appropriate login page based on current location
+      if (window.location.pathname.startsWith('/plutiocopy')) {
+        window.location.href = '/plutiocopy/login';
+      } else {
+        window.location.href = '/workspace/login';
+      }
     }
     return Promise.reject(error);
   }
