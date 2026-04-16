@@ -422,4 +422,44 @@ export const workspaceMeetingsAPI = {
   exportPDF: (id) => workspaceApi.get(`/workspace/meetings/${id}/export-pdf`, { responseType: 'blob' }),
 };
 
+// Plutio Copy Boards API
+export const plutioBoardsAPI = {
+  getAll: () => workspaceApi.get('/plutio/boards'),
+  getProjects: () => workspaceApi.get('/plutio/boards/projects'),
+  create: (data) => workspaceApi.post('/plutio/boards', data),
+  update: (id, data) => workspaceApi.put(`/plutio/boards/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/plutio/boards/${id}`),
+};
+
+// Plutio Copy Tasks API
+export const plutioTasksAPI = {
+  getAll: () => workspaceApi.get('/plutio/tasks/all'),
+  getByBoard: (boardId) => workspaceApi.get(`/plutio/tasks/board/${boardId}`),
+  create: (boardId, data) => workspaceApi.post(`/plutio/tasks/board/${boardId}`, data),
+  update: (id, data) => workspaceApi.put(`/plutio/tasks/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/plutio/tasks/${id}`),
+};
+
+export const plutioTaskGroupsAPI = {
+  getByBoard: (boardId) => workspaceApi.get(`/plutio/task-groups/board/${boardId}`),
+  create: (boardId, data) => workspaceApi.post(`/plutio/task-groups/board/${boardId}`, data),
+  update: (id, data) => workspaceApi.put(`/plutio/task-groups/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/plutio/task-groups/${id}`),
+};
+
+export const plutioContactsAPI = {
+  getAll: () => workspaceApi.get('/plutio/contacts'),
+  create: (data) => workspaceApi.post('/plutio/contacts', data),
+  update: (id, data) => workspaceApi.put(`/plutio/contacts/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/plutio/contacts/${id}`),
+};
+
+export const plutioCommentsAPI = {
+  getByTask: (taskId) => workspaceApi.get(`/plutio/comments/task/${taskId}`),
+  create: (taskId, formData) => workspaceApi.post(`/plutio/comments/task/${taskId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  delete: (id) => workspaceApi.delete(`/plutio/comments/${id}`),
+};
+
 export default api;

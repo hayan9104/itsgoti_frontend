@@ -1,43 +1,70 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { workspaceAuthAPI, plutioContactsAPI } from '../../services/api';
 
 const PlutioCopyAuthContext = createContext(null);
 
 export const PlutioCopyAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [members, setMembers] = useState([
-    { 
-      id: '1', 
-      name: 'Nand aaa', 
-      email: 'hayanpatel449104@gmail.com', 
-      role: 'Contributor', 
-      company: '', 
-      status: 'Inactive',
-      phone: '9773' 
-    }
-  ]);
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('plutiocopy_user');
-    if (stored) {
-      try { setUser(JSON.parse(stored)); } catch {}
-    }
-    setLoading(false);
+    const fetchUser = async () => {
+      const token = localStorage.getItem('workspace_token');
+      if (token) {
+        try {
+          const res = await workspaceAuthAPI.getMe();
+          if (res.data.success) {
+            setUser(res.data.data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user:', error);
+          localStorage.removeItem('workspace_token');
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+
+    const fetchMembers = async () => {
+      try {
+        const res = await plutioContactsAPI.getAll();
+        if (res.data.success) {
+          setMembers(res.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch plutio contacts:', error);
+      }
+    };
+
+    fetchUser();
+    fetchMembers();
   }, []);
 
   const login = async (email, password) => {
-    if (!email || !password) return { success: false, message: 'Email and password required' };
-    const rawName = email.split('@')[0];
-    const name = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-    const initials = rawName.substring(0, 2).toUpperCase();
-    const userData = { id: '1', name, email, initials };
-    localStorage.setItem('plutiocopy_user', JSON.stringify(userData));
-    setUser(userData);
-    return { success: true };
+    try {
+      const res = await workspaceAuthAPI.login({ email, password });
+      if (res.data.success) {
+        localStorage.setItem('workspace_token', res.data.token);
+        setUser(res.data.user);
+        // Refresh plutio contacts after login
+        const membersRes = await plutioContactsAPI.getAll();
+        if (membersRes.data.success) {
+          setMembers(membersRes.data.data);
+        }
+        return { success: true };
+      }
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Login failed' 
+      };
+    }
+    return { success: false, message: 'Invalid response from server' };
   };
 
   const logout = () => {
-    localStorage.removeItem('plutiocopy_user');
+    localStorage.removeItem('workspace_token');
     setUser(null);
   };
 
