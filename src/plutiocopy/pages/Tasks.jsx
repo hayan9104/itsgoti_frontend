@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PlutioCopyLayout from '../components/PlutioCopyLayout';
 import { usePlutioCopyAuth } from '../context/PlutioCopyAuthContext';
-import { plutioBoardsAPI, plutioTasksAPI, plutioTaskGroupsAPI, plutioCommentsAPI } from '../../services/api';
+import { plutioBoardsAPI, plutioTasksAPI, plutioTaskGroupsAPI, plutioCommentsAPI, plutioTimeEntriesAPI } from '../../services/api';
 
 /* ─── Helpers ─── */
 const Icon = ({ d, size = 16, color = 'currentColor', style = {} }) => (
@@ -75,6 +75,7 @@ const ICONS = {
   circleCheck: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z',
   lightbulb:   'M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z',
   grip:        'M9 11h2v2H9v-2zm4 0h2v2h-2v-2zm-4-4h2v2H9V7zm4 0h2v2h-2V7zm-4 8h2v2H9v-2zm4 0h2v2h-2v-2z',
+  minus:       'M19 13H5v-2h14v2z',
   refresh:     'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
 };
 
@@ -353,19 +354,30 @@ const TasksMiddlePanel = ({ activeView, projects, taskSets, onNavigate, onCreate
 };
 
 /* ─── Toolbar ─── */
-const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_VIEW_FIELDS, setActiveViewFields }) => {
-  const [activeView, setActiveView] = useState('kanban');
+const DATE_PRESETS = ['Today','Tomorrow','Yesterday','Next 7 days','Last 7 days','Next 30 days','Last 30 days','This month','Next month','Last month','This year','Next year','Last year','Custom'];
+
+const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_VIEW_FIELDS, setActiveViewFields, onViewChange, boardView: externalBoardView = 'kanban', members = [], onApplyFilters, activeFilters = [], onRemoveFilter, activeOrder = null, onSetOrder, archivedView = false, onToggleArchived, searchQuery = '', onSearchChange }) => {
+  const [activeView, setActiveView] = useState(externalBoardView);
   const [showKanbanMenu, setShowKanbanMenu] = useState(false);
   const [showOrderMenu, setShowOrderMenu] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [filterBtnRect, setFilterBtnRect] = useState(null);
+  const [valuePickerRect, setValuePickerRect] = useState(null);
+  // Filter rows state
+  const [filterRows, setFilterRows] = useState([]);
+  const [openValuePicker, setOpenValuePicker] = useState(null);
+  const [customDate, setCustomDate] = useState(null); // { rowId, start, end, calYear, calMonth }
   const [showViewEditor, setShowViewEditor] = useState(false);
   const [showAddOption, setShowAddOption] = useState(false);
-  const [archivedActive, setArchivedActive] = useState(false);
+  const archivedActive = archivedView;
   const [showImportExportModal, setShowImportExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [kanbanMenuPos, setKanbanMenuPos] = useState({ top: 0, left: 0 });
   const [orderMenuPos, setOrderMenuPos] = useState({ top: 0, left: 0 });
+  const [hoveredOrderOpt, setHoveredOrderOpt] = useState(null);
+  const [hoveredFilterField, setHoveredFilterField] = useState(null);
+  const [hoveredViewField, setHoveredViewField] = useState(null);
   const kanbanBtnRef = useRef(null);
   const orderBtnRef = useRef(null);
 
@@ -420,7 +432,12 @@ const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_
           background: '#fafafa', minWidth: '160px', marginRight: '6px',
         }}>
           <Icon d={ICONS.search} size={14} color="#9ca3af" />
-          <input placeholder="Search" style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: '#1f2937', width: '100%' }} />
+          <input
+            placeholder="Search"
+            value={searchQuery}
+            onChange={e => onSearchChange && onSearchChange(e.target.value)}
+            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '13px', color: '#1f2937', width: '100%' }}
+          />
         </div>
 
         <div style={{ width: '1px', height: '22px', background: '#e5e7eb', margin: '0 2px' }} />
@@ -446,25 +463,64 @@ const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_
         </button>
 
         {/* Filter */}
-        <button onClick={() => { setShowFilterModal(true); setShowFilterDropdown(false); }} style={tbBtn(showFilterModal)}
+        <button onClick={() => { setFilterRows(activeFilters.length > 0 ? activeFilters : []); setShowFilterModal(true); setShowFilterDropdown(false); }} style={tbBtn(showFilterModal || activeFilters.length > 0)}
           onMouseEnter={(e) => { if (!showFilterModal) e.currentTarget.style.background = '#f5f5fa'; }}
-          onMouseLeave={(e) => { if (!showFilterModal) e.currentTarget.style.background = showFilterModal ? '#eef0fd' : 'transparent'; }}
+          onMouseLeave={(e) => { if (!showFilterModal) e.currentTarget.style.background = (showFilterModal || activeFilters.length > 0) ? '#eef0fd' : 'transparent'; }}
         >
-          <Icon d={ICONS.filter} size={14} color={showFilterModal ? '#4f46e5' : '#6b7280'} /> Filter
+          <Icon d={ICONS.filter} size={14} color={(showFilterModal || activeFilters.length > 0) ? '#4f46e5' : '#6b7280'} /> Filter
         </button>
 
+        {/* Active filter chips */}
+        {activeFilters.map(f => {
+          const getLabel = () => {
+            if (Array.isArray(f.value)) {
+              if (f.value.length === 0) return null;
+              const names = f.value.map(id => {
+                const m = members.find(m => String(m.id || m._id) === String(id));
+                return m ? (m.name || `${m.firstName} ${m.lastName}`) : id;
+              });
+              return `${f.field} is ${names.join(', ')}`;
+            }
+            if (f.value && typeof f.value === 'object' && f.value.start) {
+              const fmt = d => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              return `${f.field} is ${fmt(f.value.start)}–${fmt(f.value.end)}`;
+            }
+            return `${f.field} is ${f.value}`;
+          };
+          const label = getLabel();
+          if (!label) return null;
+          return (
+            <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1f2937', color: '#fff', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+              <span>{label}</span>
+              <button onClick={() => onRemoveFilter && onRemoveFilter(f.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: '0', lineHeight: 1 }}>
+                <Icon d={ICONS.close} size={11} color="#9ca3af" />
+              </button>
+            </div>
+          );
+        })}
+
         {/* Order */}
-        <button ref={orderBtnRef} onClick={openOrderMenu} style={tbBtn(showOrderMenu)}
+        <button ref={orderBtnRef} onClick={openOrderMenu} style={tbBtn(showOrderMenu || !!activeOrder)}
           onMouseEnter={(e) => { if (!showOrderMenu) e.currentTarget.style.background = '#f5f5fa'; }}
-          onMouseLeave={(e) => { if (!showOrderMenu) e.currentTarget.style.background = 'transparent'; }}
+          onMouseLeave={(e) => { if (!showOrderMenu) e.currentTarget.style.background = (showOrderMenu || !!activeOrder) ? '#eef0fd' : 'transparent'; }}
         >
-          <Icon d={ICONS.order} size={14} color={showOrderMenu ? '#4f46e5' : '#6b7280'} /> Order
+          <Icon d={ICONS.order} size={14} color={(showOrderMenu || !!activeOrder) ? '#4f46e5' : '#6b7280'} /> Order
           <Icon d={ICONS.chevDown} size={13} color="#9ca3af" />
         </button>
 
+        {/* Active order chip */}
+        {activeOrder && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#1f2937', color: '#fff', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+            <span>{activeOrder}</span>
+            <button onClick={() => onSetOrder && onSetOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0', lineHeight: 1 }}>
+              <Icon d={ICONS.close} size={11} color="#9ca3af" />
+            </button>
+          </div>
+        )}
+
         {/* Archived */}
         <div style={{ position: 'relative' }}>
-          <button onClick={() => setArchivedActive(v => !v)} style={tbBtn(archivedActive)}
+          <button onClick={() => onToggleArchived && onToggleArchived()} style={tbBtn(archivedActive)}
             onMouseEnter={(e) => { if (!archivedActive) e.currentTarget.style.background = '#f5f5fa'; }}
             onMouseLeave={(e) => { if (!archivedActive) e.currentTarget.style.background = 'transparent'; }}
           >
@@ -492,7 +548,7 @@ const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_
             minWidth: '180px', padding: '6px', overflow: 'hidden',
           }}>
             {VIEW_OPTIONS.map(v => (
-              <button key={v.id} onMouseDown={() => { setActiveView(v.id); setShowKanbanMenu(false); }}
+              <button key={v.id} onMouseDown={() => { setActiveView(v.id); onViewChange && onViewChange(v.id); setShowKanbanMenu(false); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
                   padding: '9px 12px', border: 'none', borderRadius: '8px',
@@ -523,17 +579,17 @@ const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_
             minWidth: '210px', padding: '6px', overflow: 'hidden',
           }}>
             {ORDER_OPTIONS.map((opt, i) => (
-              <button key={opt} onMouseDown={() => setShowOrderMenu(false)}
+              <button key={opt} onMouseDown={() => { onSetOrder && onSetOrder(activeOrder === opt ? null : opt); setShowOrderMenu(false); }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   width: '100%', padding: '9px 12px', border: 'none', borderRadius: '8px',
-                  background: 'none', cursor: 'pointer', fontSize: '14px', color: '#374151', textAlign: 'left',
+                  background: activeOrder === opt ? '#f5f3ff' : 'none', cursor: 'pointer', fontSize: '14px', color: activeOrder === opt ? '#4f46e5' : '#374151', textAlign: 'left',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                onMouseEnter={(e) => { if (activeOrder !== opt) e.currentTarget.style.background = '#f9fafb'; setHoveredOrderOpt(opt); }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = activeOrder === opt ? '#f5f3ff' : 'none'; setHoveredOrderOpt(null); }}
               >
                 <span>{opt}</span>
-                {i === 0 && <Icon d={ICONS.squarePlus} size={15} color="#9ca3af" />}
+                {activeOrder === opt ? <Icon d={ICONS.check} size={14} color="#4f46e5" /> : hoveredOrderOpt === opt && <Icon d={ICONS.squarePlus} size={15} color="#9ca3af" />}
               </button>
             ))}
           </div>
@@ -541,57 +597,268 @@ const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_
       )}
 
       {/* ── Filter modal ── */}
-      {showFilterModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5000 }}
-          onMouseDown={(e) => { if (e.target === e.currentTarget) { setShowFilterModal(false); setShowFilterDropdown(false); } }}
-        >
-          <div style={{ background: '#fff', borderRadius: '16px', width: '520px', maxWidth: '90vw', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827' }}>Filter options</h3>
-              <button onClick={() => { setShowFilterModal(false); setShowFilterDropdown(false); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', display: 'flex', padding: '2px' }}>
-                <Icon d={ICONS.circleClose} size={22} color="#9ca3af" />
-              </button>
-            </div>
-            {/* Add filter option row */}
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowFilterDropdown(v => !v)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                  padding: '12px 16px', border: '1.5px solid #e5e7eb', borderRadius: '10px',
-                  background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#6b7280',
-                  textAlign: 'left', borderColor: showFilterDropdown ? '#6d28d9' : '#e5e7eb',
-                }}>
-                <Icon d={ICONS.squarePlus} size={18} color="#6b7280" />
-                <span>Add filter option</span>
-              </button>
-              {showFilterDropdown && (
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-                  background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)', zIndex: 10, overflow: 'hidden',
-                }}>
-                  {FILTER_FIELDS.map((field, i) => (
-                    <button key={field} onMouseDown={() => setShowFilterDropdown(false)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        width: '100%', padding: '11px 16px', border: 'none',
-                        borderBottom: i < FILTER_FIELDS.length - 1 ? '1px solid #f3f4f6' : 'none',
-                        background: 'none', cursor: 'pointer', fontSize: '14px', color: '#374151', textAlign: 'left',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                    >
-                      {field}
-                      {i === 0 && <Icon d={ICONS.squarePlus} size={15} color="#9ca3af" />}
+      {showFilterModal && (() => {
+        const PERSON_FIELDS = ['Assignee', 'Creator'];
+        const DATE_FIELDS = ['Due date', 'Start date', 'Creation date'];
+        const isPersonField = (f) => PERSON_FIELDS.includes(f);
+        const isDateField = (f) => DATE_FIELDS.includes(f);
+
+        const addRow = (field) => {
+          setFilterRows(prev => [...prev, { id: Date.now() + Math.random(), field, value: null }]);
+          setShowFilterDropdown(false);
+        };
+        const removeRow = (id) => {
+          setFilterRows(prev => prev.filter(r => r.id !== id));
+          if (openValuePicker === id) setOpenValuePicker(null);
+          if (customDate?.rowId === id) setCustomDate(null);
+        };
+        const updateValue = (id, val) => setFilterRows(prev => prev.map(r => r.id === id ? { ...r, value: val } : r));
+
+        const closeModal = () => { setShowFilterModal(false); setShowFilterDropdown(false); setOpenValuePicker(null); setCustomDate(null); };
+
+        const handleApply = () => {
+          onApplyFilters && onApplyFilters(filterRows.filter(r => r.value !== null && r.value !== '' && !(Array.isArray(r.value) && r.value.length === 0)));
+          closeModal();
+        };
+
+        // Custom calendar helpers
+        const calToday = new Date();
+        const calYear = customDate?.calYear ?? calToday.getFullYear();
+        const calMonth = customDate?.calMonth ?? calToday.getMonth();
+        const calFirstDay = new Date(calYear, calMonth, 1).getDay();
+        const calDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+        const calAdjFirst = calFirstDay === 0 ? 6 : calFirstDay - 1;
+        const CAL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+        const renderValueInput = (row) => {
+          if (isPersonField(row.field)) {
+            const selectedIds = Array.isArray(row.value) ? row.value : [];
+            const allMembers = members;
+            const selectedNames = allMembers.filter(m => selectedIds.includes(String(m._id || m.id))).map(m => m.name || `${m.firstName||''} ${m.lastName||''}`.trim()).join(', ');
+            return (
+              <div style={{ position: 'relative' }}>
+                <button onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setValuePickerRect(r); setOpenValuePicker(openValuePicker === row.id ? null : row.id); }}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', textAlign: 'left', fontSize: '13px', color: selectedNames ? '#111827' : '#9ca3af', cursor: 'pointer' }}>
+                  {selectedNames || 'Select…'}
+                </button>
+                {openValuePicker === row.id && valuePickerRect && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 6010 }} onClick={() => setOpenValuePicker(null)} />
+                    <div style={{ position: 'fixed', top: valuePickerRect.bottom + 4, left: valuePickerRect.left, minWidth: Math.max(valuePickerRect.width, 220), background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 6011, maxHeight: `${window.innerHeight - valuePickerRect.bottom - 12}px`, overflowY: 'auto' }}>
+                      {allMembers.length === 0 ? <div style={{ padding: '12px', fontSize: '13px', color: '#9ca3af' }}>No members</div> : allMembers.map(m => {
+                        const mId = String(m._id || m.id);
+                        const mName = (m.name || `${m.firstName||''} ${m.lastName||''}`.trim());
+                        const initial = mName.substring(0,1).toUpperCase();
+                        const checked = selectedIds.includes(mId);
+                        return (
+                          <div key={mId} onClick={() => {
+                            const next = checked ? selectedIds.filter(x => x !== mId) : [...selectedIds, mId];
+                            updateValue(row.id, next);
+                          }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: 'pointer', background: checked ? '#f5f3ff' : '#fff' }}
+                            onMouseEnter={e => e.currentTarget.style.background = checked ? '#f5f3ff' : '#f9fafb'}
+                            onMouseLeave={e => e.currentTarget.style.background = checked ? '#f5f3ff' : '#fff'}>
+                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: m.avatarColor || '#6d28d9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '700', flexShrink: 0 }}>{initial}</div>
+                            <span style={{ fontSize: '13px', color: '#374151', flex: 1 }}>{mName}</span>
+                            {checked && <Icon d={ICONS.check} size={14} color="#4f46e5" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          }
+
+          if (isDateField(row.field)) {
+            const preset = typeof row.value === 'string' ? row.value : (row.value?.label || null);
+            const showCustomPicker = customDate?.rowId === row.id;
+            return (
+              <div style={{ position: 'relative' }}>
+                <button onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setValuePickerRect(r); setOpenValuePicker(openValuePicker === row.id ? null : row.id); }}
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', textAlign: 'left', fontSize: '13px', color: preset ? '#111827' : '#9ca3af', cursor: 'pointer' }}>
+                  {preset ? (preset === 'Custom' && row.value?.start ? `${new Date(row.value.start).getDate()}/${new Date(row.value.start).getMonth()+1} → ${new Date(row.value.end).getDate()}/${new Date(row.value.end).getMonth()+1}` : preset) : 'Select…'}
+                </button>
+                {openValuePicker === row.id && !showCustomPicker && valuePickerRect && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 6010 }} onClick={() => setOpenValuePicker(null)} />
+                    <div style={{ position: 'fixed', top: valuePickerRect.bottom + 4, left: valuePickerRect.left, minWidth: valuePickerRect.width, background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 6011, maxHeight: `${window.innerHeight - valuePickerRect.bottom - 12}px`, overflowY: 'auto' }}>
+                      {DATE_PRESETS.map((p, i) => (
+                        <div key={p} onClick={() => {
+                          if (p === 'Custom') {
+                            setCustomDate({ rowId: row.id, start: null, end: null, calYear: calToday.getFullYear(), calMonth: calToday.getMonth() });
+                            setOpenValuePicker(null);
+                          } else {
+                            updateValue(row.id, p);
+                            setOpenValuePicker(null);
+                          }
+                        }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', cursor: 'pointer', background: preset === p ? '#f5f3ff' : '#fff', borderBottom: i < DATE_PRESETS.length - 1 ? '1px solid #f3f4f6' : 'none', fontSize: '13px', color: '#374151' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                          onMouseLeave={e => e.currentTarget.style.background = preset === p ? '#f5f3ff' : '#fff'}>
+                          {p} {preset === p && <Icon d={ICONS.check} size={13} color="#4f46e5" />}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {/* Custom date range picker */}
+                {showCustomPicker && valuePickerRect && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 6010 }} onClick={() => setCustomDate(null)} />
+                    <div style={{ position: 'fixed', top: valuePickerRect.bottom + 4, left: valuePickerRect.left, background: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 12px 32px rgba(0,0,0,0.15)', zIndex: 6011, padding: '16px', width: '280px' }}>
+                      <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
+                        {['Start','End'].map(lbl => {
+                          const d = lbl === 'Start' ? customDate.start : customDate.end;
+                          return (
+                            <div key={lbl} style={{ flex: 1 }}>
+                              <div style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '2px' }}>{lbl}</div>
+                              <div style={{ fontSize: '12px', color: d ? '#4f46e5' : '#9ca3af' }}>{d ? `${new Date(d).getDate()}/${new Date(d).getMonth()+1}/${new Date(d).getFullYear()}` : 'Please select'}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <button onClick={() => setCustomDate(cd => { const d = new Date(cd.calYear, cd.calMonth - 1); return { ...cd, calYear: d.getFullYear(), calMonth: d.getMonth() }; })} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px' }}><Icon d={ICONS.chevronLeft} size={16} color="#6b7280" /></button>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{CAL_MONTHS[calMonth]} {calYear}</span>
+                        <button onClick={() => setCustomDate(cd => { const d = new Date(cd.calYear, cd.calMonth + 1); return { ...cd, calYear: d.getFullYear(), calMonth: d.getMonth() }; })} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px' }}><Icon d={ICONS.chevronRight} size={16} color="#6b7280" /></button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '10px' }}>
+                        {['M','T','W','T','F','S','S'].map((d,i) => <div key={i} style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', fontWeight: '600', padding: '2px 0' }}>{d}</div>)}
+                        {Array.from({ length: calAdjFirst }).map((_, i) => <div key={`e${i}`} />)}
+                        {Array.from({ length: calDaysInMonth }, (_, i) => i + 1).map(day => {
+                          const d = new Date(calYear, calMonth, day);
+                          const s = customDate.start ? new Date(customDate.start) : null;
+                          const e = customDate.end ? new Date(customDate.end) : null;
+                          const isStart = s && d.toDateString() === s.toDateString();
+                          const isEnd = e && d.toDateString() === e.toDateString();
+                          const inRange = s && e && d >= s && d <= e;
+                          const isToday = d.toDateString() === calToday.toDateString();
+                          return (
+                            <div key={day} onClick={() => {
+                              setCustomDate(cd => {
+                                if (!cd.start || (cd.start && cd.end)) return { ...cd, start: d, end: null };
+                                if (d < new Date(cd.start)) return { ...cd, start: d, end: null };
+                                return { ...cd, end: d };
+                              });
+                            }} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: '50%', cursor: 'pointer', fontSize: '12px', fontWeight: isStart || isEnd ? '700' : '400', background: isStart || isEnd ? '#4f46e5' : inRange ? '#ede9fe' : 'transparent', color: isStart || isEnd ? '#fff' : isToday ? '#4f46e5' : '#374151', border: isToday && !isStart && !isEnd ? '1px solid #4f46e5' : 'none' }}>
+                              {day}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setCustomDate(cd => ({ ...cd, start: null, end: null }))} style={{ flex: 1, padding: '7px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '12px', cursor: 'pointer', color: '#6b7280' }}>Clear</button>
+                        <button onClick={() => {
+                          if (customDate.start && customDate.end) {
+                            updateValue(customDate.rowId, { label: 'Custom', start: customDate.start, end: customDate.end });
+                            setCustomDate(null);
+                          }
+                        }} style={{ flex: 1, padding: '7px', border: 'none', borderRadius: '8px', background: '#22c55e', fontSize: '12px', cursor: 'pointer', color: '#fff', fontWeight: '600' }}>Confirm</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          }
+
+          if (row.field === 'Title') {
+            return (
+              <input value={row.value || ''} onChange={e => updateValue(row.id, e.target.value)}
+                placeholder="Type to search…"
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: 'inherit' }} />
+            );
+          }
+
+          if (row.field === 'Status') {
+            return (
+              <select value={row.value || ''} onChange={e => updateValue(row.id, e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff', cursor: 'pointer', color: row.value ? '#111827' : '#9ca3af' }}>
+                <option value="">Select…</option>
+                {['open','in_progress','done','cancelled'].map(s => <option key={s} value={s}>{s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+              </select>
+            );
+          }
+
+          return (
+            <input value={row.value || ''} onChange={e => updateValue(row.id, e.target.value)}
+              placeholder="Enter value…"
+              style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+          );
+        };
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5000 }}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+            <div style={{ background: '#fff', borderRadius: '16px', width: '580px', maxWidth: '94vw', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827' }}>Filter options</h3>
+                <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
+                  <Icon d={ICONS.circleClose} size={22} color="#9ca3af" />
+                </button>
+              </div>
+              {/* Add filter option */}
+              <div style={{ marginBottom: filterRows.length ? '16px' : '0' }}>
+                <button onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setFilterBtnRect(r); setShowFilterDropdown(v => !v); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '11px 16px', border: `1.5px solid ${showFilterDropdown ? '#6d28d9' : '#e5e7eb'}`, borderRadius: '10px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#6b7280', textAlign: 'left' }}>
+                  <Icon d={ICONS.squarePlus} size={18} color="#6b7280" />
+                  <span>Add filter option</span>
+                </button>
+                {showFilterDropdown && filterBtnRect && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 6000 }} onMouseDown={() => setShowFilterDropdown(false)} />
+                    <div style={{ position: 'fixed', top: filterBtnRect.bottom + 4, left: filterBtnRect.left, width: filterBtnRect.width, background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 6001, maxHeight: `${window.innerHeight - filterBtnRect.bottom - 12}px`, overflowY: 'auto' }}>
+                      {FILTER_FIELDS.map((field, i) => (
+                        <button key={field} onMouseDown={() => addRow(field)}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 16px', border: 'none', borderBottom: i < FILTER_FIELDS.length - 1 ? '1px solid #f3f4f6' : 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#374151', textAlign: 'left' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; setHoveredFilterField(field); }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'none'; setHoveredFilterField(null); }}>
+                          {field}
+                          {hoveredFilterField === field && <Icon d={ICONS.squarePlus} size={15} color="#9ca3af" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* Filter rows */}
+              {filterRows.map((row, idx) => (
+                <div key={row.id}>
+                  {idx > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '10px 0' }}>
+                      <div style={{ flex: 1, height: '1px', background: '#f0f0f8' }} />
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#4f46e5', letterSpacing: '0.05em' }}>AND</span>
+                      <div style={{ flex: 1, height: '1px', background: '#f0f0f8' }} />
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: idx === 0 ? '8px' : 0 }}>
+                    {/* Field selector */}
+                    <select value={row.field} onChange={e => { setFilterRows(prev => prev.map(r => r.id === row.id ? { ...r, field: e.target.value, value: null } : r)); setOpenValuePicker(null); setCustomDate(null); }}
+                      style={{ flex: '0 0 130px', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', background: '#fff', cursor: 'pointer', color: '#374151' }}>
+                      {FILTER_FIELDS.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    {/* Operator */}
+                    <div style={{ flex: '0 0 40px', padding: '8px 4px', fontSize: '13px', color: '#6b7280', textAlign: 'center', fontWeight: '500' }}>Is</div>
+                    {/* Value picker */}
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      {renderValueInput(row)}
+                    </div>
+                    {/* Remove */}
+                    <button onClick={() => removeRow(row.id)} style={{ background: 'none', border: '1.5px solid #ef4444', borderRadius: '6px', cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                      <Icon d={ICONS.minus} size={14} color="#ef4444" />
                     </button>
-                  ))}
+                  </div>
                 </div>
-              )}
+              ))}
+              {/* Footer */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                <button onClick={() => { setFilterRows([]); onApplyFilters && onApplyFilters([]); closeModal(); }} style={{ padding: '10px 24px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', fontSize: '14px', color: '#6b7280', cursor: 'pointer', fontWeight: '500' }}>Save filter</button>
+                <button onClick={handleApply} style={{ padding: '10px 28px', border: 'none', borderRadius: '8px', background: '#22c55e', fontSize: '14px', color: '#fff', cursor: 'pointer', fontWeight: '600' }}>Apply filter</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Import / Export modal ── */}
       {showImportExportModal && !showImportModal && (
@@ -748,11 +1015,11 @@ const Toolbar = ({ onCreateTask, hideCreate = false, activeViewFields = DEFAULT_
                         setShowAddOption(false);
                       }}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '11px 16px', border: 'none', borderBottom: i < hiddenFields.length - 1 ? '1px solid #f3f4f6' : 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#374151', textAlign: 'left' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#f9fafb'; setHoveredViewField(field.id); }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; setHoveredViewField(null); }}
                     >
                       {field.label}
-                      {i === 0 && <Icon d={ICONS.squarePlus} size={15} color="#9ca3af" />}
+                      {hoveredViewField === field.id && <Icon d={ICONS.squarePlus} size={15} color="#9ca3af" />}
                     </button>
                   ))}
                 </div>
@@ -879,8 +1146,1600 @@ const TasksTable = ({ columns, rows, onRowClick }) => (
   </div>
 );
 
+/* ─── Shared section header for all board views ─── */
+const SectionHeader = ({ name }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 20px', background: '#fff', borderBottom: '1px solid #e8e8f0' }}>
+    <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #c4c4d4', flexShrink: 0 }} />
+    <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{name}</span>
+  </div>
+);
+
+/* ─── Shared task row menu items ─── */
+const ROW_MENU_ITEMS = [
+  { label: 'Set cover',         icon: ICONS.duplicate,  action: null },
+  { label: 'Copy',              icon: ICONS.copy,        action: null },
+  { label: 'Move',              icon: ICONS.move,        action: null },
+  { label: 'Copy link',         icon: ICONS.link,        action: null },
+  { label: 'Pin to menu',       icon: ICONS.toggleOn,    action: null },
+  { label: 'Open in new tab',   icon: ICONS.maximize,    action: null },
+  { label: 'Save to templates', icon: ICONS.template,    action: null },
+  { label: 'Archive task',      icon: ICONS.archive,     action: 'archive' },
+  { label: 'Delete task',       icon: ICONS.delete,      action: 'delete', danger: true },
+];
+const ROW_MENU_H = ROW_MENU_ITEMS.length * 36 + 8;
+
+/* ─── Board List View ─── */
+const BoardListView = ({ tasks, taskGroups, currentBoardId, onTaskClick, onTaskCreate, onGroupCreate, onTaskDelete, onTaskArchive }) => {
+  const [activeCreate, setActiveCreate] = useState(null); // null | 'ungrouped' | groupId
+  const [newTitle, setNewTitle] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [rowMenu, setRowMenu] = useState({ taskId: null, pos: { top: 0, left: 0 } });
+
+  const fmt = (d) => { if (!d) return ''; const x = new Date(d); return `${x.getDate()}/${x.getMonth()+1}/${x.getFullYear()}`; };
+  const fmtAgo = (d) => {
+    if (!d) return '';
+    const diff = Date.now() - new Date(d).getTime();
+    const h = Math.round(diff / 3600000);
+    if (h < 1) return 'just now';
+    if (h < 24) return `about ${h} hour${h === 1 ? '' : 's'} ago`;
+    const days = Math.round(diff / 86400000);
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
+  };
+  const past = (d) => d && new Date(d) < new Date();
+  const ungroupedTasks = tasks.filter(t => String(t.taskSetId) === String(currentBoardId) && !t.groupId);
+
+  const closeCreate = () => { setActiveCreate(null); setNewTitle(''); setNewDesc(''); };
+
+  const openRowMenu = (e, taskId) => {
+    e.stopPropagation();
+    if (rowMenu.taskId === taskId) { setRowMenu({ taskId: null, pos: { top: 0, left: 0 } }); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    setRowMenu({
+      taskId,
+      pos: { top: spaceBelow >= ROW_MENU_H ? rect.bottom + 4 : rect.top - ROW_MENU_H - 4, left: rect.right - 192 },
+    });
+  };
+
+  const handleRowMenuAction = async (e, action, taskId) => {
+    e.stopPropagation();
+    setRowMenu({ taskId: null, pos: { top: 0, left: 0 } });
+    if (action === 'delete') {
+      try { await plutioTasksAPI.delete(taskId); onTaskDelete && onTaskDelete(taskId); } catch (err) { console.error(err); }
+    } else if (action === 'archive') {
+      try { await plutioTasksAPI.update(taskId, { archived: true }); onTaskArchive && onTaskArchive(taskId); } catch (err) { console.error(err); }
+    }
+  };
+
+  const handleCreateTask = async (groupId) => {
+    if (!newTitle.trim() || saving) return;
+    setSaving(true);
+    try {
+      const res = await plutioTasksAPI.create(currentBoardId, {
+        title: newTitle.trim(),
+        description: newDesc.trim(),
+        group: groupId || null,
+      });
+      if (res.data.success) {
+        const t = res.data.data;
+        onTaskCreate && onTaskCreate({
+          id: t._id,
+          title: t.title,
+          description: t.description,
+          assignees: t.assignees || [],
+          startDate: t.scheduledDate || '',
+          dueDate: t.dueDate || '',
+          taskSetId: currentBoardId,
+          groupId: groupId || null,
+          number: t.order?.toString().padStart(3, '0') || '001',
+        });
+        setNewTitle(''); setNewDesc('');
+        // keep form open for next task
+      }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || savingGroup) return;
+    setSavingGroup(true);
+    try {
+      const res = await plutioTaskGroupsAPI.create(currentBoardId, { name: newGroupName.trim() });
+      if (res.data.success) {
+        onGroupCreate && onGroupCreate(res.data.data);
+        setNewGroupName(''); setCreatingGroup(false);
+      }
+    } catch (e) { console.error(e); }
+    setSavingGroup(false);
+  };
+
+  const renderCreateForm = (sectionKey, groupId) => {
+    const isActive = activeCreate === sectionKey;
+    if (!isActive) {
+      return (
+        <div onClick={() => setActiveCreate(sectionKey)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', background: '#fff' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+          <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon d={ICONS.plus} size={10} color="#9ca3af" />
+          </div>
+          <span style={{ fontSize: '13px', color: '#9ca3af' }}>Create task</span>
+        </div>
+      );
+    }
+    return (
+      <div style={{ borderBottom: '1px solid #f3f4f6', background: '#fff', position: 'relative' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={closeCreate} />
+        <div style={{ position: 'relative', zIndex: 11, padding: '12px 16px 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+              <Icon d={ICONS.plus} size={10} color="#9ca3af" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <input
+                autoFocus
+                value={newTitle}
+                onChange={e => setNewTitle(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newTitle.trim()) handleCreateTask(groupId);
+                  if (e.key === 'Escape') closeCreate();
+                }}
+                placeholder="Type title or /template"
+                style={{ display: 'block', width: '100%', border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#4f46e5', background: 'transparent', fontFamily: 'inherit', marginBottom: '4px', boxSizing: 'border-box' }}
+              />
+              <input
+                value={newDesc}
+                onChange={e => setNewDesc(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Escape') closeCreate(); }}
+                placeholder="Description"
+                style={{ display: 'block', width: '100%', border: 'none', outline: 'none', fontSize: '12px', color: '#6b7280', background: 'transparent', fontFamily: 'inherit', marginBottom: '8px', boxSizing: 'border-box' }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Icon d={ICONS.calendar} size={15} color="#c4c4d4" />
+                <Icon d={ICONS.clock} size={15} color="#c4c4d4" />
+                <Icon d={ICONS.refresh} size={15} color="#c4c4d4" />
+                {newTitle.trim() && (
+                  <button onClick={() => handleCreateTask(groupId)} disabled={saving}
+                    style={{ marginLeft: 'auto', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {saving ? 'Creating…' : 'Create'} <Icon d={ICONS.enter} size={9} color="#fff" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTaskRow = (task) => {
+    const taskId = task.id || task._id;
+    const assignee = task.assignees?.[0];
+    const assigneeName = assignee ? (assignee.name || `${assignee.firstName||''} ${assignee.lastName||''}`).trim() : null;
+    const initials = assigneeName ? assigneeName.substring(0, 1).toUpperCase() : null;
+    const isHov = hoveredRow === taskId;
+    const isMenuOpen = rowMenu.taskId === taskId;
+    return (
+      <div key={taskId} onClick={() => onTaskClick && onTaskClick(task)}
+        onMouseEnter={() => setHoveredRow(taskId)} onMouseLeave={() => setHoveredRow(null)}
+        style={{ display: 'flex', alignItems: 'center', padding: '0 16px', height: '46px', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', gap: '10px', background: isHov ? '#f9fafb' : '#fff' }}>
+        <div style={{ width: '16px', height: '16px', border: '1.5px solid #d1d5db', borderRadius: '3px', flexShrink: 0 }} />
+        <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{task.title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          {initials && (
+            <div style={{ background: assignee?.avatarColor || '#6d28d9', color: '#fff', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: '700', letterSpacing: '0.04em' }}>
+              {initials}
+            </div>
+          )}
+          {task.startDate && (
+            <span style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+              <Icon d={ICONS.clock} size={12} color="#9ca3af" />Started {fmtAgo(task.startDate)}
+            </span>
+          )}
+          {task.dueDate && (
+            <span style={{ fontSize: '12px', color: past(task.dueDate) ? '#ef4444' : '#6b7280', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+              <Icon d={ICONS.calendar} size={12} color={past(task.dueDate) ? '#ef4444' : '#9ca3af'} />Due {fmt(task.dueDate)}
+            </span>
+          )}
+          <Icon d={ICONS.refresh} size={13} color="#d1d5db" />
+          <Icon d={ICONS.refresh} size={13} color="#d1d5db" />
+          <span style={{ fontSize: '12px', color: '#9ca3af', minWidth: '38px' }}>#{String(task.number || 0).padStart(3, '0')}</span>
+          {/* Three-dots button — visible on hover or when menu open */}
+          <button onClick={(e) => openRowMenu(e, taskId)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px', borderRadius: '4px', display: 'flex', alignItems: 'center', opacity: isHov || isMenuOpen ? 1 : 0, transition: 'opacity 0.15s', flexShrink: 0 }}>
+            <Icon d={ICONS.dotsHorizontal} size={16} color="#6b7280" />
+          </button>
+          <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid #e5e7eb', flexShrink: 0 }} />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', background: '#f5f5f8', padding: '16px 24px 32px' }}>
+      {/* Ungrouped tasks — no section header */}
+      <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e8e8f0', marginBottom: '12px', overflow: 'hidden' }}>
+        {renderCreateForm('ungrouped', null)}
+        {ungroupedTasks.map(task => renderTaskRow(task))}
+      </div>
+      {/* Group sections */}
+      {taskGroups.map(group => {
+        const groupTasks = tasks.filter(t => t.groupId === group._id);
+        return (
+          <div key={group._id} style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e8e8f0', marginBottom: '12px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: group.color || '#ef4444', flexShrink: 0 }} />
+              <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{group.name}</span>
+            </div>
+            {renderCreateForm(group._id, group._id)}
+            {groupTasks.map(task => renderTaskRow(task))}
+          </div>
+        );
+      })}
+      {/* Create task group */}
+      {creatingGroup ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0' }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => { setCreatingGroup(false); setNewGroupName(''); }} />
+          <div style={{ position: 'relative', zIndex: 11, display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', borderRadius: '10px', border: '1px solid #e8e8f0', padding: '8px 16px', minWidth: '260px' }}>
+            <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1.5px solid #d1d5db', flexShrink: 0, background: '#ef4444' }} />
+            <input
+              autoFocus
+              value={newGroupName}
+              onChange={e => setNewGroupName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCreateGroup();
+                if (e.key === 'Escape') { setCreatingGroup(false); setNewGroupName(''); }
+              }}
+              placeholder="Type title or /template"
+              style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', fontWeight: '600', color: '#4f46e5', background: 'transparent', fontFamily: 'inherit' }}
+            />
+            {newGroupName.trim() && (
+              <button onClick={handleCreateGroup} disabled={savingGroup}
+                style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                {savingGroup ? 'Creating…' : 'Create'} <Icon d={ICONS.enter} size={9} color="#fff" />
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div onClick={() => setCreatingGroup(true)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 0', cursor: 'pointer' }}>
+          <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #d1d5db', flexShrink: 0 }} />
+          <span style={{ fontSize: '13px', color: '#9ca3af' }}>Create task group</span>
+        </div>
+      )}
+      {/* Row context menu */}
+      {rowMenu.taskId && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setRowMenu({ taskId: null, pos: { top: 0, left: 0 } })} />
+          <div style={{ position: 'fixed', top: rowMenu.pos.top, left: rowMenu.pos.left, width: '192px', background: '#fff', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0,0,0,0.13)', border: '1px solid #f0f0f5', zIndex: 9999, padding: '4px 0', overflow: 'hidden' }}>
+            {ROW_MENU_ITEMS.map((item, i) => (
+              <button key={i} onClick={(e) => handleRowMenuAction(e, item.action, rowMenu.taskId)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: item.action === null ? 'default' : 'pointer', fontSize: '13px', color: item.danger ? '#ef4444' : '#374151', textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = item.danger ? '#fef2f2' : '#f9fafb'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <Icon d={item.icon} size={14} color={item.danger ? '#ef4444' : '#9ca3af'} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ─── Board Table View ─── */
+const BoardTableView = ({ tasks, taskGroups, currentBoardId, onTaskClick, onTaskCreate, onGroupCreate, onTaskDelete, onTaskArchive }) => {
+  const [activeCreate, setActiveCreate] = useState(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [rowMenu, setRowMenu] = useState({ taskId: null, pos: { top: 0, left: 0 } });
+
+  const fmt = (d) => {
+    if (!d) return '';
+    const x = new Date(d);
+    return `${x.getDate()}/${x.getMonth()+1}/${x.getFullYear()} ${x.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+  };
+  const past = (d) => d && new Date(d) < new Date();
+  const thStyle = { padding: '10px 14px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#9ca3af', borderLeft: '1px solid #ebebf5', whiteSpace: 'nowrap', background: '#fff' };
+  const tdStyle = { padding: '10px 14px', fontSize: '13px', color: '#374151', borderLeft: '1px solid #f0f0f5', verticalAlign: 'middle' };
+
+  const openRowMenu = (e, taskId) => {
+    e.stopPropagation();
+    if (rowMenu.taskId === taskId) { setRowMenu({ taskId: null, pos: { top: 0, left: 0 } }); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    setRowMenu({ taskId, pos: { top: spaceBelow >= ROW_MENU_H ? rect.bottom + 4 : rect.top - ROW_MENU_H - 4, left: rect.right - 192 } });
+  };
+
+  const handleRowMenuAction = async (e, action, taskId) => {
+    e.stopPropagation();
+    setRowMenu({ taskId: null, pos: { top: 0, left: 0 } });
+    if (action === 'delete') {
+      try { await plutioTasksAPI.delete(taskId); onTaskDelete && onTaskDelete(taskId); } catch (err) { console.error(err); }
+    } else if (action === 'archive') {
+      try { await plutioTasksAPI.update(taskId, { archived: true }); onTaskArchive && onTaskArchive(taskId); } catch (err) { console.error(err); }
+    }
+  };
+
+  const handleCreateTask = async (groupId) => {
+    if (!newTitle.trim() || saving) return;
+    setSaving(true);
+    try {
+      const res = await plutioTasksAPI.create(currentBoardId, { title: newTitle.trim(), group: groupId || null });
+      if (res.data.success) {
+        const t = res.data.data;
+        onTaskCreate && onTaskCreate({ id: t._id, title: t.title, description: t.description, assignees: t.assignees || [], startDate: t.scheduledDate || '', dueDate: t.dueDate || '', taskSetId: currentBoardId, groupId: groupId || null, number: t.order?.toString().padStart(3, '0') || '001' });
+        setNewTitle('');
+      }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || savingGroup) return;
+    setSavingGroup(true);
+    try {
+      const res = await plutioTaskGroupsAPI.create(currentBoardId, { name: newGroupName.trim() });
+      if (res.data.success) { onGroupCreate && onGroupCreate(res.data.data); setNewGroupName(''); setCreatingGroup(false); }
+    } catch (e) { console.error(e); }
+    setSavingGroup(false);
+  };
+
+  const ungroupedTasks = tasks.filter(t => String(t.taskSetId) === String(currentBoardId) && !t.groupId);
+
+  const renderSection = (sectionKey, groupId, groupName, groupColor, sectionTasks, isFirst) => (
+    <div key={sectionKey} style={isFirst ? {} : {}}>
+      {/* Group header for non-ungrouped sections */}
+      {groupId && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: '1px solid #f3f4f6', borderTop: '1px solid #e8e8f0', background: '#fff' }}>
+          <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: groupColor || '#ef4444', flexShrink: 0 }} />
+          <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{groupName}</span>
+        </div>
+      )}
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #ebebf5' }}>
+            <th style={{ ...thStyle, borderLeft: 'none', minWidth: '220px', width: '100%' }} />
+            <th style={{ ...thStyle, minWidth: '100px' }}>Project</th>
+            <th style={{ ...thStyle, minWidth: '180px' }}>Assignee</th>
+            <th style={{ ...thStyle, minWidth: '170px' }}>Start date</th>
+            <th style={{ ...thStyle, minWidth: '170px' }}>Due date</th>
+            <th style={{ ...thStyle, minWidth: '120px' }}>Repeats</th>
+          </tr>
+        </thead>
+        <tbody>
+          {/* Create task row */}
+          {activeCreate === sectionKey ? (
+            <tr style={{ borderBottom: '1px solid #f3f4f6', position: 'relative' }}>
+              <td colSpan={6} style={{ padding: 0 }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => { setActiveCreate(null); setNewTitle(''); }} />
+                <div style={{ position: 'relative', zIndex: 11, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px' }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon d={ICONS.plus} size={10} color="#9ca3af" />
+                  </div>
+                  <input autoFocus value={newTitle} onChange={e => setNewTitle(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && newTitle.trim()) handleCreateTask(groupId); if (e.key === 'Escape') { setActiveCreate(null); setNewTitle(''); } }}
+                    placeholder="Type title or /template"
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#4f46e5', background: 'transparent', fontFamily: 'inherit' }} />
+                  {newTitle.trim() && (
+                    <button onClick={() => handleCreateTask(groupId)} disabled={saving}
+                      style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                      {saving ? 'Creating…' : 'Create'} <Icon d={ICONS.enter} size={9} color="#fff" />
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ) : (
+            <tr style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => setActiveCreate(sectionKey)}
+              onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <td colSpan={6} style={{ padding: '10px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon d={ICONS.plus} size={10} color="#9ca3af" />
+                  </div>
+                  <span style={{ fontSize: '13px', color: '#9ca3af' }}>Create task</span>
+                </div>
+              </td>
+            </tr>
+          )}
+          {sectionTasks.map(task => {
+            const tId = task.id || task._id;
+            const isHov = hoveredRow === tId;
+            const isMenuOpen = rowMenu.taskId === tId;
+            return (
+            <tr key={tId} onClick={() => onTaskClick && onTaskClick(task)} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer', background: isHov ? '#f9fafb' : 'transparent' }}
+              onMouseEnter={() => setHoveredRow(tId)} onMouseLeave={() => setHoveredRow(null)}>
+              <td style={{ ...tdStyle, borderLeft: 'none', padding: '10px 14px 10px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '16px', height: '16px', border: '1.5px solid #d1d5db', borderRadius: '3px', flexShrink: 0 }} />
+                  <span style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>{task.title}</span>
+                </div>
+              </td>
+              <td style={tdStyle}><span style={{ fontSize: '12px', color: '#9ca3af' }}>—</span></td>
+              <td style={tdStyle}>
+                {task.assignees?.length > 0 ? task.assignees.slice(0, 2).map((a, i) => {
+                  const name = (a.name || `${a.firstName||''} ${a.lastName||''}`).trim();
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: i < task.assignees.slice(0,2).length - 1 ? '6px' : 0 }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: a.avatarColor || '#6d28d9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '700', flexShrink: 0 }}>
+                        {name.substring(0, 1).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: '12px', color: '#374151' }}>{name}</span>
+                    </div>
+                  );
+                }) : <span style={{ fontSize: '12px', color: '#9ca3af' }}>—</span>}
+              </td>
+              <td style={tdStyle}><span style={{ fontSize: '12px', color: '#374151' }}>{task.startDate ? fmt(task.startDate) : '—'}</span></td>
+              <td style={{ ...tdStyle, color: past(task.dueDate) ? '#ef4444' : '#374151' }}><span style={{ fontSize: '12px' }}>{task.dueDate ? fmt(task.dueDate) : '—'}</span></td>
+              <td style={{ ...tdStyle, textAlign: 'right', paddingRight: '12px' }}>
+                <button onClick={(e) => openRowMenu(e, tId)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 4px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', opacity: isHov || isMenuOpen ? 1 : 0, transition: 'opacity 0.15s' }}>
+                  <Icon d={ICONS.dotsHorizontal} size={16} color="#6b7280" />
+                </button>
+              </td>
+            </tr>
+          );})}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: '#fff' }}>
+      {renderSection('ungrouped', null, null, null, ungroupedTasks, true)}
+      {taskGroups.map(group =>
+        renderSection(group._id, group._id, group.name, group.color, tasks.filter(t => t.groupId === group._id), false)
+      )}
+      {/* Create task group */}
+      <div style={{ padding: '16px 24px' }}>
+        {creatingGroup ? (
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => { setCreatingGroup(false); setNewGroupName(''); }} />
+            <div style={{ position: 'relative', zIndex: 11, display: 'flex', alignItems: 'center', gap: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #e8e8f0', padding: '8px 14px' }}>
+              <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />
+              <input autoFocus value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreateGroup(); if (e.key === 'Escape') { setCreatingGroup(false); setNewGroupName(''); } }}
+                placeholder="Type title or /template"
+                style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', fontWeight: '600', color: '#4f46e5', background: 'transparent', fontFamily: 'inherit', minWidth: '200px' }} />
+              {newGroupName.trim() && (
+                <button onClick={handleCreateGroup} disabled={savingGroup}
+                  style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '4px', padding: '3px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {savingGroup ? 'Creating…' : 'Create'} <Icon d={ICONS.enter} size={9} color="#fff" />
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div onClick={() => setCreatingGroup(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #d1d5db', flexShrink: 0 }} />
+            <span style={{ fontSize: '13px', color: '#9ca3af' }}>Create task group</span>
+          </div>
+        )}
+      </div>
+      {/* Row context menu */}
+      {rowMenu.taskId && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setRowMenu({ taskId: null, pos: { top: 0, left: 0 } })} />
+          <div style={{ position: 'fixed', top: rowMenu.pos.top, left: rowMenu.pos.left, width: '192px', background: '#fff', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0,0,0,0.13)', border: '1px solid #f0f0f5', zIndex: 9999, padding: '4px 0', overflow: 'hidden' }}>
+            {ROW_MENU_ITEMS.map((item, i) => (
+              <button key={i} onClick={(e) => handleRowMenuAction(e, item.action, rowMenu.taskId)}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: item.action === null ? 'default' : 'pointer', fontSize: '13px', color: item.danger ? '#ef4444' : '#374151', textAlign: 'left' }}
+                onMouseEnter={e => e.currentTarget.style.background = item.danger ? '#fef2f2' : '#f9fafb'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <Icon d={item.icon} size={14} color={item.danger ? '#ef4444' : '#9ca3af'} />
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ─── Board Calendar View ─── */
+const BoardCalendarView = ({ tasks }) => {
+  const [monthOffset, setMonthOffset] = useState(0);
+  const today = new Date();
+  const refDate = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const year = refDate.getFullYear();
+  const month = refDate.getMonth();
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  // Monday-first: Mon=0 .. Sun=6
+  const startDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+  const numWeeks = totalCells / 7;
+
+  const firstCellDate = new Date(year, month, 1 - startDow);
+  const cellDate = (idx) => { const d = new Date(firstCellDate); d.setDate(firstCellDate.getDate() + idx); return d; };
+  const dateOnly = (d) => { const r = new Date(d); r.setHours(0,0,0,0); return r; };
+  const sameDay = (a, b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  const todayDate = dateOnly(today);
+
+  // Task spans
+  const taskSpans = tasks.filter(t => t.startDate || t.dueDate).map(t => ({
+    task: t,
+    start: dateOnly(new Date(t.startDate || t.dueDate)),
+    end: dateOnly(new Date(t.dueDate || t.startDate)),
+  }));
+
+  const getWeekBars = (row) => {
+    const weekStart = dateOnly(cellDate(row * 7));
+    const weekEnd = dateOnly(cellDate(row * 7 + 6));
+    return taskSpans
+      .filter(({ start, end }) => start <= weekEnd && end >= weekStart)
+      .map(({ task, start, end }) => ({
+        task,
+        startCol: Math.max(0, Math.round((start - weekStart) / 86400000)),
+        endCol:   Math.min(6, Math.round((end   - weekStart) / 86400000)),
+      }));
+  };
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 24px', borderBottom: '1px solid #e8e8f0', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '17px', fontWeight: '600', color: '#111827' }}>{MONTHS[month]}</span>
+          <span style={{ fontSize: '17px', fontWeight: '300', color: '#6b7280' }}>{year}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <button onClick={() => setMonthOffset(o => o - 1)} style={{ border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon d={ICONS.chevronLeft} size={15} color="#6b7280" />
+          </button>
+          <button onClick={() => setMonthOffset(0)} style={{ border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', borderRadius: '6px', padding: '4px 13px', fontSize: '13px', color: '#374151', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <Icon d={ICONS.refresh} size={12} color="#6b7280" />Today
+          </button>
+          <button onClick={() => setMonthOffset(o => o + 1)} style={{ border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon d={ICONS.chevronRight} size={15} color="#6b7280" />
+          </button>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {/* Day header row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #e8e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
+          {DAYS.map(d => (
+            <div key={d} style={{ padding: '8px 12px', fontSize: '12px', color: '#9ca3af', fontWeight: '500', letterSpacing: '0.05em', borderRight: '1px solid #e8e8f0', textAlign: 'right' }}>{d}</div>
+          ))}
+        </div>
+
+        {/* Week rows */}
+        {Array.from({ length: numWeeks }, (_, row) => {
+          const bars = getWeekBars(row);
+          const maxBar = bars.length;
+          const ROW_MIN_H = Math.max(120, 42 + maxBar * 22 + 8);
+          return (
+            <div key={row} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', position: 'relative', borderBottom: '1px solid #e8e8f0', minHeight: ROW_MIN_H + 'px' }}>
+              {/* Day cells */}
+              {Array.from({ length: 7 }, (_, col) => {
+                const d = cellDate(row * 7 + col);
+                const isThisMonth = d.getMonth() === month;
+                const isToday = sameDay(d, today);
+                return (
+                  <div key={col} style={{ borderRight: col < 6 ? '1px solid #e8e8f0' : 'none', padding: '6px 10px 4px', verticalAlign: 'top', background: isThisMonth ? '#fff' : '#fafafa' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', borderRadius: '50%', background: isToday ? '#4f46e5' : 'transparent', fontSize: '13px', fontWeight: isToday ? '700' : '400', color: isToday ? '#fff' : isThisMonth ? '#374151' : '#c4c4c4', float: 'right' }}>
+                      {d.getDate()}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {/* Task bars — absolute overlay */}
+              <div style={{ position: 'absolute', top: '36px', left: 0, right: 0, pointerEvents: 'none' }}>
+                {bars.map(({ task, startCol, endCol }, bi) => {
+                  const colPct = 100 / 7;
+                  const left = startCol * colPct;
+                  const width = (endCol - startCol + 1) * colPct;
+                  return (
+                    <div key={task.id || task._id} style={{ position: 'absolute', top: bi * 22 + 2 + 'px', left: `calc(${left}% + 3px)`, width: `calc(${width}% - 6px)`, pointerEvents: 'all', zIndex: 2 }}>
+                      <div style={{ background: '#1f2937', color: '#fff', borderRadius: '4px', padding: '3px 8px', fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                        <div style={{ width: '11px', height: '11px', borderRadius: '2px', border: '1.5px solid rgba(255,255,255,0.4)', flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Board Timesheet View ─── */
+/* ── inline date+time picker ── */
+/* ── Plutio-style date+time picker ── */
+const DateTimePicker = ({ value, onChange, onClose, title = 'Date', style: extraStyle = {} }) => {
+  const now = new Date();
+  const parseVal = (v) => { try { if (v) { const d = new Date(v); if (!isNaN(d)) return d; } } catch(e){} return new Date(); };
+  const initial = parseVal(value);
+  const [selYear,  setSelYear]  = useState(initial.getFullYear());
+  const [selMonth, setSelMonth] = useState(initial.getMonth());
+  const [selDay,   setSelDay]   = useState(initial.getDate());
+  const [selHour,  setSelHour]  = useState(initial.getHours() % 12 || 12);
+  const [selMin,   setSelMin]   = useState(initial.getMinutes());
+  const [selAmPm,  setSelAmPm]  = useState(initial.getHours() >= 12 ? 'pm' : 'am');
+
+  const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAY_HEADS = ['M','T','W','T','F','S','S'];
+
+  /* calendar grid — Mon-first, show prev/next month padding dates */
+  const startDow    = (new Date(selYear, selMonth, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(selYear, selMonth + 1, 0).getDate();
+  const prevDays    = new Date(selYear, selMonth, 0).getDate();
+  const cells = [
+    ...Array.from({ length: startDow }, (_, i) => ({ day: prevDays - startDow + 1 + i, otherMonth: true })),
+    ...Array.from({ length: daysInMonth }, (_, i) => ({ day: i + 1, otherMonth: false })),
+  ];
+  while (cells.length % 7 !== 0) cells.push({ day: cells.length - startDow - daysInMonth + 1, otherMonth: true });
+
+  const fmtOut = () => {
+    const h24 = selAmPm === 'am' ? (selHour === 12 ? 0 : selHour) : (selHour === 12 ? 12 : selHour + 12);
+    const d = new Date(selYear, selMonth, selDay, h24, selMin);
+    return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${selHour}:${String(selMin).padStart(2,'0')} ${selAmPm}`;
+  };
+
+  const goToday = () => {
+    const t = new Date();
+    setSelYear(t.getFullYear()); setSelMonth(t.getMonth()); setSelDay(t.getDate());
+    setSelHour(t.getHours() % 12 || 12); setSelMin(t.getMinutes()); setSelAmPm(t.getHours() >= 12 ? 'pm' : 'am');
+  };
+
+  const applyShortcut = (label) => {
+    const base = new Date();
+    if (label === '1 hour')          base.setHours(base.getHours() + 1);
+    else if (label === '2 hours')    base.setHours(base.getHours() + 2);
+    else if (label === '3 hours')    base.setHours(base.getHours() + 3);
+    else if (label === '5 hours')    base.setHours(base.getHours() + 5);
+    else if (label === 'Tomorrow')   base.setDate(base.getDate() + 1);
+    else if (label === 'Next working day') {
+      do { base.setDate(base.getDate() + 1); } while (base.getDay() === 0 || base.getDay() === 6);
+    }
+    setSelYear(base.getFullYear()); setSelMonth(base.getMonth()); setSelDay(base.getDate());
+    setSelHour(base.getHours() % 12 || 12); setSelMin(base.getMinutes()); setSelAmPm(base.getHours() >= 12 ? 'pm' : 'am');
+  };
+
+  /* scrollable column with highlight-row style */
+  const ScrollCol = ({ items, selected, onSelect, fmtItem, showBar = true }) => {
+    const ref = useRef(null);
+    const ITEM_H = 40;
+    useEffect(() => {
+      const idx = items.indexOf(selected);
+      if (ref.current && idx >= 0) ref.current.scrollTop = Math.max(0, idx * ITEM_H - ITEM_H);
+    }, []);
+    return (
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        {showBar && <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '2px', background: '#111827', zIndex: 2, borderRadius: '1px' }} />}
+        <div ref={ref} style={{ width: '54px', height: '220px', overflowY: 'scroll', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
+          <div style={{ height: ITEM_H }} />
+          {items.map((item, i) => {
+            const isSel = item === selected;
+            return (
+              <div key={i} onClick={() => onSelect(item)}
+                style={{ height: ITEM_H, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: isSel ? '700' : '400', color: isSel ? '#111827' : '#9ca3af', cursor: 'pointer', scrollSnapAlign: 'start', borderRadius: '8px', background: isSel ? '#f0f0f0' : 'transparent', margin: '0 4px 0 0' }}>
+                {fmtItem ? fmtItem(item) : String(item).padStart(2,'0')}
+              </div>
+            );
+          })}
+          <div style={{ height: ITEM_H }} />
+        </div>
+      </div>
+    );
+  };
+
+  const SHORTCUTS = ['1 hour','2 hours','3 hours','5 hours','Tomorrow','Next working day'];
+
+  return (
+    <div style={{ position: 'absolute', zIndex: 99999, background: '#fff', borderRadius: '14px', boxShadow: '0 12px 48px rgba(0,0,0,0.18)', border: '1px solid #e5e7eb', width: '520px', ...extraStyle }}
+      onClick={e => e.stopPropagation()}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 10px' }}>
+        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111827' }}>{title}</span>
+        <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', lineHeight: 1 }}>×</button>
+      </div>
+
+      {/* Shortcut pills */}
+      <div style={{ display: 'flex', gap: '6px', padding: '0 20px 12px', flexWrap: 'wrap' }}>
+        {SHORTCUTS.map(s => (
+          <button key={s} onClick={() => applyShortcut(s)}
+            style={{ padding: '5px 12px', border: '1px solid #e5e7eb', borderRadius: '999px', background: '#fff', fontSize: '12px', color: '#374151', cursor: 'pointer', fontWeight: '500', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
+            {s}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', borderTop: '1px solid #f0f0f0' }}>
+        {/* Calendar */}
+        <div style={{ padding: '14px 16px 16px', flex: 1 }}>
+          {/* Month nav */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: '#111827', flex: 1 }}>{MONTHS[selMonth]} {selYear}</span>
+            <button onClick={goToday} style={{ display: 'flex', alignItems: 'center', gap: '5px', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 10px', background: '#fff', fontSize: '12px', color: '#374151', cursor: 'pointer', fontWeight: '500' }}>
+              ⏱ Today
+            </button>
+            <button onClick={() => { if (selMonth===0){setSelMonth(11);setSelYear(y=>y-1);}else setSelMonth(m=>m-1); }} style={{ border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '14px' }}>‹</button>
+            <button onClick={() => { if (selMonth===11){setSelMonth(0);setSelYear(y=>y+1);}else setSelMonth(m=>m+1); }} style={{ border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '14px' }}>›</button>
+          </div>
+
+          {/* Day headers — purple */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', marginBottom: '4px' }}>
+            {DAY_HEADS.map((d, i) => (
+              <div key={i} style={{ textAlign: 'center', fontSize: '12px', fontWeight: '700', color: '#6d28d9', padding: '3px 0' }}>{d}</div>
+            ))}
+          </div>
+
+          {/* Day cells */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: '1px' }}>
+            {cells.map(({ day, otherMonth }, i) => {
+              const isToday = !otherMonth && day === now.getDate() && selMonth === now.getMonth() && selYear === now.getFullYear();
+              const isSel   = !otherMonth && day === selDay;
+              return (
+                <div key={i}
+                  onClick={() => !otherMonth && setSelDay(day)}
+                  style={{ textAlign: 'center', fontSize: '13px', padding: '5px 0', borderRadius: '50%', cursor: otherMonth ? 'default' : 'pointer', background: isSel ? '#4f46e5' : 'transparent', color: isSel ? '#fff' : isToday ? '#4f46e5' : otherMonth ? '#d1d5db' : '#111827', fontWeight: isSel ? '700' : '400', border: isToday && !isSel ? '1.5px solid #4f46e5' : '1.5px solid transparent', boxSizing: 'border-box' }}
+                  onMouseEnter={e => { if (!otherMonth && !isSel) e.currentTarget.style.background = '#f3f4f6'; }}
+                  onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent'; }}>
+                  {day}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Time picker */}
+        <div style={{ borderLeft: '1px solid #f0f0f0', padding: '14px 0 14px 4px', display: 'flex', alignItems: 'flex-start' }}>
+          <ScrollCol items={[12,1,2,3,4,5,6,7,8,9,10,11]} selected={selHour} onSelect={setSelHour} showBar={true} />
+          <ScrollCol items={Array.from({length:60},(_,i)=>i)} selected={selMin} onSelect={setSelMin} fmtItem={v => String(v).padStart(2,'0')} showBar={true} />
+          {/* am/pm — bar on left, stacked */}
+          <div style={{ width: '50px', display: 'flex', flexDirection: 'column', gap: '2px', paddingTop: '80px', position: 'relative' }}>
+            {['am','pm'].map(v => (
+              <div key={v} onClick={() => setSelAmPm(v)}
+                style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: selAmPm===v ? '700' : '400', color: selAmPm===v ? '#111827' : '#9ca3af', background: selAmPm===v ? '#f0f0f0' : 'transparent', margin: '0 4px' }}>
+                {v}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #f0f0f0' }}>
+        <button onClick={() => { onChange(''); onClose(); }} style={{ border: 'none', background: 'none', color: '#6b7280', fontSize: '13px', cursor: 'pointer', fontWeight: '500' }}>Clear</button>
+        <button onClick={() => { onChange(fmtOut()); onClose(); }} style={{ padding: '8px 28px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Confirm</button>
+      </div>
+    </div>
+  );
+};
+
+const BoardTimesheetView = ({ projectName, userName, tasks, members = [], boardId }) => {
+  const [showModal, setShowModal] = useState(false);
+  const [editEntry, setEditEntry] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [savedEntries, setSavedEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showMore, setShowMore] = useState(true);
+  const [openPicker, setOpenPicker] = useState(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showTrackedMenu, setShowTrackedMenu] = useState(false);
+  const [trackedMenuPos, setTrackedMenuPos] = useState({ top: 0, left: 0, width: 0 });
+  const [tick, setTick] = useState(0);
+  const attachRef = useRef(null);
+  const trackedRef = useRef(null);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!boardId) return;
+    setLoading(true);
+    plutioTimeEntriesAPI.getByBoard(boardId)
+      .then(res => setSavedEntries(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [boardId]);
+
+  const now = new Date();
+  const fmtNow = () => `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})}`;
+
+  const newRow = () => ({ id: Date.now() + Math.random(), started: '', finished: '', duration: '00:00' });
+  const [timeRows, setTimeRows] = useState([{ id: 1, started: fmtNow(), finished: '', duration: '00:00' }]);
+  const [form, setForm] = useState({ entryTitle: '', description: '', project: projectName || '', attachment: '', trackedBy: userName || '', category: '', billingRate: '$0.00', billingStatus: 'Unpaid', costRate: '$0.00', costStatus: 'Unpaid' });
+
+  const parseDateStr = (str) => {
+    const m = String(str || '').match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)\s*(am|pm)/i);
+    if (!m) return null;
+    const [,d,mo,y,h,min,ap] = m;
+    let h24 = parseInt(h);
+    if (ap.toLowerCase()==='am' && h24===12) h24=0;
+    else if (ap.toLowerCase()==='pm' && h24!==12) h24+=12;
+    return new Date(parseInt(y), parseInt(mo)-1, parseInt(d), h24, parseInt(min));
+  };
+  const fmtDateStr = (dt) => {
+    if (!dt || isNaN(dt.getTime())) return '';
+    const h = dt.getHours(); const h12 = h % 12 || 12; const ap = h >= 12 ? 'pm' : 'am';
+    return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()} ${h12}:${String(dt.getMinutes()).padStart(2,'0')} ${ap}`;
+  };
+  const parseDuration = (str) => { const m = String(str||'').match(/^(\d+):(\d+)$/); return m ? parseInt(m[1])*60+parseInt(m[2]) : null; };
+  const fmtDuration = (mins) => `${String(Math.floor(Math.abs(mins)/60)).padStart(2,'0')}:${String(Math.abs(mins)%60).padStart(2,'0')}`;
+
+  const updateRow = (id, field, val) => setTimeRows(rows => rows.map(r => {
+    if (r.id !== id) return r;
+    const updated = { ...r, [field]: val };
+    if (field === 'duration') {
+      const mins = parseDuration(val);
+      const start = parseDateStr(r.started);
+      if (mins !== null && start) updated.finished = fmtDateStr(new Date(start.getTime() + mins * 60000));
+    } else if (field === 'finished') {
+      const start = parseDateStr(r.started); const fin = parseDateStr(val);
+      if (start && fin) { const diff = Math.round((fin - start) / 60000); if (diff >= 0) updated.duration = fmtDuration(diff); }
+    } else if (field === 'started') {
+      const start = parseDateStr(val); const mins = parseDuration(r.duration);
+      if (start && mins !== null && mins > 0) updated.finished = fmtDateStr(new Date(start.getTime() + mins * 60000));
+    }
+    return updated;
+  }));
+  const removeRow = (id) => setTimeRows(rows => rows.filter(r => r.id !== id));
+  const addRow = () => setTimeRows(rows => [...rows, newRow()]);
+
+  const resetModal = () => {
+    setShowModal(false); setEditEntry(null); setOpenPicker(null); setConfirmDeleteId(null);
+    setTimeRows([{ id: Date.now(), started: fmtNow(), finished: '', duration: '00:00' }]);
+    setForm(f => ({ ...f, entryTitle: '', description: '', attachment: '' }));
+  };
+
+  const handleCreate = async () => {
+    if (!boardId) return;
+    const title = form.entryTitle.trim() || 'Time entry';
+    try {
+      const res = await plutioTimeEntriesAPI.create(boardId, { title, description: form.description, rows: timeRows, project: form.project, attachment: form.attachment, billingRate: form.billingRate, billingStatus: form.billingStatus, costRate: form.costRate, costStatus: form.costStatus, trackedBy: form.trackedBy, startedAt: new Date().toISOString() });
+      setSavedEntries(prev => [res.data.data, ...prev]);
+    } catch (e) {}
+    resetModal();
+  };
+
+  const handleUpdate = async () => {
+    if (!editEntry) return;
+    const title = form.entryTitle.trim() || 'Time entry';
+    try {
+      const res = await plutioTimeEntriesAPI.update(editEntry._id, { title, description: form.description, rows: timeRows, project: form.project, attachment: form.attachment, billingRate: form.billingRate, billingStatus: form.billingStatus, costRate: form.costRate, costStatus: form.costStatus, trackedBy: form.trackedBy });
+      setSavedEntries(prev => prev.map(e => e._id === editEntry._id ? res.data.data : e));
+    } catch (e) {}
+    resetModal();
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await plutioTimeEntriesAPI.delete(id);
+      setSavedEntries(prev => prev.filter(e => e._id !== id));
+    } catch (e) {}
+    resetModal();
+  };
+
+  const openEdit = (entry) => {
+    setEditEntry(entry);
+    setTimeRows((entry.rows || []).length > 0 ? entry.rows.map(r => ({ ...r, id: Date.now() + Math.random() })) : [{ id: Date.now(), started: '', finished: '', duration: '00:00' }]);
+    setForm(f => ({ ...f, entryTitle: entry.title || '', description: entry.description || '', project: entry.project || '', attachment: entry.attachment || '', billingRate: entry.billingRate || '$0.00', billingStatus: entry.billingStatus || 'Unpaid', costRate: entry.costRate || '$0.00', costStatus: entry.costStatus || 'Unpaid', trackedBy: entry.trackedBy || '' }));
+    setConfirmDeleteId(null);
+    setOpenPicker(null);
+  };
+
+  const projectTasks = tasks || [];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f3f4f6' }}>
+      {/* Fixed date-picker overlay — rendered outside modal overflow */}
+      {openPicker && (() => {
+        const row = timeRows.find(r => r.id === openPicker.rowId);
+        if (!row) return null;
+        return (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 99990 }} onClick={() => setOpenPicker(null)} />
+            <DateTimePicker
+              title={openPicker.field === 'started' ? 'Started' : 'Finished'}
+              value={openPicker.field === 'started' ? row.started : row.finished}
+              style={{ position: 'fixed', top: openPicker.y, left: openPicker.x, zIndex: 99999 }}
+              onChange={v => { updateRow(openPicker.rowId, openPicker.field === 'started' ? 'started' : 'finished', v); setOpenPicker(null); }}
+              onClose={() => setOpenPicker(null)}
+            />
+          </>
+        );
+      })()}
+      {loading ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '14px' }}>Loading...</div>
+      ) : savedEntries.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111827', margin: 0 }}>Project timesheet</h2>
+          <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', margin: 0, maxWidth: '360px', lineHeight: '1.6' }}>
+            Any time tracked on this project will appear here. You can log time now or come back when time has been tracked.
+          </p>
+          <button onClick={() => setShowModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '10px 22px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+            + New time entry
+          </button>
+        </div>
+      ) : (() => {
+        const fmtTimeOnly = (str) => str || '';
+        let totalMins = 0;
+        const nowMs = Date.now(); // tick keeps this fresh
+        const startMs = (e) => new Date(e.startedAt).getTime();
+        savedEntries.forEach(e => { const secs = Math.floor((nowMs - startMs(e)) / 1000); totalMins += Math.floor(secs / 60); });
+        const totalSecs = savedEntries.reduce((sum, e) => sum + Math.floor((nowMs - startMs(e)) / 1000), 0);
+        const fmtLive = (secs) => { const h = Math.floor(secs/3600); const m = Math.floor((secs%3600)/60); const s = secs%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
+        const totalDur = fmtLive(totalSecs);
+        const STAT_COLS = [
+          { label: 'Time tracked', value: totalDur,     bg: '#1e2d4f' },
+          { label: 'Billable',     value: `00:00 (0)`,  bg: '#1e2d4f' },
+          { label: 'Non billable', value: `00:00 (0)`,  bg: '#1e2d4f' },
+          { label: 'Unpaid',       value: `00:00 (0)`,  bg: '#dc2626' },
+          { label: 'Paid',         value: `00:00 (0)`,  bg: '#16a34a' },
+          { label: 'Unpaid costs', value: `00:00 (0)`,  bg: '#dc2626' },
+          { label: 'Paid costs',   value: `00:00 (0)`,  bg: '#16a34a' },
+        ];
+        const TH_COLS = ['Attachment','Started','Finished','Duration','Category','Cost rate','Cost status','Billing rate','Billing status','Tracked by'];
+        return (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+            {/* Stat bar */}
+            <div style={{ display: 'flex', flexShrink: 0 }}>
+              {STAT_COLS.map((s, i) => (
+                <div key={i} style={{ flex: 1, background: s.bg, color: '#fff', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: '7px', borderRight: i < STAT_COLS.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '700', fontFamily: 'monospace' }}>{s.value}</span>
+                  <span style={{ fontSize: '11px', opacity: 0.78, whiteSpace: 'nowrap' }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Section header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+              <Icon d={ICONS.chevDown} size={16} color="#6b7280" />
+              <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Running timers</span>
+              <span style={{ background: '#6d28d9', color: '#fff', borderRadius: '999px', fontSize: '11px', fontWeight: '700', padding: '1px 8px' }}>{savedEntries.length}</span>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => setShowModal(true)} style={{ padding: '6px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>+ New time entry</button>
+            </div>
+
+            {/* Table */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e5e7eb', background: '#fafafa' }}>
+                    <th style={{ padding: '8px 16px', textAlign: 'left', color: '#9ca3af', fontWeight: '500', whiteSpace: 'nowrap', minWidth: '200px', position: 'sticky', left: 0, background: '#fafafa', zIndex: 1 }}></th>
+                    {TH_COLS.map(col => (
+                      <th key={col} style={{ padding: '8px 16px', textAlign: 'left', color: '#9ca3af', fontWeight: '500', whiteSpace: 'nowrap', minWidth: '110px', borderLeft: '1px solid #e5e7eb' }}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {savedEntries.map((e) => {
+                    const row0 = e.rows[0] || {};
+                    return (
+                      <tr key={e.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}
+                        onClick={() => openEdit(e)}
+                        onMouseEnter={ev => ev.currentTarget.style.background = '#fafafa'}
+                        onMouseLeave={ev => ev.currentTarget.style.background = ''}>
+                        <td style={{ padding: '10px 16px', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#fff', zIndex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input type="checkbox" style={{ width: '14px', height: '14px', accentColor: '#6d28d9', cursor: 'pointer' }} />
+                            <button style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', color: '#9ca3af', fontSize: '11px', lineHeight: 1 }}>▶</button>
+                            <button style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '2px', color: '#9ca3af', fontSize: '11px', lineHeight: 1 }}>⏸</button>
+                            <span style={{ color: '#16a34a', fontWeight: '700', fontFamily: 'monospace', fontSize: '13px' }}>{fmtLive(Math.floor((Date.now() - new Date(e.startedAt).getTime()) / 1000))}</span>
+                            <span style={{ color: '#374151', fontWeight: '500' }}>{e.title}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#4f46e5', fontSize: '12px' }}>{row0.attachment || ''}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#374151', whiteSpace: 'nowrap' }}>{fmtTimeOnly(row0.started)}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#374151', whiteSpace: 'nowrap' }}>{fmtTimeOnly(row0.finished)}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#111827', fontWeight: '600' }}>{row0.duration || '00:00'}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#9ca3af' }}></td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#374151' }}>{e.costRate || '$0.00'}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#374151' }}>{e.costStatus || 'Unpaid'}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#374151' }}>{e.billingRate || '$0.00'}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb', color: '#374151' }}>{e.billingStatus || 'Unpaid'}</td>
+                        <td style={{ padding: '10px 16px', borderLeft: '1px solid #e5e7eb' }}>
+                          {e.trackedBy ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ width: '20px', height: '20px', borderRadius: '4px', background: '#6d28d9', color: '#fff', fontSize: '9px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {e.trackedBy.substring(0,2).toUpperCase()}
+                              </div>
+                              <span style={{ fontSize: '12px', color: '#374151', whiteSpace: 'nowrap' }}>{e.trackedBy}</span>
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modal */}
+      {(showModal || editEntry) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => { if (e.target === e.currentTarget) resetModal(); }}>
+          <div style={{ background: '#fff', borderRadius: '12px', width: '520px', maxWidth: '96vw', maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.22)' }}
+            onClick={() => { setOpenPicker(null); setShowAttachMenu(false); }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 14px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#111827' }}>{editEntry ? 'Edit time entry' : 'Create time entry'}</h3>
+              <button onClick={resetModal} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', color: '#9ca3af', lineHeight: 1, padding: '2px 6px' }}>✕</button>
+            </div>
+
+            <div style={{ padding: '0 24px 24px' }}>
+              {/* Time rows */}
+              {timeRows.map((row, idx) => (
+                <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  {/* Started */}
+                  <div style={{ flex: 1 }}>
+                    <div onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setOpenPicker(openPicker?.rowId === row.id && openPicker?.field === 'started' ? null : { rowId: row.id, field: 'started', x: Math.min(r.left, window.innerWidth - 540), y: Math.min(r.bottom + 6, window.innerHeight - 530) }); }}
+                      style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '9px 12px', cursor: 'pointer' }}>
+                      <div style={{ fontSize: '10px', color: '#6d28d9', fontWeight: '600', marginBottom: '2px', letterSpacing: '0.04em' }}>Started</div>
+                      <div style={{ fontSize: '13px', color: row.started ? '#111827' : '#9ca3af' }}>{row.started || '—'}</div>
+                    </div>
+                  </div>
+                  <span style={{ color: '#9ca3af', fontSize: '15px', flexShrink: 0 }}>→</span>
+                  {/* Finished */}
+                  <div style={{ flex: 1 }}>
+                    <div onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setOpenPicker(openPicker?.rowId === row.id && openPicker?.field === 'finished' ? null : { rowId: row.id, field: 'finished', x: Math.min(r.left, window.innerWidth - 540), y: Math.min(r.bottom + 6, window.innerHeight - 530) }); }}
+                      style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '9px 12px', cursor: 'pointer' }}>
+                      <div style={{ fontSize: '10px', color: '#6d28d9', fontWeight: '600', marginBottom: '2px', letterSpacing: '0.04em' }}>Finished</div>
+                      <div style={{ fontSize: '13px', color: row.finished ? '#111827' : '#9ca3af' }}>{row.finished || '—'}</div>
+                    </div>
+                  </div>
+                  {/* Duration */}
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '9px 12px', minWidth: '72px' }}>
+                    <div style={{ fontSize: '10px', color: '#6d28d9', fontWeight: '600', marginBottom: '2px', letterSpacing: '0.04em' }}>Duration</div>
+                    <input value={row.duration}
+                      onChange={e => setTimeRows(rows => rows.map(r => r.id === row.id ? { ...r, duration: e.target.value } : r))}
+                      onBlur={e => updateRow(row.id, 'duration', e.target.value)}
+                      style={{ border: 'none', outline: 'none', fontSize: '13px', fontWeight: '600', color: '#111827', width: '100%', padding: 0, background: 'transparent' }} />
+                  </div>
+                  {/* Remove row */}
+                  <button onClick={() => timeRows.length > 1 && removeRow(row.id)}
+                    style={{ width: '28px', height: '28px', border: '1px solid #e5e7eb', borderRadius: '50%', background: '#fff', cursor: timeRows.length > 1 ? 'pointer' : 'not-allowed', color: '#9ca3af', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    −
+                  </button>
+                </div>
+              ))}
+
+              {/* Add another */}
+              <button onClick={addRow} style={{ display: 'flex', alignItems: 'center', gap: '6px', border: 'none', background: 'none', color: '#6d28d9', fontSize: '13px', cursor: 'pointer', padding: '2px 0', marginBottom: '16px', fontWeight: '500' }}>
+                <span style={{ fontSize: '17px', lineHeight: 1 }}>⊕</span> Add another
+              </button>
+
+              {/* Entry details divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>Entry details</span>
+                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+              </div>
+
+              <input value={form.entryTitle} onChange={e => setForm(f => ({ ...f, entryTitle: e.target.value }))} placeholder="Entry title"
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px', fontSize: '13px', color: '#111827', marginBottom: '10px', outline: 'none', boxSizing: 'border-box' }} />
+
+              <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description of work" rows={2}
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px', fontSize: '13px', color: '#111827', marginBottom: '10px', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+
+              {/* Project + Attachment */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px' }}>
+                  <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em', display: 'flex', justifyContent: 'space-between' }}>
+                    Project <span style={{ color: '#6d28d9', fontSize: '12px' }}>ⓘ</span>
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#111827', fontWeight: '500' }}>{form.project || '—'}</div>
+                </div>
+                {/* Attachment with task dropdown */}
+                <div style={{ position: 'relative' }} ref={attachRef} onClick={e => e.stopPropagation()}>
+                  <div onClick={() => setShowAttachMenu(v => !v)}
+                    style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px', cursor: 'pointer' }}>
+                    <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      Attachment <span style={{ color: '#6d28d9', fontSize: '12px' }}>ⓘ</span>
+                    </div>
+                    <div style={{ fontSize: '13px', color: form.attachment ? '#111827' : '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>{form.attachment || '—'}</span>
+                      {form.attachment && <span style={{ fontSize: '12px', color: '#6d28d9', cursor: 'pointer' }}>⎋</span>}
+                    </div>
+                  </div>
+                  {showAttachMenu && projectTasks.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 99999, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 6px 24px rgba(0,0,0,0.12)', maxHeight: '180px', overflowY: 'auto', marginTop: '4px' }}>
+                      {projectTasks.map(t => (
+                        <div key={t.id || t._id} onClick={() => { setForm(f => ({ ...f, attachment: t.title })); setShowAttachMenu(false); }}
+                          style={{ padding: '9px 13px', fontSize: '13px', color: '#111827', cursor: 'pointer', borderBottom: '1px solid #f5f5f8', display: 'flex', alignItems: 'center', gap: '8px' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <div style={{ width: '11px', height: '11px', borderRadius: '50%', border: '1.5px solid #d1d5db', flexShrink: 0 }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showAttachMenu && projectTasks.length === 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 99999, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', fontSize: '13px', color: '#9ca3af', textAlign: 'center', marginTop: '4px' }}>
+                      No tasks in this project
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tracked by */}
+              <div style={{ position: 'relative', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px', marginBottom: '16px', cursor: 'pointer' }}
+                ref={trackedRef}
+                onClick={(e) => { e.stopPropagation(); const r = trackedRef.current?.getBoundingClientRect(); if (r) setTrackedMenuPos({ top: r.bottom + 4, left: r.left, width: r.width }); setShowTrackedMenu(v => !v); }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.05em' }}>Tracked by</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '4px', background: '#6d28d9', color: '#fff', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {(form.trackedBy || 'U').substring(0,2).toUpperCase()}
+                  </div>
+                  <span style={{ fontSize: '13px', color: '#111827', flex: 1 }}>{form.trackedBy || 'You'}</span>
+                  <Icon d={ICONS.chevDown} size={14} color="#9ca3af" />
+                </div>
+                {showTrackedMenu && (
+                  <>
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 9100 }} onClick={e => { e.stopPropagation(); setShowTrackedMenu(false); }} />
+                    <div style={{ position: 'fixed', top: trackedMenuPos.top, left: trackedMenuPos.left, width: Math.max(trackedMenuPos.width, 240), background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', boxShadow: '0 8px 24px rgba(0,0,0,0.13)', zIndex: 9101, maxHeight: '220px', overflowY: 'auto' }}
+                      onClick={e => e.stopPropagation()}>
+                      {members.length === 0 ? (
+                        <div style={{ padding: '12px', fontSize: '13px', color: '#9ca3af' }}>No members</div>
+                      ) : members.map(m => {
+                        const name = m.name || `${m.firstName || ''} ${m.lastName || ''}`.trim() || m.email || 'Unknown';
+                        const initials = name.substring(0, 2).toUpperCase();
+                        const color = m.avatarColor || '#6d28d9';
+                        const isSelected = form.trackedBy === name;
+                        return (
+                          <div key={m._id || m.id} onClick={() => { setForm(f => ({ ...f, trackedBy: name })); setShowTrackedMenu(false); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 14px', cursor: 'pointer', background: isSelected ? '#f5f3ff' : 'transparent' }}
+                            onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#f9fafb'; }}
+                            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}>
+                            <div style={{ width: '26px', height: '26px', borderRadius: '5px', background: color, color: '#fff', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{initials}</div>
+                            <div>
+                              <div style={{ fontSize: '13px', color: '#111827', fontWeight: isSelected ? '600' : '400' }}>{name}</div>
+                              {m.email && <div style={{ fontSize: '11px', color: '#9ca3af' }}>{m.email}</div>}
+                            </div>
+                            {isSelected && <Icon d={ICONS.check} size={14} color="#6d28d9" style={{ marginLeft: 'auto' }} />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* More options */}
+              <button onClick={() => setShowMore(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '10px', border: 'none', background: 'none', cursor: 'pointer', padding: '0 0 12px', width: '100%', color: '#9ca3af', fontSize: '11px', fontWeight: '600', letterSpacing: '0.06em' }}>
+                <span>More options</span>
+                <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+              </button>
+
+              {showMore && (
+                <>
+                  <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em' }}>Category</div>
+                      <div style={{ fontSize: '13px', color: '#9ca3af' }}>—</div>
+                    </div>
+                    <span style={{ color: '#6d28d9', fontSize: '12px' }}>ⓘ</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px' }}>
+                      <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em' }}>Billing rate</div>
+                      <div style={{ fontSize: '13px', color: '#111827' }}>{form.billingRate}</div>
+                    </div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px' }}>
+                      <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em' }}>Status</div>
+                      <div style={{ fontSize: '13px', color: '#111827' }}>{form.billingStatus}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px' }}>
+                      <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em' }}>Cost rate</div>
+                      <div style={{ fontSize: '13px', color: '#111827' }}>{form.costRate}</div>
+                    </div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '7px', padding: '10px 13px' }}>
+                      <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: '600', marginBottom: '4px', letterSpacing: '0.05em' }}>Status</div>
+                      <div style={{ fontSize: '13px', color: '#111827' }}>{form.costStatus}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                {editEntry ? (
+                  confirmDeleteId === editEntry._id ? (
+                    <button onClick={() => handleDelete(editEntry._id)}
+                      style={{ padding: '10px 20px', border: '1px solid #dc2626', background: '#fef2f2', color: '#dc2626', borderRadius: '7px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                      Are you sure?
+                    </button>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteId(editEntry._id)}
+                      style={{ padding: '10px 20px', border: 'none', background: 'none', color: '#6b7280', fontSize: '14px', fontWeight: '500', cursor: 'pointer', borderRadius: '7px' }}>
+                      Delete
+                    </button>
+                  )
+                ) : (
+                  <button onClick={resetModal} style={{ padding: '10px 24px', border: 'none', background: 'none', color: '#6b7280', fontSize: '14px', fontWeight: '500', cursor: 'pointer', borderRadius: '7px' }}>
+                    Cancel
+                  </button>
+                )}
+                <button onClick={editEntry ? handleUpdate : handleCreate}
+                  style={{ padding: '10px 24px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {editEntry ? 'Update' : 'Create time entry →'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Timeline View ─── */
+const TimelineView = ({ tasks, taskGroups, currentBoardId, onUpdateTask }) => {
+  const [hoveredTaskId, setHoveredTaskId] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [timeUnit, setTimeUnit] = useState('month');
+  const [offset, setOffset] = useState(0);
+  const [localTasks, setLocalTasks] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dateEdit, setDateEdit] = useState(null); // { taskId, field:'start'|'end', pos:{top,left} }
+  const dragRef = useRef(null);
+  const localTasksRef = useRef([]);
+
+  useEffect(() => { setLocalTasks(tasks); localTasksRef.current = tasks; }, [tasks]);
+
+  const today = new Date();
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const SHORT_DAY = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const SHORT_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const getDays = () => {
+    if (timeUnit === 'month') {
+      const r = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+      const n = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate();
+      return Array.from({ length: n }, (_, i) => new Date(r.getFullYear(), r.getMonth(), i + 1));
+    }
+    if (timeUnit === 'week') {
+      const s = new Date(today); s.setDate(today.getDate() - today.getDay() + offset * 7);
+      return Array.from({ length: 7 }, (_, i) => { const d = new Date(s); d.setDate(s.getDate() + i); return d; });
+    }
+    if (timeUnit === 'year') {
+      const yr = today.getFullYear() + offset;
+      return Array.from({ length: 12 }, (_, i) => new Date(yr, i, 1));
+    }
+    return [new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)];
+  };
+
+  const days = getDays();
+  const COL_WIDTH = timeUnit === 'week' ? 120 : timeUnit === 'year' ? 90 : 56;
+  const LEFT_WIDTH = 230;
+  const ROW_H = 80;
+
+  const sod = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const periodStart = sod(days[0]);
+  const msDay = 24 * 60 * 60 * 1000;
+  const msUnit = timeUnit === 'year' ? 30 * msDay : msDay;
+
+  const getBar = (task) => {
+    if (!task.startDate && !task.dueDate) return null;
+    const s = sod(new Date(task.startDate || task.dueDate));
+    const e = sod(new Date(task.dueDate || task.startDate));
+    const rawSOff = Math.round((s - periodStart) / msUnit);
+    const rawEOff = Math.round((e - periodStart) / msUnit);
+    if (rawEOff < 0 || rawSOff >= days.length) return null;
+    return {
+      sOff: Math.max(0, rawSOff),
+      eOff: Math.min(days.length - 1, rawEOff),
+      rawSOff, rawEOff,
+      startDate: new Date(task.startDate || task.dueDate),
+      endDate: new Date(task.dueDate || task.startDate),
+    };
+  };
+
+  const fmtDt = (d) => `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})}`;
+  const todayIdx = days.findIndex(d => sod(d).getTime() === sod(today).getTime());
+
+  const headerLabel = () => {
+    if (timeUnit === 'month') { const r = new Date(today.getFullYear(), today.getMonth() + offset, 1); return `${MONTHS[r.getMonth()]}   ${r.getFullYear()}`; }
+    if (timeUnit === 'week') return `${days[0].getDate()}/${days[0].getMonth()+1} – ${days[6].getDate()}/${days[6].getMonth()+1}/${days[6].getFullYear()}`;
+    if (timeUnit === 'year') return `${today.getFullYear() + offset}`;
+    return days[0].toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+
+  const startDrag = (e, task, bar, type) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const taskId = task.id || task._id;
+    setSelectedTaskId(taskId);
+    setIsDragging(true);
+    dragRef.current = {
+      type, taskId,
+      startX: e.clientX,
+      initSOff: bar.rawSOff,
+      initEOff: bar.rawEOff,
+      colWidth: COL_WIDTH,
+      periodStartMs: periodStart.getTime(),
+      msUnit,
+    };
+
+    const onMove = (ev) => {
+      if (!dragRef.current) return;
+      const delta = Math.round((ev.clientX - dragRef.current.startX) / dragRef.current.colWidth);
+      setLocalTasks(prev => {
+        const updated = prev.map(t => {
+          if ((t.id || t._id) !== dragRef.current.taskId) return t;
+          if (dragRef.current.type === 'move') {
+            const ns = new Date(dragRef.current.periodStartMs + (dragRef.current.initSOff + delta) * dragRef.current.msUnit);
+            const ne = new Date(dragRef.current.periodStartMs + (dragRef.current.initEOff + delta) * dragRef.current.msUnit);
+            return { ...t, startDate: ns.toISOString(), dueDate: ne.toISOString() };
+          } else {
+            const ne = new Date(dragRef.current.periodStartMs + Math.max(dragRef.current.initSOff, dragRef.current.initEOff + delta) * dragRef.current.msUnit);
+            return { ...t, dueDate: ne.toISOString() };
+          }
+        });
+        localTasksRef.current = updated;
+        return updated;
+      });
+    };
+
+    const onUp = () => {
+      setIsDragging(false);
+      const dr = dragRef.current;
+      if (dr) {
+        const final = localTasksRef.current.find(t => (t.id || t._id) === dr.taskId);
+        if (final && onUpdateTask) {
+          onUpdateTask(dr.taskId, dr.type === 'move'
+            ? { scheduledDate: final.startDate, dueDate: final.dueDate }
+            : { dueDate: final.dueDate });
+        }
+      }
+      dragRef.current = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  const sections = [
+    { id: null, name: 'New task group', tasks: localTasks.filter(t => String(t.taskSetId) === String(currentBoardId) && !t.groupId) },
+    ...taskGroups.map(g => ({ id: g._id, name: g.name, tasks: localTasks.filter(t => t.groupId === g._id) })),
+  ];
+
+  /* fixed date-edit picker for timeline — rendered outside any overflow container */
+  const timelineDateEditTask = dateEdit ? localTasks.find(t => (t.id||t._id) === dateEdit.taskId) : null;
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+      {/* Fixed date picker overlay */}
+      {dateEdit && timelineDateEditTask && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99990 }} onClick={() => setDateEdit(null)} />
+          <DateTimePicker
+            title={dateEdit.field === 'start' ? 'Start Date' : 'End Date'}
+            value={dateEdit.field === 'start' ? timelineDateEditTask.startDate : timelineDateEditTask.dueDate}
+            style={{ position: 'fixed', top: Math.min(dateEdit.y, window.innerHeight - 520), left: dateEdit.x, zIndex: 99999 }}
+            onChange={(val) => {
+              if (!val) { setDateEdit(null); return; }
+              const parts = val.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)\s*(am|pm)/i);
+              let iso = '';
+              if (parts) {
+                const [,d,m,y,h,min,ap] = parts;
+                let h24 = parseInt(h); const mins = parseInt(min);
+                if (ap.toLowerCase()==='am' && h24===12) h24=0;
+                else if (ap.toLowerCase()==='pm' && h24!==12) h24+=12;
+                iso = new Date(parseInt(y), parseInt(m)-1, parseInt(d), h24, mins).toISOString();
+              }
+              const field = dateEdit.field;
+              const tId = dateEdit.taskId;
+              setLocalTasks(prev => {
+                const updated = prev.map(t => (t.id||t._id)===tId ? { ...t, [field==='start'?'startDate':'dueDate']: iso } : t);
+                localTasksRef.current = updated;
+                return updated;
+              });
+              if (onUpdateTask && iso) onUpdateTask(tId, field==='start' ? { scheduledDate: iso } : { dueDate: iso });
+              setDateEdit(null);
+            }}
+            onClose={() => setDateEdit(null)}
+          />
+        </>
+      )}
+      {/* Top controls */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 24px', borderBottom: '1px solid #e8e8f0', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button onClick={() => setOffset(o => o - 1)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
+            <Icon d={ICONS.chevronLeft} size={18} color="#6b7280" />
+          </button>
+          <span style={{ fontSize: '17px', fontWeight: '700', color: '#111827', minWidth: '200px', textAlign: 'center' }}>{headerLabel()}</span>
+          <button onClick={() => setOffset(o => o + 1)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
+            <Icon d={ICONS.chevronRight} size={18} color="#6b7280" />
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+          {['Day','Week','Month','Year'].map(u => (
+            <button key={u} onClick={() => { setTimeUnit(u.toLowerCase()); setOffset(0); }}
+              style={{ padding: '5px 11px', border: 'none', borderRadius: '5px', background: timeUnit === u.toLowerCase() ? '#f0f0f8' : 'transparent', color: timeUnit === u.toLowerCase() ? '#4f46e5' : '#6b7280', fontSize: '13px', fontWeight: timeUnit === u.toLowerCase() ? '600' : '400', cursor: 'pointer' }}>{u}
+            </button>
+          ))}
+          <div style={{ width: '1px', height: '20px', background: '#e5e7eb', margin: '0 6px' }} />
+          <button onClick={() => setOffset(0)} style={{ padding: '5px 11px', border: 'none', background: 'none', color: '#6b7280', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <Icon d={ICONS.refresh} size={13} color="#6b7280" />Today
+          </button>
+          <button style={{ padding: '5px 8px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex' }}>
+            <Icon d={ICONS.info} size={14} color="#9ca3af" />
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable grid */}
+      <div style={{ flex: 1, overflow: 'auto', position: 'relative', cursor: isDragging ? 'grabbing' : 'default' }}
+        onClick={() => { setSelectedTaskId(null); setDateEdit(null); }}>
+        {/* Date column headers */}
+        <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 30, background: '#fff', borderBottom: '1px solid #e8e8f0' }}>
+          <div style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH, flexShrink: 0, borderRight: '1px solid #e8e8f0', background: '#fff' }} />
+          {days.map((d, i) => {
+            const isT = i === todayIdx;
+            return (
+              <div key={i} style={{ width: COL_WIDTH, minWidth: COL_WIDTH, flexShrink: 0, textAlign: 'center', padding: '6px 0 5px', borderRight: '1px solid #ebebf5', background: isT ? '#f5f3ff' : 'transparent', position: 'relative' }}>
+                <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '500', lineHeight: 1, marginBottom: '3px' }}>
+                  {timeUnit === 'year' ? SHORT_MON[d.getMonth()] : SHORT_DAY[d.getDay()]}
+                </div>
+                <div style={{ display: 'inline-flex', width: '24px', height: '24px', borderRadius: '50%', alignItems: 'center', justifyContent: 'center', background: isT ? '#4f46e5' : 'transparent', fontSize: '13px', fontWeight: isT ? '700' : '500', color: isT ? '#fff' : '#374151' }}>
+                  {timeUnit === 'year' ? d.getMonth() + 1 : d.getDate()}
+                </div>
+                {isT && <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '1.5px', height: '4px', background: '#4f46e5' }} />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Section rows */}
+        {sections.map(section => {
+          const sectionTasks = section.tasks;
+          return (
+            <div key={section.id || 'ungrouped'} style={{ borderBottom: '1px solid #e8e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', position: 'relative', minHeight: sectionTasks.length === 0 ? '80px' : sectionTasks.length * ROW_H + 'px' }}>
+                {/* Sticky left column */}
+                <div style={{ width: LEFT_WIDTH, minWidth: LEFT_WIDTH, flexShrink: 0, borderRight: '1px solid #e8e8f0', position: 'sticky', left: 0, zIndex: 20, background: '#fff', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f0f0f8' }}>
+                    <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '1.5px solid #c4c4d4', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>{section.name}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#9ca3af', background: '#f0f0f8', borderRadius: '999px', padding: '1px 7px' }}>{sectionTasks.length}</span>
+                  </div>
+                  {sectionTasks.map(task => {
+                    const taskId = task.id || task._id;
+                    const isActive = hoveredTaskId === taskId || selectedTaskId === taskId;
+                    return (
+                      <div key={taskId} style={{ height: ROW_H, padding: '0 16px 0 28px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f5f5f8', background: isActive ? '#fafafa' : '#fff', overflow: 'hidden' }}>
+                        <div style={{ width: '14px', height: '14px', borderRadius: '50%', border: '1.5px solid #d1d5db', flexShrink: 0 }} />
+                        <span style={{ fontSize: '12px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
+                      </div>
+                    );
+                  })}
+                  {sectionTasks.length === 0 && <div style={{ flex: 1 }} />}
+                </div>
+
+                {/* Right grid area */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                  {(sectionTasks.length > 0 ? sectionTasks : [null]).map((task, ti) => {
+                    const taskId = task ? (task.id || task._id) : 'empty';
+                    const isHovered = hoveredTaskId === taskId;
+                    const isSelected = selectedTaskId === taskId;
+                    const isExpanded = isHovered || isSelected;
+                    const bar = task ? getBar(task) : null;
+
+                    return (
+                      <div key={taskId}
+                        style={{ height: ti === 0 && sectionTasks.length === 0 ? '80px' : ROW_H, display: 'flex', position: 'relative', borderBottom: ti < (sectionTasks.length || 1) - 1 ? '1px solid #f5f5f8' : 'none' }}
+                        onMouseEnter={() => task && setHoveredTaskId(taskId)}
+                        onMouseLeave={() => { if (!isDragging) setHoveredTaskId(null); }}>
+
+                        {/* Day background cells */}
+                        {days.map((d, i) => {
+                          const isT = i === todayIdx;
+                          return <div key={i} style={{ width: COL_WIDTH, minWidth: COL_WIDTH, height: '100%', borderRight: '1px solid #ebebf5', background: isT ? 'rgba(79,70,229,0.03)' : 'transparent', flexShrink: 0 }} />;
+                        })}
+
+                        {/* Today line */}
+                        {todayIdx >= 0 && (
+                          <div style={{ position: 'absolute', top: 0, bottom: 0, left: todayIdx * COL_WIDTH + COL_WIDTH / 2, width: '1.5px', background: '#4f46e5', opacity: 0.25, pointerEvents: 'none', zIndex: 1 }} />
+                        )}
+
+                        {/* Task bar */}
+                        {bar && task && (() => {
+                          const PILL_W = 8;
+                          const CARD_MIN_W = 170;
+                          const spanW = (bar.eOff - bar.sOff + 1) * COL_WIDTH - 4;
+                          const expandedW = Math.max(CARD_MIN_W, spanW);
+
+                          const pillLeft = bar.sOff * COL_WIDTH + Math.floor(COL_WIDTH / 2) - Math.floor(PILL_W / 2);
+                          const cardLeft = bar.sOff * COL_WIDTH + 4;
+
+                          const barBg = isSelected ? '#312e81' : isHovered ? '#4338ca' : 'rgba(87,78,198,0.72)';
+                          const multiDay = bar.eOff !== bar.sOff;
+
+                          return (
+                            <div
+                              onClick={(e) => { e.stopPropagation(); if (!isDragging) { setSelectedTaskId(isSelected ? null : taskId); setDateEdit(null); } }}
+                              onMouseDown={isExpanded ? (e) => startDrag(e, task, bar, 'move') : undefined}
+                              style={{
+                                position: 'absolute',
+                                top: '50%', transform: 'translateY(-50%)',
+                                left: isExpanded ? cardLeft : pillLeft,
+                                width: isExpanded ? expandedW : PILL_W,
+                                height: isExpanded ? '34px' : '30px',
+                                background: barBg,
+                                borderRadius: isExpanded ? '7px' : '3px',
+                                transition: isDragging ? 'none' : 'left 0.17s ease, width 0.17s ease, height 0.15s ease, border-radius 0.15s ease, background 0.12s ease',
+                                zIndex: isExpanded ? 10 : 2,
+                                display: 'flex', alignItems: 'center',
+                                overflow: 'visible', whiteSpace: 'nowrap',
+                                boxShadow: isExpanded ? '0 3px 16px rgba(49,46,129,0.28)' : '0 1px 4px rgba(87,78,198,0.35)',
+                                cursor: isDragging ? 'grabbing' : isExpanded ? 'grab' : 'pointer',
+                                userSelect: 'none',
+                              }}>
+                              {isExpanded && (
+                                <>
+                                  <div style={{ flex: 1, padding: '0 8px 0 10px', overflow: 'hidden', minWidth: 0 }}>
+                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
+                                      {task.title}
+                                    </div>
+                                    {/* Clickable date labels open picker */}
+                                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.80)', marginTop: '2px', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <span onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setDateEdit(de => de?.taskId === taskId && de?.field === 'start' ? null : { taskId, field: 'start', x: Math.min(r.left, window.innerWidth - 540), y: r.bottom + 6 }); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>{fmtDt(bar.startDate)}</span>
+                                      {multiDay && <><span>→</span><span onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setDateEdit(de => de?.taskId === taskId && de?.field === 'end' ? null : { taskId, field: 'end', x: Math.min(r.left, window.innerWidth - 540), y: r.bottom + 6 }); }} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>{fmtDt(bar.endDate)}</span></>}
+                                    </div>
+                                  </div>
+                                  {/* Resize handle */}
+                                  <div
+                                    onMouseDown={(e) => { e.stopPropagation(); startDrag(e, task, bar, 'resize'); }}
+                                    style={{ width: '12px', height: '100%', flexShrink: 0, cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: '0 7px 7px 0' }}>
+                                    <div style={{ width: '2px', height: '14px', background: 'rgba(255,255,255,0.55)', borderRadius: '1px' }} />
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 /* ─── Task Card Component ─── */
-const TaskCard = ({ task, onClick, onDelete }) => {
+const TaskCard = ({ task, onClick, onDelete, onArchive }) => {
   const [hoveredDate, setHoveredDate] = useState(null); // 'start' | 'due' | null
   const [showMenu, setShowMenu] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
@@ -894,7 +2753,7 @@ const TaskCard = ({ task, onClick, onDelete }) => {
     { label: 'Pin to menu',       icon: ICONS.toggleOn,    action: null },
     { label: 'Open in new tab',   icon: ICONS.maximize,    action: null },
     { label: 'Save to templates', icon: ICONS.template,    action: null },
-    { label: 'Archive task',      icon: ICONS.archive,     action: null },
+    { label: 'Archive task',      icon: ICONS.archive,     action: 'archive' },
     { label: 'Delete task',       icon: ICONS.delete,      action: 'delete', danger: true },
   ];
 
@@ -917,6 +2776,8 @@ const TaskCard = ({ task, onClick, onDelete }) => {
     setShowMenu(false);
     if (item.action === 'delete' && onDelete) {
       onDelete(task.id || task._id);
+    } else if (item.action === 'archive') {
+      try { await plutioTasksAPI.update(task.id || task._id, { archived: true }); onArchive && onArchive(task.id || task._id); } catch (err) { console.error(err); }
     }
   };
 
@@ -1005,7 +2866,7 @@ const TaskCard = ({ task, onClick, onDelete }) => {
                   zIndex: task.assignees.length - idx
                 }}
               >
-                {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 2).toUpperCase()}
+                {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 1).toUpperCase()}
               </div>
             ))
           ) : (
@@ -1459,7 +3320,7 @@ const AssigneePicker = ({ members, selectedIds, onSelect, onClose }) => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: m.avatarColor || '#6d28d9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '700' }}>
-                  {(m.name || `${m.firstName} ${m.lastName}`).substring(0, 2).toUpperCase()}
+                  {(m.name || `${m.firstName} ${m.lastName}`).substring(0, 1).toUpperCase()}
                 </div>
                 {m.name || `${m.firstName} ${m.lastName}`}
               </div>
@@ -1669,7 +3530,7 @@ const TaskDrawer = ({ task, onClose, onUpdateTask, onOpenDatePicker, members = [
                 comments.map(c => (
                   <div key={c._id} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: c.author?.avatarColor || '#6d28d9', color: '#fff', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {(c.author?.name || 'U').substring(0, 2).toUpperCase()}
+                      {(c.author?.name || 'U').substring(0, 1).toUpperCase()}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -2097,7 +3958,7 @@ const TaskDrawer = ({ task, onClose, onUpdateTask, onOpenDatePicker, members = [
                     localAssignees.map((asg, idx) => (
                       <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: asg.avatarColor || '#6d28d9', color: '#fff', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 2).toUpperCase()}
+                          {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 1).toUpperCase()}
                         </div>
                         <span style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>{asg.name || `${asg.firstName} ${asg.lastName}`}</span>
                       </div>
@@ -2141,7 +4002,7 @@ const TaskDrawer = ({ task, onClose, onUpdateTask, onOpenDatePicker, members = [
                   localFollowers.map((flw, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: flw.avatarColor || '#6d28d9', color: '#fff', fontSize: '10px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {(flw.name || `${flw.firstName} ${flw.lastName}`).substring(0, 2).toUpperCase()}
+                        {(flw.name || `${flw.firstName} ${flw.lastName}`).substring(0, 1).toUpperCase()}
                       </div>
                       <span style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>{flw.name || `${flw.firstName} ${flw.lastName}`}</span>
                     </div>
@@ -2330,9 +4191,20 @@ const Tasks = () => {
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskProject, setNewTaskProject] = useState('');
 
+  // Task Boards (sub-boards within a project)
+  const [projectBoards, setProjectBoards] = useState([]);
+  const [activeSubBoardId, setActiveSubBoardId] = useState(null);
+  const [showCreateBoardPopup, setShowCreateBoardPopup] = useState(false);
+  const [newBoardName, setNewBoardName] = useState('New task board');
+  const [newBoardColor, setNewBoardColor] = useState('#6d28d9');
+  const [boardMenu, setBoardMenu] = useState(null); // { boardId, rect }
+  const [renamingBoardId, setRenamingBoardId] = useState(null);
+  const [renameBoardName, setRenameBoardName] = useState('');
+
   // Task Groups State
   const [taskGroups, setTaskGroups] = useState([]);
   const [showGroupCreate, setShowGroupCreate] = useState(false);
+  const [groupMenu, setGroupMenu] = useState(null); // { id, rect }
   const [newGroupName, setNewGroupName] = useState('');
 
   // Inline Task States — inlineCreateGroupId: undefined=closed, null=standalone, string=groupId
@@ -2347,6 +4219,132 @@ const Tasks = () => {
 
   // View Editor State
   const [activeViewFields, setActiveViewFields] = useState(DEFAULT_VIEW_FIELDS);
+  // Board view type: kanban | list | table | calendar | timeline
+  const [boardView, setBoardView] = useState('kanban');
+  // Project section tab (Tasks | Calendar | Timesheet | ...)
+  const ALL_PROJECT_TABS = ['Tasks', 'Calendar', 'Timesheet', 'Transactions', 'Invoices', 'Subscriptions', 'Proposals', 'Contracts', 'Conversations', 'Forms', 'Files'];
+  const getMenuSettings = (bid) => {
+    try { const raw = localStorage.getItem(`projectMenu_${bid}`); if (raw) return JSON.parse(raw); } catch(e) {}
+    return { visibleTabs: [...ALL_PROJECT_TABS], landingPage: 'Tasks' };
+  };
+  const [activeProjectTab, setActiveProjectTab] = useState('Tasks');
+  const [showMenuEditor, setShowMenuEditor] = useState(false);
+  const [menuAddOpen, setMenuAddOpen] = useState(false);
+  const [menuSettings, setMenuSettings] = useState({ visibleTabs: [...ALL_PROJECT_TABS], landingPage: 'Tasks' });
+  const saveMenuSettings = (settings) => {
+    setMenuSettings(settings);
+    try { localStorage.setItem(`projectMenu_${currentBoardId}`, JSON.stringify(settings)); } catch(e) {}
+  };
+
+  // Filter State
+  const [activeFilters, setActiveFilters] = useState([]);
+
+  // Order State
+  const [activeOrder, setActiveOrder] = useState(null);
+
+  // Archived State
+  const [archivedView, setArchivedView] = useState(false);
+
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const applyFilters = (taskList, filters) => {
+    if (!filters || !filters.length) return taskList;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const matchDate = (taskDate, preset) => {
+      if (!taskDate) return false;
+      const d = new Date(taskDate); d.setHours(0, 0, 0, 0);
+      if (preset && typeof preset === 'object' && preset.start && preset.end) {
+        const s = new Date(preset.start); s.setHours(0,0,0,0);
+        const e = new Date(preset.end); e.setHours(0,0,0,0);
+        return d >= s && d <= e;
+      }
+      const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+      const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+      switch (preset) {
+        case 'Today': return d.getTime() === today.getTime();
+        case 'Tomorrow': return d.getTime() === tomorrow.getTime();
+        case 'Yesterday': return d.getTime() === yesterday.getTime();
+        case 'Next 7 days': { const e = new Date(today); e.setDate(today.getDate() + 7); return d >= today && d <= e; }
+        case 'Last 7 days': { const s = new Date(today); s.setDate(today.getDate() - 7); return d >= s && d <= today; }
+        case 'Next 30 days': { const e = new Date(today); e.setDate(today.getDate() + 30); return d >= today && d <= e; }
+        case 'Last 30 days': { const s = new Date(today); s.setDate(today.getDate() - 30); return d >= s && d <= today; }
+        case 'This month': return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+        case 'Next month': { const nm = new Date(today.getFullYear(), today.getMonth() + 1, 1); return d.getMonth() === nm.getMonth() && d.getFullYear() === nm.getFullYear(); }
+        case 'Last month': { const lm = new Date(today.getFullYear(), today.getMonth() - 1, 1); return d.getMonth() === lm.getMonth() && d.getFullYear() === lm.getFullYear(); }
+        case 'This year': return d.getFullYear() === today.getFullYear();
+        case 'Next year': return d.getFullYear() === today.getFullYear() + 1;
+        case 'Last year': return d.getFullYear() === today.getFullYear() - 1;
+        default: return false;
+      }
+    };
+    return taskList.filter(task => filters.every(f => {
+      if (!f.value && f.value !== 0) return true;
+      if (Array.isArray(f.value) && f.value.length === 0) return true;
+      switch (f.field) {
+        case 'Assignee':
+          return Array.isArray(f.value) && f.value.length > 0
+            ? (task.assignees || []).some(a => f.value.includes(String(a._id || a.id || a)))
+            : true;
+        case 'Creator':
+          return Array.isArray(f.value) && f.value.length > 0
+            ? f.value.includes(String(task.createdBy?._id || task.createdBy))
+            : true;
+        case 'Due date': return matchDate(task.dueDate, f.value);
+        case 'Start date': return matchDate(task.startDate, f.value);
+        case 'Creation date': return matchDate(task.createdAt, f.value);
+        case 'Title':
+          return typeof f.value === 'string' && f.value.trim()
+            ? (task.title || '').toLowerCase().includes(f.value.toLowerCase())
+            : true;
+        case 'Status':
+          return f.value ? (task.status || 'open') === f.value : true;
+        default: return true;
+      }
+    }));
+  };
+
+  const visibleTasks = archivedView ? tasks.filter(t => t.archived) : tasks.filter(t => !t.archived);
+  const searchedTasks = searchQuery.trim()
+    ? visibleTasks.filter(t => (t.title || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : visibleTasks;
+  const filteredTasks = applyFilters(searchedTasks, activeFilters);
+
+  const sortTasks = (taskList, order) => {
+    if (!order) return taskList;
+    const sorted = [...taskList];
+    switch (order) {
+      case 'Name (alphabetically)':
+        sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        break;
+      case 'Creation date':
+        sorted.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+        break;
+      case 'Due date':
+        sorted.sort((a, b) => {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        });
+        break;
+      case 'Completion date':
+        sorted.sort((a, b) => {
+          const aD = a.status === 'done' ? new Date(a.updatedAt || 0) : null;
+          const bD = b.status === 'done' ? new Date(b.updatedAt || 0) : null;
+          if (!aD && !bD) return 0;
+          if (!aD) return 1;
+          if (!bD) return -1;
+          return aD - bD;
+        });
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  };
+
+  const orderedTasks = sortTasks(filteredTasks, activeOrder);
 
   // Task Drawer State
   const [selectedTask, setSelectedTask] = useState(null);
@@ -2429,9 +4427,9 @@ const Tasks = () => {
   };
 
   const handleCreateGroup = async () => {
-    if (!newGroupName.trim() || !currentBoardId) return;
+    if (!newGroupName.trim() || !effectiveBoardId) return;
     try {
-      const res = await plutioTaskGroupsAPI.create(currentBoardId, { name: newGroupName.trim() });
+      const res = await plutioTaskGroupsAPI.create(effectiveBoardId, { name: newGroupName.trim() });
       if (res.data.success) {
         setTaskGroups(prev => [...prev, res.data.data]);
         setNewGroupName('');
@@ -2454,9 +4452,9 @@ const Tasks = () => {
   };
 
   const handleInlineCreateTask = async (groupId) => {
-    if (!inlineTaskTitle.trim() || !currentBoardId) return;
+    if (!inlineTaskTitle.trim() || !effectiveBoardId) return;
     try {
-      const res = await plutioTasksAPI.create(currentBoardId, {
+      const res = await plutioTasksAPI.create(effectiveBoardId, {
         title: inlineTaskTitle.trim(),
         description: inlineTaskDescription,
         assignees: inlineTaskAssignees.map(a => a.id || a._id),
@@ -2470,11 +4468,11 @@ const Tasks = () => {
           id: t._id,
           title: t.title,
           description: t.description,
-          project: currentBoard?.name || 'General',
+          project: isProjectBoard ? (currentProjectBoard?.name || '') : '',
           assignees: t.assignees || [],
           startDate: t.scheduledDate || '',
           dueDate: t.dueDate || '',
-          taskSetId: currentBoardId,
+          taskSetId: effectiveBoardId,
           groupId: groupId || null,
           number: t.order?.toString().padStart(3, '0') || '001'
         }]);
@@ -2545,6 +4543,14 @@ const Tasks = () => {
   
   const currentBoardId = view === 'board' ? location.pathname.split('/board/')[1] : null;
 
+  // Reset sub-boards when navigating away from a project
+  useEffect(() => {
+    if (view !== 'board') {
+      setProjectBoards([]);
+      setActiveSubBoardId(null);
+    }
+  }, [view, currentBoardId]);
+
   useEffect(() => {
     const fetchTasks = async () => {
       if (!currentBoardId) {
@@ -2557,10 +4563,18 @@ const Tasks = () => {
                 id: t._id,
                 title: t.title,
                 description: t.description,
-                project: t.board?.name || 'General',
+                project: t.board?.type === 'project'
+                  ? (t.board?.name || '')
+                  : t.board?.type === 'taskboard'
+                    ? (t.board?.parentProject?.name || '')
+                    : '',
                 assignees: t.assignees || [],
-                startDate: t.scheduledDate || '',
-                dueDate: t.dueDate || '',
+                assignee: (t.assignees || []).map(a => a.name || `${a.firstName||''} ${a.lastName||''}`.trim()).filter(Boolean).join(', '),
+                startDate: t.scheduledDate ? formatDateOnly(t.scheduledDate) : '',
+                dueDate: t.dueDate ? formatDateOnly(t.dueDate) : '',
+                createdAt: t.createdAt || '',
+                createdBy: t.createdBy,
+                status: t.status || 'open',
                 taskSetId: t.board?._id || t.board,
                 number: t.order?.toString().padStart(3, '0') || '001'
               })));
@@ -2572,21 +4586,32 @@ const Tasks = () => {
         return;
       }
 
+      // For project boards, wait until activeSubBoardId is set
+      const isProject = projects.find(p => p.id === currentBoardId);
+      const loadId = (isProject && activeSubBoardId) ? activeSubBoardId : currentBoardId;
+
+      // If it's a project board but no sub-board selected yet, skip (sub-board effect will set it)
+      if (isProject && !activeSubBoardId) return;
+
       try {
         const [tasksRes, groupsRes] = await Promise.all([
-          plutioTasksAPI.getByBoard(currentBoardId),
-          plutioTaskGroupsAPI.getByBoard(currentBoardId),
+          plutioTasksAPI.getByBoard(loadId),
+          plutioTaskGroupsAPI.getByBoard(loadId),
         ]);
         if (tasksRes.data.success) {
           const formattedTasks = tasksRes.data.data.map(t => ({
             id: t._id,
             title: t.title,
             description: t.description,
-            project: t.board?.name || 'General',
+            project: isProject ? (isProject?.name || '') : '',
             assignees: t.assignees || [],
             startDate: t.scheduledDate || '',
             dueDate: t.dueDate || '',
-            taskSetId: currentBoardId,
+            createdAt: t.createdAt || '',
+            createdBy: t.createdBy,
+            status: t.status || 'open',
+            archived: t.archived || false,
+            taskSetId: loadId,
             groupId: t.group ? (t.group._id || t.group) : null,
             number: t.order?.toString().padStart(3, '0') || '001'
           }));
@@ -2601,7 +4626,56 @@ const Tasks = () => {
     };
     fetchTasks();
     if (!currentBoardId) setTaskGroups([]);
-  }, [currentBoardId, view]);
+  }, [currentBoardId, view, activeSubBoardId, projects]);
+
+  // Load project menu settings when board changes
+  useEffect(() => {
+    if (!currentBoardId) return;
+    const settings = getMenuSettings(currentBoardId);
+    setMenuSettings(settings);
+    setActiveProjectTab(settings.landingPage || 'Tasks');
+    setShowMenuEditor(false);
+  }, [currentBoardId]);
+
+  // Load sub-boards when visiting a project board
+  useEffect(() => {
+    if (!currentBoardId || !projects.length) return;
+    const isProject = projects.find(p => p.id === currentBoardId);
+    if (!isProject) return;
+
+    const loadSubBoards = async () => {
+      try {
+        const res = await plutioBoardsAPI.getSubBoards(currentBoardId);
+        if (res.data.success) {
+          const boards = res.data.data;
+          if (boards.length === 0) {
+            // Auto-create default "New task board"
+            const createRes = await plutioBoardsAPI.create({
+              name: 'New task board',
+              color: '#6d28d9',
+              type: 'taskboard',
+              parentProject: currentBoardId,
+            });
+            const nb = createRes.data.data;
+            const newBoard = { id: nb._id, name: nb.name, color: nb.color };
+            setProjectBoards([newBoard]);
+            setActiveSubBoardId(newBoard.id);
+          } else {
+            const mapped = boards.map(b => ({ id: b._id, name: b.name, color: b.color }));
+            setProjectBoards(mapped);
+            setActiveSubBoardId(prev => {
+              // Keep current selection if it still exists
+              if (prev && mapped.find(b => b.id === prev)) return prev;
+              return mapped[0].id;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load sub-boards:', err);
+      }
+    };
+    loadSubBoards();
+  }, [currentBoardId, projects]);
 
   useEffect(() => {
      const handleClickOutside = (event) => {
@@ -2717,6 +4791,87 @@ const Tasks = () => {
    };
  
   const currentBoard = taskSets.find(s => s.id === currentBoardId);
+  const currentProjectBoard = projects.find(p => p.id === currentBoardId);
+  const isProjectBoard = !!currentProjectBoard;
+  // For project boards, tasks/groups are scoped to the active sub-board
+  const effectiveBoardId = (isProjectBoard && activeSubBoardId) ? activeSubBoardId : currentBoardId;
+
+  const handleRenameBoardSave = async () => {
+    if (!renameBoardName.trim() || !renamingBoardId) return;
+    try {
+      await plutioBoardsAPI.update(renamingBoardId, { name: renameBoardName.trim() });
+      setProjectBoards(prev => prev.map(b => b.id === renamingBoardId ? { ...b, name: renameBoardName.trim() } : b));
+    } catch (err) { console.error(err); }
+    setRenamingBoardId(null);
+    setRenameBoardName('');
+  };
+
+  const handleDuplicateBoard = async (board) => {
+    setBoardMenu(null);
+    try {
+      const createRes = await plutioBoardsAPI.create({
+        name: `${board.name} (copy)`,
+        color: board.color,
+        type: 'taskboard',
+        parentProject: currentBoardId,
+      });
+      if (!createRes.data.success) return;
+      const newBoard = { id: createRes.data.data._id, name: createRes.data.data.name, color: createRes.data.data.color };
+      // Duplicate task groups
+      const groupsRes = await plutioTaskGroupsAPI.getByBoard(board.id);
+      if (groupsRes.data.success) {
+        for (const g of groupsRes.data.data) {
+          await plutioTaskGroupsAPI.create(newBoard.id, { name: g.name, color: g.color });
+        }
+      }
+      setProjectBoards(prev => [...prev, newBoard]);
+      setActiveSubBoardId(newBoard.id);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleArchiveBoard = async (boardId) => {
+    setBoardMenu(null);
+    try {
+      await plutioBoardsAPI.update(boardId, { status: 'archived' });
+      const remaining = projectBoards.filter(b => b.id !== boardId);
+      setProjectBoards(remaining);
+      if (activeSubBoardId === boardId) setActiveSubBoardId(remaining[0]?.id || null);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteSubBoard = async (boardId) => {
+    setBoardMenu(null);
+    if (!window.confirm('Delete this task board and all its content?')) return;
+    try {
+      await plutioBoardsAPI.delete(boardId);
+      const remaining = projectBoards.filter(b => b.id !== boardId);
+      setProjectBoards(remaining);
+      if (activeSubBoardId === boardId) setActiveSubBoardId(remaining[0]?.id || null);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleCreateSubBoard = async () => {
+    if (!newBoardName.trim() || !currentBoardId) return;
+    try {
+      const res = await plutioBoardsAPI.create({
+        name: newBoardName.trim(),
+        color: newBoardColor,
+        type: 'taskboard',
+        parentProject: currentBoardId,
+      });
+      if (res.data.success) {
+        const nb = res.data.data;
+        const newBoard = { id: nb._id, name: nb.name, color: nb.color };
+        setProjectBoards(prev => [...prev, newBoard]);
+        setActiveSubBoardId(newBoard.id);
+        setShowCreateBoardPopup(false);
+        setNewBoardName('New task board');
+        setNewBoardColor('#6d28d9');
+      }
+    } catch (err) {
+      console.error('Failed to create board:', err);
+    }
+  };
 
   const handleCreateTaskSet = async (e) => {
     e.preventDefault();
@@ -2762,24 +4917,24 @@ const Tasks = () => {
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
-    if (!newTaskName.trim() || !currentBoardId) return;
-    
+    if (!newTaskName.trim() || !effectiveBoardId) return;
+
     try {
-      const res = await plutioTasksAPI.create(currentBoardId, {
+      const res = await plutioTasksAPI.create(effectiveBoardId, {
         title: newTaskName.trim(),
-        board: currentBoardId
+        board: effectiveBoardId
       });
       
       if (res.data.success) {
         const t = res.data.data;
-        const newTask = { 
-          id: t._id, 
-          title: t.title, 
-          project: currentBoard?.name || 'General',
+        const newTask = {
+          id: t._id,
+          title: t.title,
+          project: isProjectBoard ? (currentProjectBoard?.name || '') : '',
           assignee: '',
           startDate: '',
           dueDate: '',
-          taskSetId: currentBoardId,
+          taskSetId: effectiveBoardId,
           number: t.order?.toString().padStart(3, '0') || '001'
         };
         setTasks(prevTasks => [...prevTasks, newTask]);
@@ -2798,7 +4953,9 @@ const Tasks = () => {
     delegated: { label: 'Delegated',  breadcrumb: 'Tasks / Delegated' },
     following: { label: 'Following',  breadcrumb: 'Tasks / Following' },
     today:     { label: 'Today',      breadcrumb: 'Tasks / Today' },
-    board:     { label: currentBoard?.name || 'Task set', breadcrumb: `Tasks / Task sets / ${currentBoard?.name || ''}` }
+    board:     isProjectBoard
+      ? { label: currentProjectBoard?.name || 'Project', breadcrumb: `Projects / ${currentProjectBoard?.name || ''} / Tasks` }
+      : { label: currentBoard?.name || 'Task set', breadcrumb: `Tasks / Task sets / ${currentBoard?.name || ''}` }
   };
 
   const allTasksCols = [
@@ -2810,7 +4967,7 @@ const Tasks = () => {
   ];
 
   const renderContent = () => {
-    if (view === 'board' && !currentBoard) {
+    if (view === 'board' && !currentBoard && !currentProjectBoard) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '20px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>Page Not Found</h2>
@@ -2832,63 +4989,73 @@ const Tasks = () => {
               <div onClick={e => e.stopPropagation()} style={{ position: 'fixed', inset: 0, zIndex: 50 }} onMouseDown={() => resetInlineCreate()} />
               <div style={{
                 background: '#fff', borderRadius: '12px', border: '1.5px solid #6d28d9',
-                padding: '20px', width: '260px', boxShadow: '0 4px 24px rgba(109,40,217,0.08)',
+                padding: '14px 16px 12px', width: '260px', boxShadow: '0 4px 24px rgba(109,40,217,0.08)',
                 position: 'relative', boxSizing: 'border-box', zIndex: 51
               }}>
-                {(inlineTaskTitle.trim() || inlineTaskDescription.trim()) && (
-                  <button onClick={() => handleInlineCreateTask(groupId)} style={{
-                    position: 'absolute', top: '20px', right: '16px',
-                    background: '#1f2937', color: '#fff', border: 'none',
-                    borderRadius: '4px', padding: '3px 8px', fontSize: '10px',
-                    fontWeight: '700', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', gap: '4px', zIndex: 10
-                  }}>
-                    Create <Icon d={ICONS.enter} size={9} color="#fff" />
-                  </button>
-                )}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
-                  <Icon d={ICONS.squarePlus} size={18} color="#1f2937" style={{ marginTop: '2px' }} />
+                {/* Title row */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                  <Icon d={ICONS.squarePlus} size={16} color="#1f2937" style={{ marginTop: '3px', flexShrink: 0 }} />
                   <textarea autoFocus rows={1} value={inlineTaskTitle}
                     onChange={(e) => { setInlineTaskTitle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                    placeholder="Type title or /template"
+                    placeholder="Task title"
                     onKeyDown={(e) => { if (e.key === 'Escape') resetInlineCreate(); }}
-                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '14px', color: '#4f46e5', fontWeight: '700', background: 'transparent', fontFamily: 'inherit', paddingRight: '65px', resize: 'none', minHeight: '20px', overflow: 'hidden', lineHeight: '1.4' }}
+                    style={{ flex: 1, border: 'none', outline: 'none', fontSize: '13px', color: '#4f46e5', fontWeight: '700', background: 'transparent', fontFamily: 'inherit', resize: 'none', minHeight: '20px', overflow: 'hidden', lineHeight: '1.4' }}
                   />
+                  {inlineTaskTitle.trim() && (
+                    <button onClick={() => handleInlineCreateTask(groupId)} style={{
+                      background: '#1f2937', color: '#fff', border: 'none', flexShrink: 0,
+                      borderRadius: '4px', padding: '3px 7px', fontSize: '10px',
+                      fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px',
+                    }}>
+                      Create <Icon d={ICONS.enter} size={9} color="#fff" />
+                    </button>
+                  )}
                 </div>
-                <div style={{ marginBottom: '16px', paddingLeft: '26px' }}>
+                {/* Description */}
+                <div style={{ paddingLeft: '24px', marginBottom: '10px' }}>
                   <textarea value={inlineTaskDescription}
                     onChange={(e) => { setInlineTaskDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     placeholder="Description"
-                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '12px', color: '#4b5563', resize: 'none', minHeight: '20px', padding: 0, background: 'transparent', fontFamily: 'inherit', lineHeight: '1.5', overflow: 'hidden' }}
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '11px', color: '#6b7280', resize: 'none', minHeight: '16px', padding: 0, background: 'transparent', fontFamily: 'inherit', lineHeight: '1.4', overflow: 'hidden' }}
                   />
                 </div>
-                <div ref={pickerRef} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {/* Pickers row */}
+                <div ref={pickerRef} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {/* Start date */}
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => setActivePicker(activePicker === 'startDate' ? null : 'startDate')} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px', background: '#fff', cursor: 'pointer', display: 'flex', transition: 'all 0.2s', color: activePicker === 'startDate' || inlineTaskStartDate ? '#6d28d9' : '#9ca3af', alignItems: 'center', gap: '8px' }}>
-                      <Icon d={ICONS.calendar} size={20} />
-                      {inlineTaskStartDate && <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{inlineTaskStartDate}</span>}
+                    <button onClick={() => setActivePicker(activePicker === 'startDate' ? null : 'startDate')} style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '5px 8px', background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: inlineTaskStartDate ? '#6d28d9' : '#9ca3af' }}>
+                      <Icon d={ICONS.calendar} size={14} />
+                      {inlineTaskStartDate
+                        ? <span style={{ fontSize: '11px', fontWeight: '600', color: '#374151' }}>{formatDateOnly(inlineTaskStartDate)}</span>
+                        : <span style={{ fontSize: '11px', color: '#9ca3af' }}>Start</span>
+                      }
                     </button>
                     {activePicker === 'startDate' && <DatePicker value={inlineTaskStartDate} onChange={setInlineTaskStartDate} onClose={() => setActivePicker(null)} title="Start Date" />}
                   </div>
+                  {/* Due date */}
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => setActivePicker(activePicker === 'dueDate' ? null : 'dueDate')} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px', background: '#fff', cursor: 'pointer', display: 'flex', transition: 'all 0.2s', color: activePicker === 'dueDate' || inlineTaskDueDate ? '#6d28d9' : '#9ca3af', alignItems: 'center', gap: '8px' }}>
-                      <Icon d={ICONS.clock} size={20} />
-                      {inlineTaskDueDate && <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{inlineTaskDueDate}</span>}
+                    <button onClick={() => setActivePicker(activePicker === 'dueDate' ? null : 'dueDate')} style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '5px 8px', background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: inlineTaskDueDate ? '#6d28d9' : '#9ca3af' }}>
+                      <Icon d={ICONS.clock} size={14} />
+                      {inlineTaskDueDate
+                        ? <span style={{ fontSize: '11px', fontWeight: '600', color: '#374151' }}>{formatDateOnly(inlineTaskDueDate)}</span>
+                        : <span style={{ fontSize: '11px', color: '#9ca3af' }}>Due</span>
+                      }
                     </button>
                     {activePicker === 'dueDate' && <DatePicker value={inlineTaskDueDate} onChange={setInlineTaskDueDate} onClose={() => setActivePicker(null)} title="Due Date" />}
                   </div>
-                  <div style={{ position: 'relative' }}>
+                  {/* Assignee */}
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {inlineTaskAssignees.length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', marginRight: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
                         {inlineTaskAssignees.map((asg, idx) => (
-                          <div key={idx} style={{ width: '24px', height: '24px', borderRadius: '50%', background: asg.avatarColor || '#6d28d9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '700', border: '2px solid #fff', marginLeft: idx === 0 ? 0 : '-8px', zIndex: inlineTaskAssignees.length - idx }}>
-                            {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 2).toUpperCase()}
+                          <div key={idx} style={{ width: '20px', height: '20px', borderRadius: '50%', background: asg.avatarColor || '#6d28d9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '700', border: '2px solid #fff', marginLeft: idx === 0 ? 0 : '-6px', zIndex: inlineTaskAssignees.length - idx }}>
+                            {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 1).toUpperCase()}
                           </div>
                         ))}
                       </div>
                     )}
-                    <button onClick={() => setActivePicker(activePicker === 'assignee' ? null : 'assignee')} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px', background: '#fff', cursor: 'pointer', display: 'flex', transition: 'all 0.2s', color: activePicker === 'assignee' ? '#6d28d9' : '#9ca3af' }}>
-                      <Icon d={ICONS.assignee} size={20} />
+                    <button onClick={() => setActivePicker(activePicker === 'assignee' ? null : 'assignee')} style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '5px 7px', background: '#f9fafb', cursor: 'pointer', display: 'flex', alignItems: 'center', color: activePicker === 'assignee' ? '#6d28d9' : '#9ca3af' }}>
+                      <Icon d={ICONS.assignee} size={14} />
                     </button>
                     {activePicker === 'assignee' && (
                       <AssigneePicker
@@ -2910,61 +5077,377 @@ const Tasks = () => {
 
         return (
           <>
-            <Toolbar onCreateTask={() => setShowTaskModal(true)} hideCreate={true} activeViewFields={activeViewFields} setActiveViewFields={setActiveViewFields} />
-            <div style={{ padding: '24px 40px 160px', flex: 1, background: '#f5f5f8', overflowX: 'auto', overflowY: 'auto' }}>
+            {/* ── Project tabs (only for project boards) ── */}
+            {isProjectBoard && (() => {
+              const visibleTabs = [...(menuSettings.visibleTabs || ALL_PROJECT_TABS), 'Edit'];
+              return (
+                <>
+                  {/* Tab bar */}
+                  <div style={{ display: 'flex', alignItems: 'center', borderBottom: '2px solid #e5e7eb', background: '#fff', paddingLeft: '20px', overflowX: 'auto', flexShrink: 0 }}>
+                    {visibleTabs.map(tab => {
+                      const isActive = tab !== 'Edit' && activeProjectTab === tab;
+                      return (
+                        <button key={tab}
+                          onClick={() => { if (tab === 'Edit') { setShowMenuEditor(true); } else { setActiveProjectTab(tab); setShowMenuEditor(false); } }}
+                          style={{ padding: '12px 16px', fontSize: '13px', fontWeight: isActive || (tab === 'Edit' && showMenuEditor) ? '700' : '500', color: isActive || (tab === 'Edit' && showMenuEditor) ? '#6d28d9' : '#6b7280', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', borderBottom: isActive || (tab === 'Edit' && showMenuEditor) ? '2px solid #6d28d9' : '2px solid transparent', marginBottom: '-2px', transition: 'color 0.15s' }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#374151'; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = tab === 'Edit' && showMenuEditor ? '#6d28d9' : '#6b7280'; }}
+                        >{tab}</button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Project menu editor modal */}
+                  {showMenuEditor && (() => {
+                    const curVisible = menuSettings.visibleTabs || ALL_PROJECT_TABS;
+                    const hiddenTabs = ALL_PROJECT_TABS.filter(t => !curVisible.includes(t));
+                    return (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={e => { if (e.target === e.currentTarget) { setMenuAddOpen(false); setShowMenuEditor(false); } }}>
+                      <div style={{ background: '#fff', borderRadius: '14px', width: '480px', maxWidth: '96vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+                        onClick={() => setMenuAddOpen(false)}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 24px 14px' }}>
+                          <span style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>Project menu editor</span>
+                          <button onClick={() => { setMenuAddOpen(false); setShowMenuEditor(false); }} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: '#9ca3af', lineHeight: 1 }}>×</button>
+                        </div>
+                        {/* Info banner */}
+                        <div style={{ margin: '0 24px 16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', display: 'flex', gap: '8px' }}>
+                          <span style={{ color: '#3b82f6', fontSize: '15px', flexShrink: 0 }}>💡</span>
+                          <span style={{ fontSize: '12px', color: '#1d4ed8', lineHeight: '1.5' }}>Customise the default menu of this project. Changes will be reflected in your project navigation.</span>
+                        </div>
+                        {/* Add a menu item */}
+                        <div style={{ margin: '0 24px 12px', position: 'relative' }}>
+                          <button onClick={e => { e.stopPropagation(); setMenuAddOpen(v => !v); }}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#374151', fontWeight: '500' }}>
+                            <span style={{ fontSize: '18px', color: '#6d28d9', lineHeight: 1 }}>⊕</span> Add a menu item
+                          </button>
+                          {menuAddOpen && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 10, marginTop: '4px', overflow: 'hidden' }}
+                              onClick={e => e.stopPropagation()}>
+                              {hiddenTabs.length === 0 ? (
+                                <div style={{ padding: '12px 16px', fontSize: '13px', color: '#9ca3af' }}>All tabs are visible</div>
+                              ) : hiddenTabs.map(tab => (
+                                <div key={tab}
+                                  onClick={() => {
+                                    const next = [...curVisible, tab].sort((a,b) => ALL_PROJECT_TABS.indexOf(a) - ALL_PROJECT_TABS.indexOf(b));
+                                    saveMenuSettings({ ...menuSettings, visibleTabs: next });
+                                    setMenuAddOpen(false);
+                                  }}
+                                  style={{ padding: '11px 16px', fontSize: '14px', color: '#374151', cursor: 'pointer', fontWeight: '500' }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                  onMouseLeave={e => e.currentTarget.style.background = ''}>
+                                  {tab}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {/* Visible tab list only */}
+                        <div style={{ padding: '0 24px' }}>
+                          {curVisible.map(tab => (
+                            <div key={tab} style={{ display: 'flex', alignItems: 'center', padding: '11px 14px', borderRadius: '8px', marginBottom: '4px', border: '1px solid #e5e7eb', background: '#fff' }}>
+                              <Icon d={ICONS.grip} size={16} color="#9ca3af" style={{ marginRight: '12px', flexShrink: 0 }} />
+                              <span style={{ flex: 1, fontSize: '14px', fontWeight: '500', color: '#111827' }}>{tab}</span>
+                              <span style={{ fontSize: '13px', color: '#6d28d9', marginRight: '12px', fontWeight: '500' }}>{tab}</span>
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  const next = curVisible.filter(t => t !== tab);
+                                  const newLanding = menuSettings.landingPage === tab ? (next[0] || 'Tasks') : menuSettings.landingPage;
+                                  saveMenuSettings({ ...menuSettings, visibleTabs: next, landingPage: newLanding });
+                                  if (activeProjectTab === tab) setActiveProjectTab(next[0] || 'Tasks');
+                                }}
+                                style={{ width: '26px', height: '26px', border: '1.5px solid #6d28d9', borderRadius: '6px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#6d28d9', fontSize: '16px', lineHeight: 1 }}>
+                                −
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Landing page */}
+                        <div style={{ margin: '16px 24px 8px', border: '1.5px solid #6d28d9', borderRadius: '8px', padding: '12px 14px' }}>
+                          <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.05em' }}>Landing page</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <select value={menuSettings.landingPage || 'Tasks'}
+                              onChange={e => saveMenuSettings({ ...menuSettings, landingPage: e.target.value })}
+                              style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#111827', background: 'transparent', cursor: 'pointer' }}>
+                              {curVisible.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                            <span style={{ color: '#6d28d9', fontSize: '14px' }}>ⓘ</span>
+                          </div>
+                        </div>
+                        {/* Reset */}
+                        <div style={{ padding: '8px 24px 22px' }}>
+                          <button onClick={() => { saveMenuSettings({ visibleTabs: [...ALL_PROJECT_TABS], landingPage: 'Tasks' }); setMenuAddOpen(false); }}
+                            style={{ border: 'none', background: 'none', color: '#6d28d9', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0, fontWeight: '500' }}>
+                            <Icon d={ICONS.refresh} size={14} color="#6d28d9" /> Reset to default
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  })()}
+                </>
+              );
+            })()}
+            {activeProjectTab === 'Calendar' && isProjectBoard && (
+              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <BoardCalendarView tasks={tasks} currentBoardId={currentBoardId} />
+              </div>
+            )}
+            {activeProjectTab === 'Timesheet' && isProjectBoard && (
+              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <BoardTimesheetView projectName={currentProjectBoard?.name || ''} userName={user?.name || `${user?.firstName||''} ${user?.lastName||''}`.trim()} tasks={tasks} members={user ? [{ ...user, id: user._id || user.id, name: user.name || `${user.firstName||''} ${user.lastName||''}`.trim() }, ...members] : members} boardId={currentBoardId} />
+              </div>
+            )}
+            {activeProjectTab !== 'Tasks' && activeProjectTab !== 'Calendar' && activeProjectTab !== 'Timesheet' && isProjectBoard && !showMenuEditor && (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: '15px' }}>
+                {activeProjectTab} — coming soon
+              </div>
+            )}
+            {activeProjectTab === 'Tasks' && <Toolbar onCreateTask={() => setShowTaskModal(true)} hideCreate={true} activeViewFields={activeViewFields} setActiveViewFields={setActiveViewFields} onViewChange={setBoardView} boardView={boardView} members={members} onApplyFilters={setActiveFilters} activeFilters={activeFilters} onRemoveFilter={id => setActiveFilters(prev => prev.filter(f => f.id !== id))} activeOrder={activeOrder} onSetOrder={setActiveOrder} archivedView={archivedView} onToggleArchived={() => setArchivedView(v => !v)} searchQuery={searchQuery} onSearchChange={setSearchQuery} />}
+            {/* ── Task board tabs (sub-boards within project) ── */}
+            {activeProjectTab === 'Tasks' && isProjectBoard && projectBoards.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: '#fff', flexShrink: 0, flexWrap: 'wrap', borderBottom: '1px solid #e8e8ef', position: 'relative' }}>
+                {/* Board menu backdrop */}
+                {boardMenu && <div style={{ position: 'fixed', inset: 0, zIndex: 9990 }} onClick={() => setBoardMenu(null)} />}
+
+                {projectBoards.map(board => {
+                  const isActive = board.id === activeSubBoardId;
+                  const isRenaming = renamingBoardId === board.id;
+                  return (
+                    <div key={board.id} style={{ position: 'relative' }}>
+                      <div
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          padding: '5px 10px 5px 6px', borderRadius: '8px',
+                          background: isActive ? '#ede9fe' : '#f3f4f6',
+                          border: isActive ? '1.5px solid #c4b5fd' : '1.5px solid transparent',
+                          cursor: 'pointer', fontSize: '13px', fontWeight: isActive ? '700' : '500',
+                          color: isActive ? '#6d28d9' : '#374151',
+                          transition: 'all 0.15s',
+                          overflow: 'hidden',
+                        }}
+                        onClick={() => { if (!isRenaming) setActiveSubBoardId(board.id); }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#e9eaf0'; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = '#f3f4f6'; }}
+                      >
+                        {/* Colored left bar */}
+                        <div style={{ width: '3px', height: '18px', borderRadius: '2px', background: board.color || '#6d28d9', flexShrink: 0 }} />
+                        {isRenaming ? (
+                          <input
+                            autoFocus
+                            value={renameBoardName}
+                            onChange={e => setRenameBoardName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleRenameBoardSave(); if (e.key === 'Escape') { setRenamingBoardId(null); } }}
+                            onBlur={handleRenameBoardSave}
+                            onClick={e => e.stopPropagation()}
+                            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', fontWeight: '700', color: '#6d28d9', width: '100px', fontFamily: 'inherit' }}
+                          />
+                        ) : (
+                          <span>{board.name}</span>
+                        )}
+                        {/* ··· button */}
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setBoardMenu(prev => prev?.boardId === board.id ? null : { boardId: board.id, rect });
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: '#9ca3af', fontSize: '13px', lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                        >
+                          ···
+                        </button>
+                      </div>
+
+                      {/* Board dropdown menu */}
+                      {boardMenu?.boardId === board.id && (
+                        <div style={{ position: 'fixed', top: boardMenu.rect.bottom + 4, left: boardMenu.rect.left, width: '210px', background: '#fff', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.16)', border: '1px solid #f0f0f5', zIndex: 9999, padding: '6px 0', overflow: 'hidden' }}>
+                          {/* Color row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px 10px', borderBottom: '1px solid #f0f0f5' }}>
+                            {['#6d28d9', '#1f2937', '#22c55e', '#f97316', '#eab308', '#3b82f6'].map(c => (
+                              <button key={c} onClick={async () => {
+                                try {
+                                  await plutioBoardsAPI.update(board.id, { color: c });
+                                  setProjectBoards(prev => prev.map(b => b.id === board.id ? { ...b, color: c } : b));
+                                } catch (err) { console.error(err); }
+                                setBoardMenu(null);
+                              }} style={{ width: '24px', height: '24px', borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+                                {board.color === c && <span style={{ color: '#fff', fontSize: '12px', fontWeight: '900', lineHeight: 1 }}>✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                          {[
+                            { label: 'Rename', icon: ICONS.rename, action: () => { setRenamingBoardId(board.id); setRenameBoardName(board.name); setBoardMenu(null); } },
+                            { label: 'Duplicate', icon: ICONS.duplicate, action: () => handleDuplicateBoard(board) },
+                            { label: 'Archive task board', icon: ICONS.archive, action: () => handleArchiveBoard(board.id) },
+                            { label: 'Delete task board', icon: ICONS.delete, action: () => handleDeleteSubBoard(board.id), color: '#ef4444' },
+                          ].map(item => (
+                            <button key={item.label} onClick={item.action} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: item.color || '#374151', textAlign: 'left' }}
+                              onMouseEnter={e => e.currentTarget.style.background = item.color ? '#fef2f2' : '#f9fafb'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                              <Icon d={item.icon} size={14} color={item.color || '#6b7280'} />
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <button
+                  onClick={() => { setNewBoardName('New task board'); setNewBoardColor('#6d28d9'); setShowCreateBoardPopup(true); }}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '6px',
+                    border: '1.5px solid #e5e7eb', background: '#f9fafb',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#6b7280', fontSize: '18px', lineHeight: 1,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#ede9fe'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#f9fafb'}
+                  title="Add task board"
+                >
+                  +
+                </button>
+              </div>
+            )}
+            {activeProjectTab === 'Tasks' && (boardView === 'list' || boardView === 'table' || boardView === 'calendar' || boardView === 'timeline') && (
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {boardView === 'list' && <BoardListView tasks={orderedTasks} taskGroups={taskGroups.filter(g => archivedView ? g.archived : !g.archived)} currentBoardId={currentBoardId} onTaskClick={handleTaskClick} onTaskCreate={t => setTasks(prev => [...prev, t])} onGroupCreate={g => setTaskGroups(prev => [...prev, g])} onTaskDelete={id => setTasks(prev => prev.filter(t => (t.id || t._id) !== id))} onTaskArchive={id => setTasks(prev => prev.map(t => (t.id || t._id) === id ? { ...t, archived: true } : t))} />}
+                {boardView === 'table' && <BoardTableView tasks={orderedTasks} taskGroups={taskGroups.filter(g => archivedView ? g.archived : !g.archived)} currentBoardId={currentBoardId} onTaskClick={handleTaskClick} onTaskCreate={t => setTasks(prev => [...prev, t])} onGroupCreate={g => setTaskGroups(prev => [...prev, g])} onTaskDelete={id => setTasks(prev => prev.filter(t => (t.id || t._id) !== id))} onTaskArchive={id => setTasks(prev => prev.map(t => (t.id || t._id) === id ? { ...t, archived: true } : t))} />}
+                {boardView === 'calendar' && <BoardCalendarView tasks={tasks} currentBoardId={currentBoardId} />}
+                {boardView === 'timeline' && <TimelineView tasks={tasks} taskGroups={taskGroups} currentBoardId={currentBoardId} onUpdateTask={async (id, data) => { try { await plutioTasksAPI.update(id, data); setTasks(prev => prev.map(t => (t.id || t._id) === id ? { ...t, ...(data.scheduledDate !== undefined ? { startDate: data.scheduledDate } : {}), ...(data.dueDate !== undefined ? { dueDate: data.dueDate } : {}) } : t)); } catch(e) { console.error(e); } }} />}
+              </div>
+            )}
+            {activeProjectTab === 'Tasks' && boardView === 'kanban' && <div style={{ padding: '24px 40px 24px', flex: 1, background: '#f5f5f8', overflowX: 'auto', overflowY: 'auto' }}>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', minWidth: 'max-content' }}>
 
-                {/* ── Standalone tasks column ── */}
-                <div style={{ width: '280px', flexShrink: 0 }}>
-                  {/* Create task button */}
-                  <div onClick={() => { resetInlineCreate(); setInlineCreateGroupId(null); }}
-                    style={{ background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 20px', marginBottom: '8px', color: '#1f2937', cursor: 'pointer', fontWeight: '700' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '4px', border: '1.5px solid #6d28d9' }}>
-                      <Icon d={ICONS.plus} size={12} color="#6d28d9" />
-                    </div>
-                    <span style={{ fontSize: '14px' }}>Create task</span>
-                  </div>
-                  {renderInlineCard(null)}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {tasks.filter(t => String(t.taskSetId) === String(currentBoardId) && !t.groupId).map(task => (
-                      <TaskCard key={task.id} task={task} onClick={handleTaskClick} onDelete={async (id) => { await plutioTasksAPI.delete(id); setTasks(prev => prev.filter(t => t.id !== id)); }} />
-                    ))}
-                  </div>
-                </div>
 
-                {/* ── Task group columns ── */}
-                {taskGroups.map(group => (
+                {/* ── Task group columns — normal view: all groups, archived ones collapsed ── */}
+                {!archivedView && taskGroups.map(group => (
                   <div key={group._id} style={{ width: '280px', flexShrink: 0 }}>
                     {/* Group header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '10px 14px', background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #6b7280', background: 'transparent', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '10px 14px', background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', position: 'relative' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: group.color || '#ef4444', flexShrink: 0 }} />
                       <span style={{ fontSize: '14px', fontWeight: '700', color: '#1f2937', flex: 1 }}>{group.name}</span>
-                      <button onClick={async () => {
-                        if (!window.confirm(`Delete group "${group.name}"?`)) return;
-                        await plutioTaskGroupsAPI.delete(group._id);
-                        setTaskGroups(prev => prev.filter(g => g._id !== group._id));
-                        setTasks(prev => prev.map(t => t.groupId === group._id ? { ...t, groupId: null } : t));
+                      {group.archived && (
+                        <span style={{ fontSize: '11px', color: '#9ca3af', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '2px 7px', fontWeight: '500', flexShrink: 0 }}>Archived</span>
+                      )}
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        const id = group._id;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setGroupMenu(prev => prev?.id === id ? null : { id, rect });
                       }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px', display: 'flex' }}>
-                        <Icon d={ICONS.close} size={12} />
+                        <Icon d={ICONS.dots} size={14} color="#9ca3af" />
                       </button>
+                      {groupMenu?.id === group._id && (
+                        <>
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setGroupMenu(null)} />
+                          <div style={{ position: 'fixed', top: groupMenu.rect.bottom + 4, left: groupMenu.rect.left - 160, width: '180px', background: '#fff', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0,0,0,0.13)', border: '1px solid #f0f0f5', zIndex: 9999, padding: '4px 0', overflow: 'hidden' }}>
+                            {group.archived ? (
+                              <button onClick={async () => {
+                                setGroupMenu(null);
+                                await plutioTaskGroupsAPI.update(group._id, { archived: false });
+                                setTaskGroups(prev => prev.map(g => g._id === group._id ? { ...g, archived: false } : g));
+                              }} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#374151', textAlign: 'left' }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                                <Icon d={ICONS.refresh} size={14} color="#9ca3af" />
+                                Unarchive group
+                              </button>
+                            ) : (
+                              <>
+                                <button onClick={async () => {
+                                  setGroupMenu(null);
+                                  await plutioTaskGroupsAPI.update(group._id, { archived: true });
+                                  setTaskGroups(prev => prev.map(g => g._id === group._id ? { ...g, archived: true } : g));
+                                }} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#374151', textAlign: 'left' }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                                  <Icon d={ICONS.archive} size={14} color="#9ca3af" />
+                                  Archive group
+                                </button>
+                                <button onClick={async () => {
+                                  setGroupMenu(null);
+                                  if (!window.confirm(`Delete group "${group.name}"?`)) return;
+                                  await plutioTaskGroupsAPI.delete(group._id);
+                                  setTaskGroups(prev => prev.filter(g => g._id !== group._id));
+                                  setTasks(prev => prev.map(t => t.groupId === group._id ? { ...t, groupId: null } : t));
+                                }} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#ef4444', textAlign: 'left' }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                                  <Icon d={ICONS.delete} size={14} color="#ef4444" />
+                                  Delete group
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {/* Create task inside group */}
-                    <div onClick={() => { resetInlineCreate(); setInlineCreateGroupId(group._id); }}
-                      style={{ background: '#fff', borderRadius: '12px', border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', marginBottom: '8px', color: '#6b7280', cursor: 'pointer' }}>
-                      <Icon d={ICONS.plus} size={14} color="#6b7280" />
-                      <span style={{ fontSize: '13px', fontWeight: '600' }}>Create task</span>
+                    {/* Only show create task + tasks if group is NOT archived */}
+                    {!group.archived && (
+                      <>
+                        <div onClick={() => { resetInlineCreate(); setInlineCreateGroupId(group._id); }}
+                          style={{ background: '#fff', borderRadius: '12px', border: '1.5px dashed #d1d5db', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', marginBottom: '8px', color: '#6b7280', cursor: 'pointer' }}>
+                          <Icon d={ICONS.plus} size={14} color="#6b7280" />
+                          <span style={{ fontSize: '13px', fontWeight: '600' }}>Create task</span>
+                        </div>
+                        {renderInlineCard(group._id)}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {orderedTasks.filter(t => String(t.taskSetId) === String(effectiveBoardId) && t.groupId === group._id).map(task => (
+                            <TaskCard key={task.id} task={task} onClick={handleTaskClick} onDelete={async (id) => { await plutioTasksAPI.delete(id); setTasks(prev => prev.filter(t => t.id !== id)); }} onArchive={id => setTasks(prev => prev.map(t => (t.id || t._id) === id ? { ...t, archived: true } : t))} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {/* ── Task group columns — archived view: archived groups with ALL their tasks ── */}
+                {archivedView && taskGroups.filter(g => g.archived).map(group => (
+                  <div key={group._id} style={{ width: '280px', flexShrink: 0 }}>
+                    {/* Group header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '10px 14px', background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', position: 'relative' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: group.color || '#ef4444', flexShrink: 0 }} />
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#1f2937', flex: 1 }}>{group.name}</span>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        const id = group._id;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setGroupMenu(prev => prev?.id === id ? null : { id, rect });
+                      }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#9ca3af', padding: '2px', display: 'flex' }}>
+                        <Icon d={ICONS.dots} size={14} color="#9ca3af" />
+                      </button>
+                      {groupMenu?.id === group._id && (
+                        <>
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setGroupMenu(null)} />
+                          <div style={{ position: 'fixed', top: groupMenu.rect.bottom + 4, left: groupMenu.rect.left - 160, width: '180px', background: '#fff', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0,0,0,0.13)', border: '1px solid #f0f0f5', zIndex: 9999, padding: '4px 0', overflow: 'hidden' }}>
+                            <button onClick={async () => {
+                              setGroupMenu(null);
+                              await plutioTaskGroupsAPI.update(group._id, { archived: false });
+                              setTaskGroups(prev => prev.map(g => g._id === group._id ? { ...g, archived: false } : g));
+                            }} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#374151', textAlign: 'left' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                              <Icon d={ICONS.refresh} size={14} color="#9ca3af" />
+                              Unarchive group
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {renderInlineCard(group._id)}
+                    {/* All tasks of this group regardless of their archived status */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {tasks.filter(t => String(t.taskSetId) === String(currentBoardId) && t.groupId === group._id).map(task => (
-                        <TaskCard key={task.id} task={task} onClick={handleTaskClick} onDelete={async (id) => { await plutioTasksAPI.delete(id); setTasks(prev => prev.filter(t => t.id !== id)); }} />
+                      {tasks.filter(t => String(t.taskSetId) === String(effectiveBoardId) && t.groupId === group._id && (!searchQuery.trim() || (t.title || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))).map(task => (
+                        <TaskCard key={task.id || task._id} task={task} onClick={handleTaskClick} onDelete={async (id) => { await plutioTasksAPI.delete(id); setTasks(prev => prev.filter(t => t.id !== id && t._id !== id)); }} onArchive={id => setTasks(prev => prev.map(t => (t.id || t._id) === id ? { ...t, archived: true } : t))} />
                       ))}
                     </div>
                   </div>
                 ))}
 
-                {/* ── Create task group column ── */}
-                <div style={{ width: '280px', flexShrink: 0 }}>
+                {/* ── Create task group column — hidden in archived view ── */}
+                {!archivedView && <div style={{ width: '280px', flexShrink: 0 }}>
                   {showGroupCreate ? (
                     <div style={{ position: 'relative', zIndex: 51 }}>
                     <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onMouseDown={() => { setShowGroupCreate(false); setNewGroupName(''); }} />
@@ -3000,10 +5483,10 @@ const Tasks = () => {
                       <span style={{ fontSize: '14px', fontWeight: '600' }}>Create task group</span>
                     </div>
                   )}
-                </div>
+                </div>}
 
               </div>
-            </div>
+            </div>}
 
                 {/* OLD inline create — removed, now handled per-column via renderInlineCard */}
                 {false && (
@@ -3190,7 +5673,7 @@ const Tasks = () => {
                                       zIndex: inlineTaskAssignees.length - idx
                                     }}
                                   >
-                                    {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 2).toUpperCase()}
+                                    {(asg.name || `${asg.firstName} ${asg.lastName}`).substring(0, 1).toUpperCase()}
                                   </div>
                                 ))}
                               </div>
@@ -3262,7 +5745,9 @@ const Tasks = () => {
     }
   };
 
-  const middlePanel = (
+  const isProjectView = isProjectBoard;
+
+  const middlePanel = isProjectView ? null : (
     <TasksMiddlePanel
       activeView={view}
       projects={projects}
@@ -3288,19 +5773,29 @@ const Tasks = () => {
               const isLast = i === arr.length - 1;
               return (
                 <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isLast && view === 'board' && currentBoard && (
-                    <div style={{ 
-                      width: '12px', height: '12px', borderRadius: '50%', 
-                      background: currentBoard.color || '#6d28d9', flexShrink: 0 
+                  {isLast && view === 'board' && (currentBoard || currentProjectBoard) && (
+                    <div style={{
+                      width: '12px', height: '12px', borderRadius: '50%',
+                      background: (currentBoard || currentProjectBoard)?.color || '#6d28d9', flexShrink: 0
                     }} />
                   )}
-                  <span style={{
-                    fontSize: '20px',
-                    fontWeight: '800',
-                    color: isLast ? '#111827' : '#9ca3af',
-                  }}>
-                    {part}
-                  </span>
+                  {isLast ? (
+                    <span style={{ fontSize: '20px', fontWeight: '800', color: '#111827' }}>
+                      {part}
+                    </span>
+                  ) : (
+                    <span
+                      onClick={() => navigate('/plutiocopy/tasks')}
+                      style={{
+                        fontSize: '20px', fontWeight: '800', color: '#9ca3af',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#6b7280'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
+                    >
+                      {part}
+                    </span>
+                  )}
                   {!isLast && (
                     <span style={{ color: '#d1d5db', fontSize: '20px', fontWeight: '400' }}>/</span>
                   )}
@@ -3373,7 +5868,7 @@ const Tasks = () => {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: 'auto', background: '#f5f5f8' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f5f5f8' }}>
           {isLoading ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <div style={{ width: '40px', height: '40px', border: '3px solid #f3f3f3', borderTop: '3px solid #6d28d9', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
@@ -3388,9 +5883,66 @@ const Tasks = () => {
         </div>
 
         {/* Create Project Modal */}
+        {/* ── Create task board popup ── */}
+        {showCreateBoardPopup && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000 }}>
+            <div style={{ background: '#fff', borderRadius: '16px', width: '460px', maxWidth: 'calc(100vw - 32px)', boxShadow: '0 20px 48px rgba(0,0,0,0.22)', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px' }}>
+                <span style={{ fontSize: '17px', fontWeight: '800', color: '#111827' }}>Create task board</span>
+                <button onClick={() => setShowCreateBoardPopup(false)} style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9ca3af', fontSize: '16px' }}>×</button>
+              </div>
+              {/* Body */}
+              <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Name field */}
+                <div style={{ border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#9ca3af', marginBottom: '4px' }}>Board name</div>
+                  <input
+                    autoFocus
+                    value={newBoardName}
+                    onChange={e => setNewBoardName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateSubBoard(); if (e.key === 'Escape') setShowCreateBoardPopup(false); }}
+                    style={{ width: '100%', border: 'none', outline: 'none', fontSize: '14px', fontWeight: '600', color: '#4f46e5', background: 'transparent', fontFamily: 'inherit' }}
+                  />
+                </div>
+                {/* Color picker */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {['#6d28d9', '#1f2937', '#22c55e', '#f97316', '#eab308', '#3b82f6'].map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setNewBoardColor(c)}
+                      style={{
+                        width: '30px', height: '30px', borderRadius: '50%', background: c,
+                        border: 'none', cursor: 'pointer', flexShrink: 0, outline: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      {newBoardColor === c && <span style={{ color: '#fff', fontSize: '14px', fontWeight: '900', lineHeight: 1 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+                {/* More options */}
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', marginBottom: '8px', borderTop: '1px solid #f0f0f5', paddingTop: '12px' }}>More options</div>
+                  <div style={{ border: '1.5px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#9ca3af', cursor: 'not-allowed', background: '#fafafa' }}>
+                    Select template
+                  </div>
+                </div>
+              </div>
+              {/* Footer */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', padding: '14px 24px', borderTop: '1px solid #f0f0f5' }}>
+                <button onClick={() => setShowCreateBoardPopup(false)} style={{ background: '#f3f4f6', border: 'none', padding: '10px 22px', borderRadius: '8px', color: '#4b5563', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+                <button onClick={handleCreateSubBoard} style={{ background: '#22c55e', border: 'none', padding: '10px 22px', borderRadius: '8px', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  Create <Icon d={ICONS.arrowRight} size={15} color="#fff" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showProjectModal && (
-          <Modal 
-            title="Create project" 
+          <Modal
+            title="Create project"
             onClose={() => setShowProjectModal(false)}
             footer={
               <>

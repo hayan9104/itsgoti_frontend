@@ -67,7 +67,7 @@ const RIGHT_TOP = [
 const RIGHT_MID = ['bell', 'calIcon', 'list', 'search', 'send'];
 const RIGHT_BOT = ['moon', 'help', 'settings'];
 
-const PlutioCopyLayout = ({ children, middlePanel }) => {
+const PlutioCopyLayout = ({ children, middlePanel, hideSidebar = false }) => {
   const { user, logout } = usePlutioCopyAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -90,7 +90,7 @@ const PlutioCopyLayout = ({ children, middlePanel }) => {
     }}>
 
       {/* ── LEFT SIDEBAR ── */}
-      <div style={{
+      {!hideSidebar && <div style={{
         width: '185px',
         minWidth: '185px',
         height: '100vh',
@@ -208,7 +208,7 @@ const PlutioCopyLayout = ({ children, middlePanel }) => {
             <Icon d={ICONS.expand} size={14} color="#9ca3af" />
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* ── CENTER AREA (middle panel + main content + banner) ── */}
       <div style={{

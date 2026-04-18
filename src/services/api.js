@@ -431,6 +431,7 @@ export const workspaceMeetingsAPI = {
 export const plutioBoardsAPI = {
   getAll: () => workspaceApi.get('/plutio/boards'),
   getProjects: () => workspaceApi.get('/plutio/boards/projects'),
+  getSubBoards: (projectId) => workspaceApi.get(`/plutio/boards/project/${projectId}`),
   create: (data) => workspaceApi.post('/plutio/boards', data),
   update: (id, data) => workspaceApi.put(`/plutio/boards/${id}`, data),
   delete: (id) => workspaceApi.delete(`/plutio/boards/${id}`),
@@ -465,6 +466,13 @@ export const plutioCommentsAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   delete: (id) => workspaceApi.delete(`/plutio/comments/${id}`),
+};
+
+export const plutioTimeEntriesAPI = {
+  getByBoard: (boardId) => workspaceApi.get(`/plutio/time-entries/board/${boardId}`),
+  create:     (boardId, data) => workspaceApi.post(`/plutio/time-entries/board/${boardId}`, data),
+  update:     (id, data) => workspaceApi.put(`/plutio/time-entries/${id}`, data),
+  delete:     (id) => workspaceApi.delete(`/plutio/time-entries/${id}`),
 };
 
 export default api;
