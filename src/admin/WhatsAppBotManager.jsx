@@ -29,6 +29,48 @@ const WhatsAppBotManager = ({ basePath }) => {
   );
 };
 
+// Standalone popup — must be outside FlowsList so React doesn't remount it on every keystroke
+const AddPopup = ({ title, form, setForm, formErrors, setFormErrors, onSave, saving, onClose }) => (
+  <div onClick={onClose} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: '#fff', borderRadius: 16, padding: 32, width: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{title}</h3>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+      </div>
+      {[
+        { key: 'name', label: 'Name', placeholder: 'Enter full name', type: 'text', maxLength: undefined },
+        { key: 'phone', label: 'Mobile', placeholder: 'Enter 10-digit number', type: 'tel', maxLength: 10 },
+        { key: 'email', label: 'Email', placeholder: 'Enter email address', type: 'email', maxLength: undefined },
+      ].map(field => (
+        <div key={field.key} style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+            {field.label} <span style={{ color: '#dc2626' }}>*</span>
+          </label>
+          <input
+            type={field.type}
+            placeholder={field.placeholder}
+            value={form[field.key]}
+            maxLength={field.maxLength}
+            onChange={e => {
+              const val = field.key === 'phone' ? e.target.value.replace(/\D/g, '').slice(0, 10) : e.target.value;
+              setForm(p => ({ ...p, [field.key]: val }));
+              setFormErrors(p => ({ ...p, [field.key]: '' }));
+            }}
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${formErrors[field.key] ? '#dc2626' : '#e5e7eb'}`, fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
+          />
+          {formErrors[field.key] && <p style={{ color: '#dc2626', fontSize: 12, margin: '4px 0 0' }}>{formErrors[field.key]}</p>}
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+        <button onClick={onClose} style={{ flex: 1, padding: '11px', border: '1px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', fontSize: 14, background: '#fff' }}>Cancel</button>
+        <button onClick={onSave} disabled={saving} style={{ flex: 1, padding: '11px', backgroundColor: '#25D366', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // Flows List Component
 const FlowsList = ({ basePath }) => {
   const navigate = useNavigate();
@@ -38,6 +80,35 @@ const FlowsList = ({ basePath }) => {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Main tab: 'flow' | 'reminder'
+  const [mainTab, setMainTab] = useState('flow');
+  // Reminder sub-tab: 'admin' | 'client'
+  const [reminderTab, setReminderTab] = useState('admin');
+  const [showReminderDropdown, setShowReminderDropdown] = useState(false);
+
+  // Reminder system state
+  const [allowedNumbers, setAllowedNumbers] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [reminderCounts, setReminderCounts] = useState({}); // phone → count
+
+  // Admin detail view
+  const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [adminReminders, setAdminReminders] = useState([]);
+  const [loadingAdminReminders, setLoadingAdminReminders] = useState(false);
+  const [adminDetailTab, setAdminDetailTab] = useState('list');
+  const [adminCalendarMonth, setAdminCalendarMonth] = useState(new Date());
+  const [tooltip, setTooltip] = useState(null); // { x, y, type:'client'|'reminder', ...fields }
+
+  // Popup modals
+  const [showAdminPopup, setShowAdminPopup] = useState(false);
+  const [showClientPopup, setShowClientPopup] = useState(false);
+  const emptyForm = { name: '', phone: '', email: '' };
+  const [adminForm, setAdminForm] = useState(emptyForm);
+  const [clientForm, setClientForm] = useState(emptyForm);
+  const [savingAdmin, setSavingAdmin] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   // Meeting Reminders state
   const [showReminders, setShowReminders] = useState(false);
@@ -71,7 +142,152 @@ const FlowsList = ({ basePath }) => {
     fetchTemplates();
     fetchReminders();
     fetchScheduledContent();
+    fetchAllowedNumbers();
+    fetchContacts();
   }, []);
+
+  const fetchAllReminders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/reminders`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setAllReminders(data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchAllowedNumbers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const [adminsRes, remindersRes] = await Promise.all([
+        fetch(`${API_BASE}/reminders/allowed-numbers`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/reminders`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const adminsData = await adminsRes.json();
+      const remindersData = await remindersRes.json();
+      setAllowedNumbers(adminsData.data || []);
+      const counts = {};
+      (remindersData.data || []).forEach(r => {
+        counts[r.fromPhone] = (counts[r.fromPhone] || 0) + 1;
+      });
+      setReminderCounts(counts);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleToggleAdmin = async (id) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_BASE}/reminders/allowed-numbers/${id}/toggle`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.success) {
+      setAllowedNumbers(prev => prev.map(u => u._id === id ? { ...u, isActive: data.data.isActive } : u));
+    }
+  };
+
+  const fetchContacts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/reminders/contacts`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setContacts(data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const validateForm = (form) => {
+    const errors = {};
+    if (!form.name.trim()) errors.name = 'Name is required';
+    if (!form.phone.trim()) errors.phone = 'Mobile is required';
+    else if (!/^\d{10}$/.test(form.phone)) errors.phone = 'Enter a valid 10-digit number';
+    if (!form.email.trim()) errors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errors.email = 'Invalid email';
+    return errors;
+  };
+
+  const handleAddAdmin = async () => {
+    const errors = validateForm(adminForm);
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+    setSavingAdmin(true);
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE}/reminders/allowed-numbers`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(adminForm),
+      });
+      setAdminForm(emptyForm);
+      setFormErrors({});
+      setShowAdminPopup(false);
+      fetchAllowedNumbers();
+    } catch (e) { console.error(e); }
+    setSavingAdmin(false);
+  };
+
+  const handleDeleteAdmin = async (id) => {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_BASE}/reminders/allowed-numbers/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchAllowedNumbers();
+  };
+
+  const handleAddContact = async () => {
+    const errors = validateForm(clientForm);
+    if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
+    setSavingClient(true);
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE}/reminders/contacts`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientForm),
+      });
+      setClientForm(emptyForm);
+      setFormErrors({});
+      setShowClientPopup(false);
+      fetchContacts();
+    } catch (e) { console.error(e); }
+    setSavingClient(false);
+  };
+
+  const handleDeleteContact = async (id) => {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_BASE}/reminders/contacts/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    fetchContacts();
+  };
+
+  const handleDeleteReminder = async (id) => {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_BASE}/reminders/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setAdminReminders(p => p.filter(r => r._id !== id));
+  };
+
+  const fetchAdminReminders = async (phone) => {
+    setLoadingAdminReminders(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/reminders`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setAdminReminders((data.data || []).filter(r => r.fromPhone === phone));
+    } catch (e) { console.error(e); }
+    setLoadingAdminReminders(false);
+  };
+
+  const handleOpenAdmin = (admin) => {
+    setSelectedAdmin(admin);
+    setAdminDetailTab('list');
+    setAdminCalendarMonth(new Date());
+    fetchAdminReminders(admin.phone);
+  };
+
+  // AddPopup is defined outside FlowsList (top-level) to prevent remount on each keystroke
 
   const fetchFlows = async () => {
     try {
@@ -253,6 +469,17 @@ const FlowsList = ({ basePath }) => {
   // Upload state for scheduled content items
   const [uploadingIndex, setUploadingIndex] = useState(null);
   const fileInputRefs = useRef({});
+  const reminderDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (reminderDropdownRef.current && !reminderDropdownRef.current.contains(e.target)) {
+        setShowReminderDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleScheduledFileUpload = async (index, e) => {
     const file = e.target.files[0];
@@ -304,60 +531,76 @@ const FlowsList = ({ basePath }) => {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: 0 }}>
-            WhatsApp Bot Flows
-          </h1>
-          <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
-            Create and manage automated WhatsApp conversation flows
-          </p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: 0 }}>WhatsApp Bot</h1>
+          <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>Manage flows and AI reminders</p>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={() => setShowTemplateModal(true)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#fff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontSize: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-            </svg>
-            Use Template
-          </button>
+        {mainTab === 'flow' && (
           <button
             onClick={() => navigate(`${basePath}/new`)}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#25D366',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              fontWeight: 500,
-              cursor: 'pointer',
-              fontSize: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            style={{ padding: '10px 20px', backgroundColor: '#25D366', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 500, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Create Flow
           </button>
+        )}
+      </div>
+
+      {/* Main Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '2px solid #e5e7eb', paddingBottom: 0 }}>
+        {/* Flow tab */}
+        <button
+          onClick={() => { setMainTab('flow'); setShowReminderDropdown(false); }}
+          style={{
+            padding: '10px 24px', background: 'none', border: 'none',
+            borderBottom: mainTab === 'flow' ? '2px solid #25D366' : '2px solid transparent',
+            marginBottom: -2, fontWeight: mainTab === 'flow' ? 700 : 500,
+            color: mainTab === 'flow' ? '#25D366' : '#6b7280', cursor: 'pointer', fontSize: 15,
+          }}
+        >
+          Flow
+        </button>
+
+        {/* Reminder tab with dropdown */}
+        <div ref={reminderDropdownRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => { setMainTab('reminder'); setShowReminderDropdown(p => !p); }}
+            style={{
+              padding: '10px 24px', background: 'none', border: 'none',
+              borderBottom: mainTab === 'reminder' ? '2px solid #25D366' : '2px solid transparent',
+              marginBottom: -2, fontWeight: mainTab === 'reminder' ? 700 : 500,
+              color: mainTab === 'reminder' ? '#25D366' : '#6b7280', cursor: 'pointer', fontSize: 15,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            Reminder
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              style={{ transform: showReminderDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showReminderDropdown && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 300, minWidth: 170, overflow: 'hidden' }}>
+              {[{ key: 'admin', label: 'Admin Numbers' }, { key: 'client', label: 'Clients' }].map(opt => (
+                <button key={opt.key} onClick={() => { setReminderTab(opt.key); setShowReminderDropdown(false); setSelectedAdmin(null); }} style={{
+                  display: 'block', width: '100%', padding: '11px 18px', background: reminderTab === opt.key ? '#f0fdf4' : '#fff',
+                  border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: 14,
+                  fontWeight: reminderTab === opt.key ? 700 : 500,
+                  color: reminderTab === opt.key ? '#16a34a' : '#374151',
+                }}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* ==================== FLOW TAB ==================== */}
+      {mainTab === 'flow' && <>
 
       {/* Flows Grid */}
       {flows.length === 0 ? (
@@ -1165,6 +1408,333 @@ const FlowsList = ({ basePath }) => {
           </div>
         )}
       </div>
+
+      </> } {/* end Flow tab */}
+
+      {/* ==================== REMINDER TAB ==================== */}
+      {mainTab === 'reminder' && (
+        <div>
+          {selectedAdmin ? (
+
+            /* ===== ADMIN DETAIL VIEW ===== */
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
+                <button onClick={() => setSelectedAdmin(null)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 600 }}>
+                  ← Back
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #d1fae5, #6ee7b7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#059669', fontSize: 20 }}>
+                    {selectedAdmin.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>{selectedAdmin.name}</div>
+                    <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 2 }}>{selectedAdmin.phone}{selectedAdmin.email ? ` · ${selectedAdmin.email}` : ''}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 2, marginBottom: 20, borderBottom: '1.5px solid #f3f4f6' }}>
+                {[{ k: 'list', l: 'Reminders List' }, { k: 'calendar', l: 'Calendar' }].map(t => (
+                  <button key={t.k} onClick={() => setAdminDetailTab(t.k)} style={{
+                    padding: '9px 22px', background: 'none', border: 'none',
+                    borderBottom: adminDetailTab === t.k ? '2px solid #10b981' : '2px solid transparent',
+                    marginBottom: -1.5, fontWeight: adminDetailTab === t.k ? 700 : 500,
+                    color: adminDetailTab === t.k ? '#10b981' : '#9ca3af', cursor: 'pointer', fontSize: 14,
+                  }}>{t.l}</button>
+                ))}
+              </div>
+
+              {adminDetailTab === 'list' && (
+                <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                  {loadingAdminReminders ? (
+                    <div style={{ padding: 48, textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>Loading...</div>
+                  ) : adminReminders.length === 0 ? (
+                    <div style={{ padding: 56, textAlign: 'center' }}>
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>No reminders yet</div>
+                      <div style={{ fontSize: 13, color: '#9ca3af' }}>Reminders sent from {selectedAdmin.name}'s number will appear here</div>
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+                          {['#', 'Date', 'Time', 'Message', 'To', 'Status', ''].map((h, i) => (
+                            <th key={i} style={{ padding: '13px 18px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adminReminders.map((r, i) => {
+                          const dt = new Date(r.scheduledAt);
+                          const sc = r.sent ? { bg: '#d1fae5', text: '#059669', label: 'Sent' }
+                            : r.status === 'failed' ? { bg: '#fee2e2', text: '#dc2626', label: 'Failed' }
+                            : r.status === 'pending_confirmation' ? { bg: '#fef3c7', text: '#d97706', label: 'Pending' }
+                            : { bg: '#dbeafe', text: '#2563eb', label: 'Scheduled' };
+                          return (
+                            <tr key={r._id} style={{ borderBottom: '1px solid #f9fafb' }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafafa'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
+                              <td style={{ padding: '14px 18px', fontSize: 13, color: '#c4c9d4', fontWeight: 600 }}>{i + 1}</td>
+                              <td style={{ padding: '14px 18px', fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
+                                {dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td style={{ padding: '14px 18px', fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
+                                {dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td style={{ padding: '14px 18px', fontSize: 13, color: '#111827', maxWidth: 280 }}>
+                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.message}>{r.message}</div>
+                              </td>
+                              <td style={{ padding: '14px 18px', fontSize: 13, whiteSpace: 'nowrap' }}>
+                                {r.isSelf ? (
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', backgroundColor: '#f3f4f6', padding: '3px 9px', borderRadius: 20 }}>Self</span>
+                                ) : (() => {
+                                  const contact = contacts.find(c => c.phone === r.toPhone);
+                                  return contact ? (
+                                    <span
+                                      style={{ color: '#374151', cursor: 'default', borderBottom: '1px dashed #d1d5db' }}
+                                      onMouseMove={e => setTooltip({ x: e.clientX, y: e.clientY, type: 'client', name: contact.name, phone: contact.phone, email: contact.email })}
+                                      onMouseLeave={() => setTooltip(null)}
+                                    >
+                                      {contact.name}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#d1d5db' }}>—</span>
+                                  );
+                                })()}
+                              </td>
+                              <td style={{ padding: '14px 18px' }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, backgroundColor: sc.bg, color: sc.text }}>{sc.label}</span>
+                              </td>
+                              <td style={{ padding: '14px 18px' }}>
+                                <button onClick={() => handleDeleteReminder(r._id)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 16, lineHeight: 1, padding: 2 }}
+                                  onMouseEnter={e => e.target.style.color = '#ef4444'}
+                                  onMouseLeave={e => e.target.style.color = '#e5e7eb'}>✕</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {adminDetailTab === 'calendar' && (
+                <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', padding: 28, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                      {adminCalendarMonth.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                    </h3>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => { const d = new Date(adminCalendarMonth); d.setMonth(d.getMonth() - 1); setAdminCalendarMonth(d); }}
+                        style={{ padding: '7px 14px', border: '1px solid #f3f4f6', borderRadius: 8, cursor: 'pointer', background: '#fff', fontSize: 15, color: '#6b7280' }}>‹</button>
+                      <button onClick={() => { const d = new Date(adminCalendarMonth); d.setMonth(d.getMonth() + 1); setAdminCalendarMonth(d); }}
+                        style={{ padding: '7px 14px', border: '1px solid #f3f4f6', borderRadius: 8, cursor: 'pointer', background: '#fff', fontSize: 15, color: '#6b7280' }}>›</button>
+                    </div>
+                  </div>
+                  {(() => {
+                    const year = adminCalendarMonth.getFullYear();
+                    const month = adminCalendarMonth.getMonth();
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const days = [];
+                    for (let i = 0; i < firstDay; i++) days.push(null);
+                    for (let d = 1; d <= daysInMonth; d++) days.push(d);
+                    const remForDay = d => adminReminders.filter(r => { const rd = new Date(r.scheduledAt); return rd.getFullYear() === year && rd.getMonth() === month && rd.getDate() === d; });
+                    const today = new Date();
+                    return (
+                      <div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 10 }}>
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                            <div key={d} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#c4c9d4', paddingBottom: 8 }}>{d}</div>
+                          ))}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 5 }}>
+                          {days.map((day, i) => {
+                            const rems = day ? remForDay(day) : [];
+                            const isToday = day && today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+                            return (
+                              <div key={i} style={{ minHeight: 76, padding: '7px 8px', borderRadius: 10, backgroundColor: isToday ? '#f0fdf9' : day ? '#fafafa' : 'transparent', border: isToday ? '1.5px solid #6ee7b7' : day ? '1px solid #f3f4f6' : 'none' }}>
+                                {day && (
+                                  <>
+                                    <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? '#059669' : '#374151', marginBottom: 4 }}>{day}</div>
+                                    {rems.map(r => {
+                                      const sc = r.sent ? { bg: '#d1fae5', text: '#059669' } : r.status === 'failed' ? { bg: '#fee2e2', text: '#dc2626' } : { bg: '#dbeafe', text: '#2563eb' };
+                                      const statusLabel = r.sent ? 'Sent' : r.status === 'failed' ? 'Failed' : r.status === 'pending_confirmation' ? 'Pending' : 'Scheduled';
+                                      const toLabel = r.isSelf ? 'Self' : (contacts.find(c => c.phone === r.toPhone)?.name || r.toName || r.toPhone || '—');
+                                      return (
+                                        <div key={r._id}
+                                          style={{ fontSize: 10, padding: '2px 6px', borderRadius: 5, marginBottom: 2, backgroundColor: sc.bg, color: sc.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, cursor: 'default' }}
+                                          onMouseMove={e => setTooltip({ x: e.clientX, y: e.clientY, type: 'reminder', message: r.message, to: toLabel, time: new Date(r.scheduledAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), status: statusLabel, statusColor: sc.text })}
+                                          onMouseLeave={() => setTooltip(null)}
+                                        >
+                                          {new Date(r.scheduledAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
+          ) : reminderTab === 'admin' ? (
+
+            /* ===== ADMIN LIST ===== */
+            <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #f9fafb' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>Admin Numbers</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: 13, color: '#9ca3af' }}>Team members allowed to send reminders via WhatsApp</p>
+                </div>
+                <button onClick={() => { setAdminForm(emptyForm); setFormErrors({}); setShowAdminPopup(true); }}
+                  style={{ padding: '9px 20px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  + Add Admin
+                </button>
+              </div>
+              {allowedNumbers.length === 0 ? (
+                <div style={{ padding: 56, textAlign: 'center' }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>👤</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>No admins yet</div>
+                  <div style={{ fontSize: 13, color: '#9ca3af' }}>Add team members who can send reminders via WhatsApp</div>
+                </div>
+              ) : allowedNumbers.map((u, i) => (
+                <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: i < allowedNumbers.length - 1 ? '1px solid #f9fafb' : 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafafa'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #d1fae5, #6ee7b7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#059669', fontSize: 17, flexShrink: 0 }}>
+                    {u.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{u.name}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{u.phone}{u.email ? ` · ${u.email}` : ''}</div>
+                  </div>
+                  <span style={{ fontSize: 13, color: '#9ca3af', flexShrink: 0 }}>({reminderCounts[u.phone] || 0})</span>
+                  {/* Toggle */}
+                  <div onClick={() => handleToggleAdmin(u._id)} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', flexShrink: 0 }}>
+                    <div style={{ width: 38, height: 21, borderRadius: 11, backgroundColor: u.isActive !== false ? '#10b981' : '#d1d5db', position: 'relative', transition: 'background 0.25s', flexShrink: 0 }}>
+                      <div style={{ width: 17, height: 17, borderRadius: '50%', backgroundColor: '#fff', position: 'absolute', top: 2, left: u.isActive !== false ? 19 : 2, transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: u.isActive !== false ? '#10b981' : '#9ca3af', minWidth: 42 }}>
+                      {u.isActive !== false ? 'Active' : 'Paused'}
+                    </span>
+                  </div>
+                  <button onClick={() => handleOpenAdmin(u)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', background: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151', flexShrink: 0 }}>
+                    View →
+                  </button>
+                  <button onClick={() => handleDeleteAdmin(u._id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 18, flexShrink: 0, padding: 4, lineHeight: 1 }}
+                    onMouseEnter={e => e.target.style.color = '#ef4444'}
+                    onMouseLeave={e => e.target.style.color = '#e5e7eb'}>✕</button>
+                </div>
+              ))}
+            </div>
+
+          ) : (
+
+            /* ===== CLIENT LIST ===== */
+            <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #f9fafb' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>Clients</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: 13, color: '#9ca3af' }}>Add clients so reminders can be sent to them by mentioning their name</p>
+                </div>
+                <button onClick={() => { setClientForm(emptyForm); setFormErrors({}); setShowClientPopup(true); }}
+                  style={{ padding: '9px 20px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+                  + Add Client
+                </button>
+              </div>
+              {contacts.length === 0 ? (
+                <div style={{ padding: 56, textAlign: 'center' }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>👥</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>No clients yet</div>
+                  <div style={{ fontSize: 13, color: '#9ca3af' }}>Add clients by name to send them reminders</div>
+                </div>
+              ) : contacts.map((c, i) => (
+                <div key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: i < contacts.length - 1 ? '1px solid #f9fafb' : 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafafa'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#2563eb', fontSize: 17, flexShrink: 0 }}>
+                    {c.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{c.name}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{c.phone}{c.email ? ` · ${c.email}` : ''}{c.note ? ` · ${c.note}` : ''}</div>
+                  </div>
+                  <button onClick={() => handleDeleteContact(c._id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 18, padding: 4, lineHeight: 1 }}
+                    onMouseEnter={e => e.target.style.color = '#ef4444'}
+                    onMouseLeave={e => e.target.style.color = '#e5e7eb'}>✕</button>
+                </div>
+              ))}
+            </div>
+
+          )}
+        </div>
+      )}
+
+      {/* Hover tooltip */}
+      {tooltip && (
+        <div style={{
+          position: 'fixed', left: tooltip.x + 14, top: tooltip.y - 10,
+          backgroundColor: '#1f2937', color: '#fff', borderRadius: 10,
+          padding: '10px 14px', fontSize: 12, lineHeight: 1.7,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.25)', zIndex: 9000,
+          pointerEvents: 'none', whiteSpace: 'nowrap', maxWidth: 280,
+        }}>
+          {tooltip.type === 'client' ? (
+            <>
+              <div style={{ fontWeight: 700, marginBottom: 3, fontSize: 13 }}>{tooltip.name}</div>
+              {tooltip.phone && <div style={{ color: '#9ca3af' }}>📱 {tooltip.phone}</div>}
+              {tooltip.email && <div style={{ color: '#9ca3af' }}>✉ {tooltip.email}</div>}
+            </>
+          ) : (
+            <>
+              <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#f9fafb', whiteSpace: 'normal', maxWidth: 260 }}>{tooltip.message}</div>
+              <div style={{ color: '#9ca3af' }}>🕐 {tooltip.time}</div>
+              <div style={{ color: '#9ca3af' }}>👤 {tooltip.to}</div>
+              <div style={{ color: tooltip.statusColor, fontWeight: 700, marginTop: 2 }}>{tooltip.status}</div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Admin Number Popup */}
+      {showAdminPopup && (
+        <AddPopup
+          title="Add Admin Number"
+          form={adminForm}
+          setForm={setAdminForm}
+          formErrors={formErrors}
+          setFormErrors={setFormErrors}
+          onSave={handleAddAdmin}
+          saving={savingAdmin}
+          onClose={() => { setShowAdminPopup(false); setFormErrors({}); }}
+        />
+      )}
+
+      {/* Client Popup */}
+      {showClientPopup && (
+        <AddPopup
+          title="Add Client"
+          form={clientForm}
+          setForm={setClientForm}
+          formErrors={formErrors}
+          setFormErrors={setFormErrors}
+          onSave={handleAddContact}
+          saving={savingClient}
+          onClose={() => { setShowClientPopup(false); setFormErrors({}); }}
+        />
+      )}
 
       {/* Template Modal */}
       {showTemplateModal && (
