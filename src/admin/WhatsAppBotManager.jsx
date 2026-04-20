@@ -167,7 +167,8 @@ const FlowsList = ({ basePath }) => {
       setAllowedNumbers(adminsData.data || []);
       const counts = {};
       (remindersData.data || []).forEach(r => {
-        counts[r.fromPhone] = (counts[r.fromPhone] || 0) + 1;
+        const key = (r.fromPhone || '').replace(/\D/g, '').slice(-10);
+        counts[key] = (counts[key] || 0) + 1;
       });
       setReminderCounts(counts);
     } catch (e) { console.error(e); }
@@ -275,7 +276,7 @@ const FlowsList = ({ basePath }) => {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/reminders`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      setAdminReminders((data.data || []).filter(r => r.fromPhone === phone));
+      setAdminReminders((data.data || []).filter(r => (r.fromPhone || '').replace(/\D/g, '').slice(-10) === (phone || '').replace(/\D/g, '').slice(-10)));
     } catch (e) { console.error(e); }
     setLoadingAdminReminders(false);
   };
