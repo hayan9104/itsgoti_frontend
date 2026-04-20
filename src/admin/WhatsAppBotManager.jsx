@@ -100,6 +100,14 @@ const FlowsList = ({ basePath }) => {
   const [adminCalendarMonth, setAdminCalendarMonth] = useState(new Date());
   const [tooltip, setTooltip] = useState(null); // { x, y, type:'client'|'reminder', ...fields }
 
+  // Search & filter state
+  const [adminSearch, setAdminSearch] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [filterTo, setFilterTo] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
   // Popup modals
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showClientPopup, setShowClientPopup] = useState(false);
@@ -1445,15 +1453,69 @@ const FlowsList = ({ basePath }) => {
                 ))}
               </div>
 
-              {adminDetailTab === 'list' && (
+              {adminDetailTab === 'list' && (() => {
+                const filteredReminders = adminReminders.filter(r => {
+                  if (filterTo === 'self' && !r.isSelf) return false;
+                  if (filterTo && filterTo !== 'self') {
+                    const contact = contacts.find(c => (c.phone || '').replace(/\D/g, '').slice(-10) === (r.toPhone || '').replace(/\D/g, '').slice(-10));
+                    if (!contact || contact.name !== filterTo) return false;
+                  }
+                  if (filterStatus === 'sent' && !r.sent) return false;
+                  if (filterStatus === 'failed' && !r.failed) return false;
+                  if (filterStatus === 'scheduled' && (r.sent || r.failed || r.status !== 'confirmed')) return false;
+                  if (filterStatus === 'pending' && r.status !== 'pending_confirmation') return false;
+                  if (filterDateFrom && new Date(r.scheduledAt) < new Date(filterDateFrom)) return false;
+                  if (filterDateTo) { const to = new Date(filterDateTo); to.setHours(23,59,59,999); if (new Date(r.scheduledAt) > to) return false; }
+                  return true;
+                });
+                const hasFilters = filterTo || filterStatus || filterDateFrom || filterDateTo;
+                const toOptions = ['self', ...contacts.map(c => c.name)];
+                return (
+                <div>
+                  {/* Filter bar */}
+                  <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', padding: '16px 20px', marginBottom: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                    {/* To filter */}
+                    <select value={filterTo} onChange={e => setFilterTo(e.target.value)}
+                      style={{ padding: '7px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, color: filterTo ? '#111827' : '#9ca3af', background: '#f9fafb', cursor: 'pointer', outline: 'none' }}>
+                      <option value=''>All Recipients</option>
+                      <option value='self'>Self</option>
+                      {contacts.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
+                    </select>
+                    {/* Status pills */}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[['', 'All'], ['scheduled', 'Scheduled'], ['sent', 'Sent'], ['failed', 'Failed'], ['pending', 'Pending']].map(([val, label]) => (
+                        <button key={val} onClick={() => setFilterStatus(val)} style={{
+                          padding: '6px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none',
+                          background: filterStatus === val ? '#10b981' : '#f3f4f6',
+                          color: filterStatus === val ? '#fff' : '#6b7280',
+                        }}>{label}</button>
+                      ))}
+                    </div>
+                    {/* Date range */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type='date' value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                        style={{ padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#374151', background: '#f9fafb', outline: 'none' }} />
+                      <span style={{ fontSize: 12, color: '#9ca3af' }}>→</span>
+                      <input type='date' value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                        style={{ padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#374151', background: '#f9fafb', outline: 'none' }} />
+                    </div>
+                    {hasFilters && (
+                      <button onClick={() => { setFilterTo(''); setFilterStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#fee2e2', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Clear
+                      </button>
+                    )}
+                    <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>{filteredReminders.length} of {adminReminders.length}</span>
+                  </div>
+
                 <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   {loadingAdminReminders ? (
                     <div style={{ padding: 48, textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>Loading...</div>
-                  ) : adminReminders.length === 0 ? (
+                  ) : filteredReminders.length === 0 ? (
                     <div style={{ padding: 56, textAlign: 'center' }}>
                       <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>No reminders yet</div>
-                      <div style={{ fontSize: 13, color: '#9ca3af' }}>Reminders sent from {selectedAdmin.name}'s number will appear here</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>{hasFilters ? 'No matches' : 'No reminders yet'}</div>
+                      <div style={{ fontSize: 13, color: '#9ca3af' }}>{hasFilters ? 'Try adjusting your filters' : `Reminders sent from ${selectedAdmin.name}'s number will appear here`}</div>
                     </div>
                   ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1465,7 +1527,7 @@ const FlowsList = ({ basePath }) => {
                         </tr>
                       </thead>
                       <tbody>
-                        {adminReminders.map((r, i) => {
+                        {filteredReminders.map((r, i) => {
                           const dt = new Date(r.scheduledAt);
                           const sc = r.sent ? { bg: '#d1fae5', text: '#059669', label: 'Sent' }
                             : r.status === 'failed' ? { bg: '#fee2e2', text: '#dc2626', label: 'Failed' }
@@ -1519,7 +1581,9 @@ const FlowsList = ({ basePath }) => {
                     </table>
                   )}
                 </div>
-              )}
+                </div>
+                );
+              })()}
 
               {adminDetailTab === 'calendar' && (
                 <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', padding: 28, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
@@ -1596,19 +1660,34 @@ const FlowsList = ({ basePath }) => {
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>Admin Numbers</h3>
                   <p style={{ margin: '3px 0 0', fontSize: 13, color: '#9ca3af' }}>Team members allowed to send reminders via WhatsApp</p>
                 </div>
-                <button onClick={() => { setAdminForm(emptyForm); setFormErrors({}); setShowAdminPopup(true); }}
-                  style={{ padding: '9px 20px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-                  + Add Admin
-                </button>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 14 }}>🔍</span>
+                    <input
+                      value={adminSearch} onChange={e => setAdminSearch(e.target.value)}
+                      placeholder='Search name, number, email...'
+                      style={{ paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f9fafb', outline: 'none', width: 220 }}
+                    />
+                  </div>
+                  <button onClick={() => { setAdminForm(emptyForm); setFormErrors({}); setShowAdminPopup(true); }}
+                    style={{ padding: '9px 20px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>
+                    + Add Admin
+                  </button>
+                </div>
               </div>
-              {allowedNumbers.length === 0 ? (
+              {(() => {
+                const filteredAdmins = allowedNumbers.filter(u => {
+                  const q = adminSearch.toLowerCase();
+                  return !q || u.name?.toLowerCase().includes(q) || u.phone?.includes(q) || u.email?.toLowerCase().includes(q);
+                });
+                return filteredAdmins.length === 0 ? (
                 <div style={{ padding: 56, textAlign: 'center' }}>
                   <div style={{ fontSize: 36, marginBottom: 10 }}>👤</div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>No admins yet</div>
-                  <div style={{ fontSize: 13, color: '#9ca3af' }}>Add team members who can send reminders via WhatsApp</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>{adminSearch ? 'No results found' : 'No admins yet'}</div>
+                  <div style={{ fontSize: 13, color: '#9ca3af' }}>{adminSearch ? 'Try a different search term' : 'Add team members who can send reminders via WhatsApp'}</div>
                 </div>
-              ) : allowedNumbers.map((u, i) => (
-                <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: i < allowedNumbers.length - 1 ? '1px solid #f9fafb' : 'none' }}
+              ) : filteredAdmins.map((u, i) => (
+                <div key={u._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: i < filteredAdmins.length - 1 ? '1px solid #f9fafb' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafafa'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
                   <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #d1fae5, #6ee7b7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#059669', fontSize: 17, flexShrink: 0 }}>
@@ -1637,7 +1716,8 @@ const FlowsList = ({ basePath }) => {
                     onMouseEnter={e => e.target.style.color = '#ef4444'}
                     onMouseLeave={e => e.target.style.color = '#e5e7eb'}>✕</button>
                 </div>
-              ))}
+              ))
+            })()}
             </div>
 
           ) : (
@@ -1649,19 +1729,34 @@ const FlowsList = ({ basePath }) => {
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111827' }}>Clients</h3>
                   <p style={{ margin: '3px 0 0', fontSize: 13, color: '#9ca3af' }}>Add clients so reminders can be sent to them by mentioning their name</p>
                 </div>
-                <button onClick={() => { setClientForm(emptyForm); setFormErrors({}); setShowClientPopup(true); }}
-                  style={{ padding: '9px 20px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-                  + Add Client
-                </button>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 14 }}>🔍</span>
+                    <input
+                      value={clientSearch} onChange={e => setClientSearch(e.target.value)}
+                      placeholder='Search name, number, email...'
+                      style={{ paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f9fafb', outline: 'none', width: 220 }}
+                    />
+                  </div>
+                  <button onClick={() => { setClientForm(emptyForm); setFormErrors({}); setShowClientPopup(true); }}
+                    style={{ padding: '9px 20px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>
+                    + Add Client
+                  </button>
+                </div>
               </div>
-              {contacts.length === 0 ? (
+              {(() => {
+                const filteredContacts = contacts.filter(c => {
+                  const q = clientSearch.toLowerCase();
+                  return !q || c.name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q);
+                });
+                return filteredContacts.length === 0 ? (
                 <div style={{ padding: 56, textAlign: 'center' }}>
                   <div style={{ fontSize: 36, marginBottom: 10 }}>👥</div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>No clients yet</div>
-                  <div style={{ fontSize: 13, color: '#9ca3af' }}>Add clients by name to send them reminders</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>{clientSearch ? 'No results found' : 'No clients yet'}</div>
+                  <div style={{ fontSize: 13, color: '#9ca3af' }}>{clientSearch ? 'Try a different search term' : 'Add clients by name to send them reminders'}</div>
                 </div>
-              ) : contacts.map((c, i) => (
-                <div key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: i < contacts.length - 1 ? '1px solid #f9fafb' : 'none' }}
+              ) : filteredContacts.map((c, i) => (
+                <div key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: i < filteredContacts.length - 1 ? '1px solid #f9fafb' : 'none' }}
                   onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafafa'}
                   onMouseLeave={e => e.currentTarget.style.backgroundColor = ''}>
                   <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#2563eb', fontSize: 17, flexShrink: 0 }}>
@@ -1676,7 +1771,8 @@ const FlowsList = ({ basePath }) => {
                     onMouseEnter={e => e.target.style.color = '#ef4444'}
                     onMouseLeave={e => e.target.style.color = '#e5e7eb'}>✕</button>
                 </div>
-              ))}
+              ))
+            })()}
             </div>
 
           )}
