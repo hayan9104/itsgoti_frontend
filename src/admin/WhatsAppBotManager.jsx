@@ -573,39 +573,6 @@ const FlowsList = ({ basePath }) => {
           Flow
         </button>
 
-        {/* Reminder tab with dropdown */}
-        <div ref={reminderDropdownRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => { setMainTab('reminder'); setShowReminderDropdown(p => !p); }}
-            style={{
-              padding: '10px 24px', background: 'none', border: 'none',
-              borderBottom: mainTab === 'reminder' ? '2px solid #25D366' : '2px solid transparent',
-              marginBottom: -2, fontWeight: mainTab === 'reminder' ? 700 : 500,
-              color: mainTab === 'reminder' ? '#25D366' : '#6b7280', cursor: 'pointer', fontSize: 15,
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            Reminder
-            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              style={{ transform: showReminderDropdown ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {showReminderDropdown && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 300, minWidth: 170, overflow: 'hidden' }}>
-              {[{ key: 'admin', label: 'Admin Numbers' }, { key: 'client', label: 'Clients' }].map(opt => (
-                <button key={opt.key} onClick={() => { setReminderTab(opt.key); setShowReminderDropdown(false); setSelectedAdmin(null); }} style={{
-                  display: 'block', width: '100%', padding: '11px 18px', background: reminderTab === opt.key ? '#f0fdf4' : '#fff',
-                  border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: 14,
-                  fontWeight: reminderTab === opt.key ? 700 : 500,
-                  color: reminderTab === opt.key ? '#16a34a' : '#374151',
-                }}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ==================== FLOW TAB ==================== */}
@@ -1420,8 +1387,7 @@ const FlowsList = ({ basePath }) => {
 
       </> } {/* end Flow tab */}
 
-      {/* ==================== REMINDER TAB ==================== */}
-      {mainTab === 'reminder' && (
+      {false && (
         <div>
           {selectedAdmin ? (
 

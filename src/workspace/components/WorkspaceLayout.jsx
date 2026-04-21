@@ -97,11 +97,13 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
         { id: 'admins', path: '/admins', icon: 'users', label: 'Team' },
         { id: 'calendar', path: '/calendar', icon: 'calendar', label: 'Calendar' },
         { id: 'meetings', path: '/meetings', icon: 'meetings', label: 'Meetings' },
+        { id: 'reminders', path: '/reminders', icon: 'reminders', label: 'Reminders' },
       ]
     : [
         { id: 'boards', path: '/boards', icon: 'boards', label: 'Work' },
         { id: 'calendar', path: '/calendar', icon: 'calendar', label: 'Calendar' },
         { id: 'meetings', path: '/meetings', icon: 'meetings', label: 'Meetings' },
+        { id: 'reminders', path: '/reminders', icon: 'reminders', label: 'Reminders' },
       ];
 
   const icons = {
@@ -138,6 +140,11 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
     meetings: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
         <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+      </svg>
+    ),
+    reminders: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
       </svg>
     ),
     settings: (

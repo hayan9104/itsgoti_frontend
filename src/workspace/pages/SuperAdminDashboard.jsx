@@ -10,6 +10,8 @@ import AllTasks from './AllTasks';
 import Inbox from './Inbox';
 import CalendarView from '../components/CalendarView';
 import MeetingsView from '../components/MeetingsView';
+import RemindersSidebar from '../components/RemindersSidebar';
+import RemindersContent from '../components/RemindersContent';
 import { workspaceBoardsAPI, workspaceTasksAPI, workspaceUsersAPI, workspaceMessagesAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
@@ -627,6 +629,10 @@ const SuperAdminDashboard = () => {
   // Settings tab state
   const [settingsTab, setSettingsTab] = useState('account');
 
+  // Reminders state
+  const [reminderView, setReminderView] = useState('admin'); // 'admin' | 'client' | 'admin-detail'
+  const [reminderAdmin, setReminderAdmin] = useState(null);
+
   // Handlers for InboxSidebar
   const handleSelectConversation = (conv) => {
     setInboxConversation(conv);
@@ -652,6 +658,7 @@ const SuperAdminDashboard = () => {
     if (location.pathname.includes('/all-tasks')) return 'boards';
     if (location.pathname.includes('/calendar')) return 'calendar';
     if (location.pathname.includes('/meetings')) return 'meetings';
+    if (location.pathname.includes('/reminders')) return 'reminders';
     if (location.pathname.includes('/settings')) return 'settings';
     return 'home';
   };
@@ -664,6 +671,12 @@ const SuperAdminDashboard = () => {
       <SettingsSidebar
         activeTab={settingsTab}
         onTabChange={setSettingsTab}
+      />
+    );
+    if (section === 'reminders') return (
+      <RemindersSidebar
+        selected={reminderView === 'admin-detail' ? 'admin' : reminderView}
+        onSelect={(key) => { setReminderView(key); setReminderAdmin(null); }}
       />
     );
     if (section === 'inbox') return (
@@ -688,6 +701,14 @@ const SuperAdminDashboard = () => {
         <Route path="/boards/:boardId" element={<BoardDetail />} />
         <Route path="/calendar" element={<CalendarView />} />
         <Route path="/meetings" element={<MeetingsView />} />
+        <Route path="/reminders" element={
+          <RemindersContent
+            view={reminderView}
+            selectedAdmin={reminderAdmin}
+            onViewAdmin={(admin) => { setReminderAdmin(admin); setReminderView('admin-detail'); }}
+            onBack={() => { setReminderView('admin'); setReminderAdmin(null); }}
+          />
+        } />
         <Route path="/all-tasks" element={<AllTasks />} />
         <Route path="/admins" element={<AdminsManager />} />
         <Route path="/inbox" element={
