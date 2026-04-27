@@ -3,20 +3,20 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const HomeIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <path d="M3 12L12 3L21 12V21H15V15H9V21H3V12Z" fill={active ? '#fff' : '#666'} />
+    <path d="M3 12L12 3L21 12V21H15V15H9V21H3V12Z" fill={active ? '#0dbaab' : '#9ca3af'} />
   </svg>
 );
 const MediaIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="2" width="20" height="20" rx="3" stroke={active ? '#fff' : '#666'} strokeWidth="2" />
-    <path d="M9 8L17 12L9 16V8Z" fill={active ? '#fff' : '#666'} />
+    <rect x="2" y="2" width="20" height="20" rx="3" stroke={active ? '#0dbaab' : '#9ca3af'} strokeWidth="2" />
+    <path d="M9 8L17 12L9 16V8Z" fill={active ? '#0dbaab' : '#9ca3af'} />
   </svg>
 );
 const ShoppableIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-    <path d="M6 2L3 6V20C3 21.1 3.9 22 5 22H19C20.1 22 21 21.1 21 20V6L18 2H6Z" stroke={active ? '#fff' : '#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M3 6H21" stroke={active ? '#fff' : '#666'} strokeWidth="2"/>
-    <path d="M16 10C16 12.21 14.21 14 12 14C9.79 14 8 12.21 8 10" stroke={active ? '#fff' : '#666'} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M6 2L3 6V20C3 21.1 3.9 22 5 22H19C20.1 22 21 21.1 21 20V6L18 2H6Z" stroke={active ? '#0dbaab' : '#9ca3af'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M3 6H21" stroke={active ? '#0dbaab' : '#9ca3af'} strokeWidth="2"/>
+    <path d="M16 10C16 12.21 14.21 14 12 14C9.79 14 8 12.21 8 10" stroke={active ? '#0dbaab' : '#9ca3af'} strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
 
@@ -200,9 +200,9 @@ export default function GotiVideosDashboard() {
 
       {/* Icon Sidebar */}
       <div style={{
-        width: '64px', background: '#111', flexShrink: 0,
+        width: '64px', background: '#f9fafb', flexShrink: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        paddingTop: '16px', gap: '4px', borderRight: '1px solid #222'
+        paddingTop: '16px', gap: '4px', borderRight: '1px solid #e5e7eb'
       }}>
         {[
           { key: 'home', label: 'Home', Icon: HomeIcon },
@@ -211,44 +211,30 @@ export default function GotiVideosDashboard() {
         ].map(({ key, label, Icon }) => (
           <button key={key} onClick={() => setActiveTab(key)} style={{
             width: '52px', padding: '10px 4px 8px',
-            background: activeTab === key ? '#2a2a2a' : 'transparent',
+            background: activeTab === key ? '#e8f8f7' : 'transparent',
             border: 'none', borderRadius: '8px', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
           }}>
             <Icon active={activeTab === key} />
-            <span style={{ fontSize: '10px', color: activeTab === key ? '#fff' : '#666', fontWeight: '500' }}>{label}</span>
+            <span style={{ fontSize: '10px', color: activeTab === key ? '#0dbaab' : '#9ca3af', fontWeight: '500' }}>{label}</span>
           </button>
         ))}
-        <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
-          <button onClick={() => navigate(`/gotivideos/analytics?shop=${shop}`)} style={{
-            width: '52px', padding: '10px 4px 8px',
-            background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="12" width="4" height="9" rx="1" fill="#666"/>
-              <rect x="10" y="7" width="4" height="14" rx="1" fill="#666"/>
-              <rect x="17" y="3" width="4" height="18" rx="1" fill="#666"/>
-            </svg>
-            <span style={{ fontSize: '10px', color: '#666', fontWeight: '500' }}>Analytics</span>
-          </button>
-        </div>
       </div>
 
       {/* Sub Sidebar */}
       {activeTab === 'media' && (
         <div style={{
-          width: '220px', background: '#1a1a1a', flexShrink: 0,
-          display: 'flex', flexDirection: 'column', borderRight: '1px solid #252525'
+          width: '210px', background: '#fff', flexShrink: 0,
+          display: 'flex', flexDirection: 'column', borderRight: '1px solid #e5e7eb'
         }}>
-          <div style={{ padding: '20px 16px 12px', color: '#888', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          <div style={{ padding: '20px 16px 10px', color: '#9ca3af', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
             Library
           </div>
           {subNavItems.map(item => (
             <button key={item.key} onClick={() => setActiveSubNav(item.key)} style={{
-              padding: '9px 16px', background: activeSubNav === item.key ? '#2e2e2e' : 'transparent',
+              padding: '9px 14px', background: activeSubNav === item.key ? '#f0faf9' : 'transparent',
               border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-              color: activeSubNav === item.key ? '#fff' : '#aaa',
+              color: activeSubNav === item.key ? '#0dbaab' : '#6b7280',
               fontSize: '13.5px', fontWeight: activeSubNav === item.key ? '600' : '400',
               textAlign: 'left', borderRadius: '6px', margin: '1px 8px', width: 'calc(100% - 16px)'
             }}>
@@ -256,21 +242,6 @@ export default function GotiVideosDashboard() {
               {item.label}
             </button>
           ))}
-          <div style={{ marginTop: 'auto', padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <svg width="28" height="28" viewBox="0 0 28 28">
-                <circle cx="14" cy="14" r="12" stroke="#333" strokeWidth="2" fill="none"/>
-                <path d={`M 14 2 A 12 12 0 ${storagePercent > 50 ? 1 : 0} 1 ${14 + 12 * Math.sin(storagePercent / 100 * Math.PI * 2)} ${14 - 12 * Math.cos(storagePercent / 100 * Math.PI * 2)}`} stroke="#0dbaab" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-              </svg>
-              <div>
-                <div style={{ color: '#aaa', fontSize: '11px' }}>Storage available</div>
-                <div style={{ color: '#666', fontSize: '11px' }}>{totalSizeMB.toFixed(2)}GB of 1GB</div>
-              </div>
-            </div>
-            <div style={{ background: '#333', borderRadius: '4px', height: '4px', overflow: 'hidden' }}>
-              <div style={{ width: `${storagePercent}%`, height: '100%', background: '#0dbaab', borderRadius: '4px' }} />
-            </div>
-          </div>
         </div>
       )}
 
