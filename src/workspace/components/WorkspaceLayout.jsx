@@ -11,14 +11,14 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [accountToRemove, setAccountToRemove] = useState(null);
-  
+
   // Inline login states
   const [showInlineLogin, setShowInlineLogin] = useState(false);
   const [inlineEmail, setInlineEmail] = useState('');
   const [inlinePassword, setInlinePassword] = useState('');
   const [inlineLoading, setInlineLoading] = useState(false);
   const [inlineError, setInlineError] = useState(null);
-  
+
   const accountPickerRef = useRef(null);
 
   const handleAddAccount = () => {
@@ -29,7 +29,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
   const handleInlineLogin = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!inlineEmail || !inlinePassword) {
       setInlineError('Email and password required');
       return;
@@ -37,15 +37,14 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
 
     setInlineLoading(true);
     setInlineError(null);
-    
+
     const result = await linkNewAccount(inlineEmail, inlinePassword);
     setInlineLoading(false);
-    
+
     if (result.success) {
       setShowInlineLogin(false);
       setInlineEmail('');
       setInlinePassword('');
-      // The context update will trigger the list to refresh
     } else {
       setInlineError(result.message || 'Login failed');
     }
@@ -164,7 +163,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
       style={{
         display: 'flex',
         minHeight: '100vh',
-        backgroundColor: '#1a1a1c',
+        backgroundColor: '#f4f5f7',
         fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       }}
     >
@@ -172,18 +171,18 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
       {switchingAccount && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(17, 18, 20, 0.95)', zIndex: 9999,
+          backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 9999,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           backdropFilter: 'blur(10px)', transition: 'all 0.5s ease'
         }}>
-          <div style={{ 
-            width: '40px', height: '40px', border: '3px solid #333436', borderTop: '3px solid #3b82f6', 
-            borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' 
+          <div style={{
+            width: '40px', height: '40px', border: '3px solid #e5e7eb', borderTop: '3px solid #3b82f6',
+            borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px'
           }}></div>
           <style>{`
             @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
           `}</style>
-          <div style={{ fontSize: '14px', fontWeight: '500', color: '#e5e7eb', letterSpacing: '0.5px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff', letterSpacing: '0.5px' }}>
             Switching account...
           </div>
         </div>
@@ -194,7 +193,8 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
         style={{
           width: '68px',
           height: '100vh',
-          backgroundColor: '#1a1a1c',
+          backgroundColor: '#ffffff',
+          borderRight: '1px solid #e5e7eb',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -212,7 +212,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
             style={{
               width: '36px', height: '36px', borderRadius: '8px', border: 'none',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: viewMode === 'super_admin' ? 'rgba(232,101,90,0.15)' : 'rgba(59,130,246,0.15)',
+              backgroundColor: viewMode === 'super_admin' ? 'rgba(232,101,90,0.12)' : 'rgba(59,130,246,0.12)',
               transition: 'all 0.15s',
             }}
             onMouseEnter={(e) => e.currentTarget.style.opacity = '0.75'}
@@ -228,27 +228,27 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           {showAccountPicker && (
             <div style={{
               position: 'fixed', left: '76px', top: '16px',
-              width: '240px', backgroundColor: '#2a2b2d',
-              borderRadius: '12px', border: '1px solid #333436',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              width: '240px', backgroundColor: '#ffffff',
+              borderRadius: '12px', border: '1px solid #e5e7eb',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
               zIndex: 99999, overflow: 'hidden',
             }}>
               {/* User info header */}
-              <div style={{ padding: '16px', borderBottom: '1px solid #333436' }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#4a4b4d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: '#fff', flexShrink: 0 }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '700', color: '#374151', flexShrink: 0 }}>
                     {user?.name?.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#e5e7eb' }}>{user?.name}</div>
-                    <div style={{ fontSize: '11px', color: '#6f6e6f' }}>{user?.email}</div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{user?.name}</div>
+                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{user?.email}</div>
                   </div>
                 </div>
               </div>
 
               {/* Accounts list */}
               <div style={{ padding: '8px' }}>
-                <div style={{ fontSize: '10px', fontWeight: '600', color: '#6f6e6f', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '4px 8px 6px 8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '4px 8px 6px 8px' }}>
                   Accounts
                 </div>
 
@@ -256,10 +256,10 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                   const isCurrent = acc.isCurrent;
                   const accUser = acc.user;
                   const isSA = accUser.role === 'super_admin';
-                  
+
                   return (
                     <div key={accUser._id} style={{ display: 'flex', alignItems: 'center', borderRadius: '8px', overflow: 'hidden', marginBottom: '2px' }}
-                      onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#333436'; }}
+                      onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
                       onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                       <button
@@ -267,13 +267,13 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                         style={{
                           flex: 1, display: 'flex', alignItems: 'center', gap: '10px',
                           padding: '8px 10px', border: 'none', cursor: isCurrent ? 'default' : 'pointer',
-                          backgroundColor: isCurrent ? 'rgba(59,130,246,0.12)' : 'transparent', textAlign: 'left',
+                          backgroundColor: isCurrent ? 'rgba(59,130,246,0.08)' : 'transparent', textAlign: 'left',
                         }}
                       >
-                        <div style={{ 
-                          width: '30px', height: '30px', borderRadius: '8px', 
-                          backgroundColor: isSA ? 'rgba(232,101,90,0.2)' : 'rgba(59,130,246,0.2)', 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+                        <div style={{
+                          width: '30px', height: '30px', borderRadius: '8px',
+                          backgroundColor: isSA ? 'rgba(232,101,90,0.12)' : 'rgba(59,130,246,0.12)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                         }}>
                           <span style={{ fontSize: '10px', fontWeight: '800', color: isSA ? '#e8655a' : '#3b82f6' }}>
                             {isSA ? 'SA' : 'A'}
@@ -281,14 +281,14 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#e5e7eb' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#111827' }}>
                               {isSA ? 'Super Admin' : 'Admin'}
                             </span>
                             {isCurrent && (
-                              <span style={{ fontSize: '9px', fontWeight: '600', color: isSA ? '#e8655a' : '#3b82f6', backgroundColor: isSA ? 'rgba(232,101,90,0.15)' : 'rgba(59,130,246,0.15)', padding: '1px 5px', borderRadius: '4px' }}>Active</span>
+                              <span style={{ fontSize: '9px', fontWeight: '600', color: isSA ? '#e8655a' : '#3b82f6', backgroundColor: isSA ? 'rgba(232,101,90,0.12)' : 'rgba(59,130,246,0.12)', padding: '1px 5px', borderRadius: '4px' }}>Active</span>
                             )}
                           </div>
-                          <div style={{ fontSize: '10px', color: '#6f6e6f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accUser.email}</div>
+                          <div style={{ fontSize: '10px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{accUser.email}</div>
                         </div>
                         {isCurrent && (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill={isSA ? "#e8655a" : "#3b82f6"} style={{ flexShrink: 0 }}><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
@@ -300,7 +300,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
               </div>
 
               {/* Add account + divider */}
-              <div style={{ borderTop: '1px solid #333436', padding: '8px' }}>
+              <div style={{ borderTop: '1px solid #e5e7eb', padding: '8px' }}>
                 {!showInlineLogin ? (
                   <button
                     onClick={handleAddAccount}
@@ -309,40 +309,40 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                       padding: '8px 10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
                       backgroundColor: 'transparent', textAlign: 'left', transition: 'all 0.15s',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333436'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', backgroundColor: '#333436', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#a2a0a2"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#6b7280"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: '500', color: '#a2a0a2' }}>Add account</span>
+                    <span style={{ fontSize: '12px', fontWeight: '500', color: '#6b7280' }}>Add account</span>
                   </button>
                 ) : (
-                  <div 
-                    onClick={(e) => e.stopPropagation()} 
+                  <div
+                    onClick={(e) => e.stopPropagation()}
                     style={{ padding: '4px 8px' }}
                   >
-                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#e5e7eb', marginBottom: '8px' }}>Add Account</div>
-                    
-                    <input 
-                      type="email" 
-                      placeholder="Email" 
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>Add Account</div>
+
+                    <input
+                      type="email"
+                      placeholder="Email"
                       value={inlineEmail}
                       onChange={(e) => setInlineEmail(e.target.value)}
-                      style={{ 
-                        width: '100%', padding: '8px', marginBottom: '8px', borderRadius: '6px', 
-                        backgroundColor: '#1e1f21', border: '1px solid #333436', color: '#e5e7eb', fontSize: '12px' 
+                      style={{
+                        width: '100%', padding: '8px', marginBottom: '8px', borderRadius: '6px',
+                        backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', color: '#111827', fontSize: '12px'
                       }}
                     />
-                    
-                    <input 
-                      type="password" 
-                      placeholder="Password" 
+
+                    <input
+                      type="password"
+                      placeholder="Password"
                       value={inlinePassword}
                       onChange={(e) => setInlinePassword(e.target.value)}
-                      style={{ 
-                        width: '100%', padding: '8px', marginBottom: '8px', borderRadius: '6px', 
-                        backgroundColor: '#1e1f21', border: '1px solid #333436', color: '#e5e7eb', fontSize: '12px' 
+                      style={{
+                        width: '100%', padding: '8px', marginBottom: '8px', borderRadius: '6px',
+                        backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', color: '#111827', fontSize: '12px'
                       }}
                     />
 
@@ -351,20 +351,20 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                     )}
 
                     <div style={{ display: 'flex', gap: '6px' }}>
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); setShowInlineLogin(false); }}
-                        style={{ 
-                          flex: 1, padding: '6px', borderRadius: '6px', border: 'none', 
-                          backgroundColor: '#333436', color: '#e5e7eb', fontSize: '11px', cursor: 'pointer' 
+                        style={{
+                          flex: 1, padding: '6px', borderRadius: '6px', border: 'none',
+                          backgroundColor: '#f3f4f6', color: '#374151', fontSize: '11px', cursor: 'pointer'
                         }}
                       >
                         Cancel
                       </button>
-                      <button 
+                      <button
                         onClick={handleInlineLogin}
                         disabled={inlineLoading}
-                        style={{ 
-                          flex: 1, padding: '6px', borderRadius: '6px', border: 'none', 
+                        style={{
+                          flex: 1, padding: '6px', borderRadius: '6px', border: 'none',
                           backgroundColor: '#3b82f6', color: 'white', fontSize: '11px', cursor: 'pointer',
                           opacity: inlineLoading ? 0.7 : 1
                         }}
@@ -383,7 +383,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
         {showRemoveConfirm && (
           <div
             style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               zIndex: 999999,
             }}
@@ -391,35 +391,35 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           >
             <div
               style={{
-                backgroundColor: '#2a2b2d', borderRadius: '12px', border: '1px solid #333436',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.5)', padding: '24px', width: '300px',
+                backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e5e7eb',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.15)', padding: '24px', width: '300px',
               }}
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="#ef4444">
                     <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
                   </svg>
                 </div>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>Remove Account</div>
-                  <div style={{ fontSize: '11px', color: '#6f6e6f' }}>{accountToRemove?.email}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Remove Account</div>
+                  <div style={{ fontSize: '11px', color: '#6b7280' }}>{accountToRemove?.email}</div>
                 </div>
               </div>
-              <p style={{ fontSize: '13px', color: '#a2a0a2', margin: '12px 0 20px 0', lineHeight: '1.5' }}>
-                Are you sure you want to remove <strong style={{ color: '#e5e7eb' }}>{accountToRemove?.name}</strong>? You will be signed out of this account.
+              <p style={{ fontSize: '13px', color: '#6b7280', margin: '12px 0 20px 0', lineHeight: '1.5' }}>
+                Are you sure you want to remove <strong style={{ color: '#111827' }}>{accountToRemove?.name}</strong>? You will be signed out of this account.
               </p>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => { setShowRemoveConfirm(false); setAccountToRemove(null); }}
                   style={{
                     padding: '7px 16px', fontSize: '13px', fontWeight: '500',
-                    backgroundColor: '#333436', color: '#e5e7eb',
+                    backgroundColor: '#f3f4f6', color: '#374151',
                     border: 'none', borderRadius: '8px', cursor: 'pointer',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3d3e40'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#333436'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                 >
                   Cancel
                 </button>
@@ -455,8 +455,8 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: '4px',
-                color: isActiveSection(item.id) ? '#ffffff' : '#6f6e6f',
-                backgroundColor: isActiveSection(item.id) ? '#2e2f31' : 'transparent',
+                color: isActiveSection(item.id) ? '#2563eb' : '#9ca3af',
+                backgroundColor: isActiveSection(item.id) ? '#eff6ff' : 'transparent',
                 textDecoration: 'none',
                 transition: 'all 0.15s',
                 position: 'relative',
@@ -483,7 +483,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                     fontSize: '9px',
                     fontWeight: '700',
                     padding: '0 3px',
-                    border: '2px solid #1a1a1c',
+                    border: '2px solid #ffffff',
                   }}
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
@@ -505,8 +505,8 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: isActiveSection('settings') ? '#ffffff' : '#6f6e6f',
-              backgroundColor: isActiveSection('settings') ? '#2e2f31' : 'transparent',
+              color: isActiveSection('settings') ? '#2563eb' : '#9ca3af',
+              backgroundColor: isActiveSection('settings') ? '#eff6ff' : 'transparent',
               textDecoration: 'none',
               transition: 'all 0.15s',
             }}
@@ -529,7 +529,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           display: 'flex',
           flexDirection: 'column',
           zIndex: 1,
-          backgroundColor: '#1a1a1c',
+          backgroundColor: '#f4f5f7',
         }}
       >
         {/* ── Top Bar (OUTSIDE the rounded container) ── */}
@@ -541,7 +541,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0 24px',
-            backgroundColor: '#1a1a1c',
+            backgroundColor: '#f4f5f7',
           }}
         >
           <div />
@@ -554,20 +554,20 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                 alignItems: 'center',
                 gap: '8px',
                 padding: '7px 14px',
-                backgroundColor: '#2e2f31',
+                backgroundColor: '#ffffff',
                 borderRadius: '20px',
-                border: '1px solid #3a3b3d',
+                border: '1px solid #e5e7eb',
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="#6f6e6f">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#9ca3af">
                 <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
               </svg>
-              <span style={{ fontSize: '13px', color: '#6f6e6f', userSelect: 'none' }}>Search</span>
+              <span style={{ fontSize: '13px', color: '#9ca3af', userSelect: 'none' }}>Search</span>
             </div>
           </div>
 
           {/* Right: Brand */}
-          <span style={{ fontSize: '15px', fontWeight: '700', color: '#6f6e6f', letterSpacing: '0.5px' }}>
+          <span style={{ fontSize: '15px', fontWeight: '700', color: '#9ca3af', letterSpacing: '0.5px' }}>
             ItsGoti
           </span>
         </div>
@@ -577,10 +577,10 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
           style={{
             flex: 1,
             display: 'flex',
-            backgroundColor: '#252628',
+            backgroundColor: '#ffffff',
             borderRadius: '20px 0 0 0',
             overflow: 'hidden',
-            boxShadow: '-2px -2px 20px rgba(0,0,0,0.15)',
+            boxShadow: '-2px -2px 20px rgba(0,0,0,0.06)',
           }}
         >
           {/* Sidebar — ALWAYS visible */}
@@ -588,8 +588,8 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
             style={{
               width: '280px',
               height: '100%',
-              backgroundColor: '#252628',
-              borderRight: '1px solid #333436',
+              backgroundColor: '#ffffff',
+              borderRight: '1px solid #e5e7eb',
               overflow: 'auto',
               flexShrink: 0,
               display: 'flex',
@@ -608,8 +608,8 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                   padding: '10px 16px',
                   borderRadius: '8px',
                   marginBottom: '2px',
-                  color: isActiveSection('home') ? '#ffffff' : '#a2a0a2',
-                  backgroundColor: isActiveSection('home') ? '#3a3b3d' : 'transparent',
+                  color: isActiveSection('home') ? '#2563eb' : '#4b5563',
+                  backgroundColor: isActiveSection('home') ? '#eff6ff' : 'transparent',
                   textDecoration: 'none',
                   fontSize: '14px',
                   fontWeight: isActiveSection('home') ? '500' : '400',
@@ -630,8 +630,8 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
                   padding: '10px 16px',
                   borderRadius: '8px',
                   marginBottom: '2px',
-                  color: isActiveSection('inbox') ? '#ffffff' : '#a2a0a2',
-                  backgroundColor: isActiveSection('inbox') ? '#3a3b3d' : 'transparent',
+                  color: isActiveSection('inbox') ? '#2563eb' : '#4b5563',
+                  backgroundColor: isActiveSection('inbox') ? '#eff6ff' : 'transparent',
                   textDecoration: 'none',
                   fontSize: '14px',
                   fontWeight: isActiveSection('inbox') ? '500' : '400',
@@ -657,7 +657,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
             </div>
 
             {/* Separator */}
-            <div style={{ height: '1px', backgroundColor: '#333436', margin: '8px 16px' }} />
+            <div style={{ height: '1px', backgroundColor: '#e5e7eb', margin: '8px 16px' }} />
 
             {/* Contextual sidebar content (boards, inbox chats, etc.) */}
             <div style={{ flex: 1, overflow: 'auto' }}>
@@ -670,7 +670,7 @@ const WorkspaceLayout = ({ children, activeSection, secondarySidebar }) => {
             style={{
               flex: 1,
               overflow: 'auto',
-              backgroundColor: '#1e1f21',
+              backgroundColor: '#f4f5f7',
               padding: '24px',
             }}
           >
