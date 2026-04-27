@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function GotiVideosDashboard() {
   const [searchParams] = useSearchParams();
   const shop = searchParams.get('shop');
+  const navigate = useNavigate();
   const [shopData, setShopData] = useState(null);
   const [videos, setVideos] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -72,7 +73,13 @@ export default function GotiVideosDashboard() {
         padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <div style={{ fontWeight: '700', fontSize: '20px' }}>Goti Videos</div>
-        <div style={{ color: '#888', fontSize: '13px' }}>{shop}</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => navigate(`/gotivideos/analytics?shop=${shop}`)} style={{
+            background: 'transparent', border: '1px solid #333', borderRadius: '6px',
+            padding: '7px 14px', color: '#aaa', fontSize: '13px', cursor: 'pointer'
+          }}>📊 Analytics</button>
+          <div style={{ color: '#555', fontSize: '13px' }}>{shop}</div>
+        </div>
       </div>
 
       <div style={{ padding: '40px 32px', maxWidth: '1100px', margin: '0 auto' }}>
@@ -177,9 +184,19 @@ export default function GotiVideosDashboard() {
                       <span>🛒 {video.conversions}</span>
                     </div>
                     <button
-                      onClick={() => handleDelete(video._id)}
+                      onClick={() => navigate(`/gotivideos/editor/${video._id}?shop=${shop}`)}
                       style={{
                         width: '100%', marginTop: '10px', padding: '6px',
+                        background: '#5c6ac4', border: 'none',
+                        borderRadius: '6px', color: '#fff', fontSize: '12px', cursor: 'pointer', fontWeight: '600'
+                      }}
+                    >
+                      🏷 Tag Products
+                    </button>
+                    <button
+                      onClick={() => handleDelete(video._id)}
+                      style={{
+                        width: '100%', marginTop: '6px', padding: '6px',
                         background: 'transparent', border: '1px solid #3a3a3a',
                         borderRadius: '6px', color: '#f87171', fontSize: '12px', cursor: 'pointer'
                       }}

@@ -25,6 +25,8 @@ import { PlutioCopyAuthProvider, usePlutioCopyAuth } from './plutiocopy/context/
 // Goti Videos - Shopify App
 const GotiVideosInstall = lazy(() => import('./gotivideos/pages/GotiVideosInstall'));
 const GotiVideosDashboard = lazy(() => import('./gotivideos/pages/GotiVideosDashboard'));
+const GotiVideosEditor = lazy(() => import('./gotivideos/pages/GotiVideosEditor'));
+const GotiVideosAnalytics = lazy(() => import('./gotivideos/pages/GotiVideosAnalytics'));
 
 // Workspace (Project Management) - Lazy loaded
 const WorkspaceLogin = lazy(() => import('./workspace/pages/WorkspaceLogin'));
@@ -370,6 +372,8 @@ function App() {
             {/* Goti Videos - Shopify App */}
             <Route path="/gotivideos/install" element={<Suspense fallback={<PageLoader />}><GotiVideosInstall /></Suspense>} />
             <Route path="/gotivideos" element={<Suspense fallback={<PageLoader />}><GotiVideosDashboard /></Suspense>} />
+            <Route path="/gotivideos/editor/:videoId" element={<Suspense fallback={<PageLoader />}><GotiVideosEditor /></Suspense>} />
+            <Route path="/gotivideos/analytics" element={<Suspense fallback={<PageLoader />}><GotiVideosAnalytics /></Suspense>} />
 
             {/* Workspace Routes - Project Management System */}
             <Route path="/workspace/login" element={<Suspense fallback={<PageLoader />}><WorkspaceLogin /></Suspense>} />
