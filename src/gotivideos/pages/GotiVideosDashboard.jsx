@@ -585,10 +585,6 @@ export default function GotiVideosDashboard() {
                                 background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)',
                                 borderRadius: '6px', padding: '5px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer'
                               }}>▶</button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDownloadVideo(video); }} title="Download video" style={{
-                                background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)',
-                                borderRadius: '6px', padding: '5px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer'
-                              }}>⬇</button>
                             </div>
                             <div style={{ display: 'flex', gap: '6px' }}>
                               <button onClick={() => navigate(`/gotivideos/editor/${video._id}?shop=${shop}`)} style={{
