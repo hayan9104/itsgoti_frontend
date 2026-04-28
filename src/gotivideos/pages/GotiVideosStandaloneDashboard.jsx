@@ -4,9 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const API = '/api/goti-videos';
 const MAX_UPLOADS = 20;
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 const formatSize = (bytes) => {
   if (!bytes) return '';
@@ -14,44 +12,90 @@ const formatSize = (bytes) => {
   return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 };
 
+const FolderSVG = ({ size = 64 }) => (
+  <svg width={size} height={Math.round(size * 0.8)} viewBox="0 0 72 58" fill="none">
+    <path d="M0 8C0 3.58 3.58 0 8 0H26L33 9H64C68.42 9 72 12.58 72 17V50C72 54.42 68.42 58 64 58H8C3.58 58 0 54.42 0 50V8Z" fill="#d1d5db"/>
+    <path d="M0 17H72V50C72 54.42 68.42 58 64 58H8C3.58 58 0 54.42 0 50V17Z" fill="#e5e7eb"/>
+  </svg>
+);
+
 export default function GotiVideosStandaloneDashboard() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
+  const [folders, setFolders] = useState([]);
+  const [currentFolder, setCurrentFolder] = useState(null); // null = root, {_id, name} = inside
   const [activeUploads, setActiveUploads] = useState({}); // { tempId: { name, progress } }
   const [search, setSearch] = useState('');
   const [hoveredVideo, setHoveredVideo] = useState(null);
+  const [hoveredFolder, setHoveredFolder] = useState(null);
+  const [folderMenuOpen, setFolderMenuOpen] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [sortBy, setSortBy] = useState('date');
   const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Modals
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameTarget, setRenameTarget] = useState(null);
+  const [renameName, setRenameName] = useState('');
+
   const fileInputRef = useRef(null);
   const pollingRef = useRef({});
+  const folderNameRef = useRef(null);
+  const renameRef = useRef(null);
+  const dblClickTimers = useRef({});
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/goti/admin/login'); return; }
-    loadVideos();
+    loadFolders();
     return () => Object.values(pollingRef.current).forEach(clearInterval);
   }, []);
 
+  useEffect(() => { loadVideos(); }, [currentFolder]);
+
+  useEffect(() => {
+    if (showNewFolderModal && folderNameRef.current) folderNameRef.current.focus();
+  }, [showNewFolderModal]);
+
+  useEffect(() => {
+    if (showRenameModal && renameRef.current) renameRef.current.focus();
+  }, [showRenameModal]);
+
+  useEffect(() => {
+    const close = () => { setShowSortMenu(false); setFolderMenuOpen(null); };
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, []);
+
+  const loadFolders = async () => {
+    try {
+      const res = await fetch(`${API}/folders`, { headers: authHeaders() });
+      if (res.status === 401) { navigate('/goti/admin/login'); return; }
+      const data = await res.json();
+      if (data.success) setFolders(data.data);
+    } catch {}
+  };
+
   const loadVideos = async () => {
     try {
-      const res = await fetch(API, { headers: authHeaders() });
+      const folderId = currentFolder ? currentFolder._id : 'root';
+      const res = await fetch(`${API}/videos?folderId=${folderId}`, { headers: authHeaders() });
       if (res.status === 401) { navigate('/goti/admin/login'); return; }
       const data = await res.json();
       if (data.success) {
         setVideos(data.data);
         data.data.filter(v => v.status === 'processing').forEach(startPolling);
       }
-    } catch (err) {
-      console.error('Failed to load videos', err);
-    }
+    } catch {}
   };
 
   const startPolling = (video) => {
     if (pollingRef.current[video._id]) return;
     pollingRef.current[video._id] = setInterval(async () => {
       try {
-        const res = await fetch(`${API}/${video._id}/status`, { headers: authHeaders() });
+        const res = await fetch(`${API}/videos/${video._id}/status`, { headers: authHeaders() });
         const data = await res.json();
         if (data.success && data.data.status === 'ready') {
           clearInterval(pollingRef.current[video._id]);
@@ -66,6 +110,7 @@ export default function GotiVideosStandaloneDashboard() {
     const formData = new FormData();
     formData.append('video', file);
     formData.append('title', file.name.replace(/\.[^/.]+$/, ''));
+    if (currentFolder) formData.append('folderId', currentFolder._id);
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API}/upload`);
@@ -79,28 +124,16 @@ export default function GotiVideosStandaloneDashboard() {
     };
 
     xhr.onload = () => {
-      // Remove placeholder
-      setActiveUploads(prev => {
-        const next = { ...prev };
-        delete next[tempId];
-        return next;
-      });
+      setActiveUploads(prev => { const n = { ...prev }; delete n[tempId]; return n; });
       try {
         const data = JSON.parse(xhr.responseText);
-        if (data.success) {
-          setVideos(v => [data.data, ...v]);
-          startPolling(data.data);
-        }
+        if (data.success) { setVideos(v => [data.data, ...v]); startPolling(data.data); }
       } catch {}
     };
 
     xhr.onerror = () => {
-      setActiveUploads(prev => {
-        const next = { ...prev };
-        delete next[tempId];
-        return next;
-      });
-      alert(`Upload failed for: ${file.name}`);
+      setActiveUploads(prev => { const n = { ...prev }; delete n[tempId]; return n; });
+      alert(`Upload failed: ${file.name}`);
     };
 
     xhr.send(formData);
@@ -109,8 +142,6 @@ export default function GotiVideosStandaloneDashboard() {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files).slice(0, MAX_UPLOADS);
     e.target.value = '';
-    if (!files.length) return;
-
     files.forEach(file => {
       const tempId = `${Date.now()}-${Math.random()}`;
       setActiveUploads(prev => ({ ...prev, [tempId]: { name: file.name.replace(/\.[^/.]+$/, ''), progress: 0 } }));
@@ -118,9 +149,9 @@ export default function GotiVideosStandaloneDashboard() {
     });
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteVideo = async (id) => {
     if (!confirm('Delete this video?')) return;
-    await fetch(`${API}/${id}`, { method: 'DELETE', headers: authHeaders() });
+    await fetch(`${API}/videos/${id}`, { method: 'DELETE', headers: authHeaders() });
     clearInterval(pollingRef.current[id]);
     delete pollingRef.current[id];
     setVideos(v => v.filter(x => x._id !== id));
@@ -138,16 +169,67 @@ export default function GotiVideosStandaloneDashboard() {
     const url = video.compressedUrl || video.originalUrl;
     if (!url) return;
     const a = document.createElement('a');
-    a.href = url;
-    a.download = video.title + '.mp4';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = video.title + '.mp4';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+  // Double-click to open folder
+  const handleFolderClick = (folder) => {
+    if (dblClickTimers.current[folder._id]) {
+      clearTimeout(dblClickTimers.current[folder._id]);
+      delete dblClickTimers.current[folder._id];
+      setCurrentFolder(folder);
+      setSearch('');
+      setVideos([]);
+    } else {
+      dblClickTimers.current[folder._id] = setTimeout(() => {
+        delete dblClickTimers.current[folder._id];
+      }, 260);
+    }
+  };
+
+  const createFolder = async () => {
+    if (!newFolderName.trim()) return;
+    const res = await fetch(`${API}/folders`, {
+      method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newFolderName.trim() }),
+    });
+    const data = await res.json();
+    if (data.success) { setFolders(f => [...f, data.data]); setNewFolderName(''); setShowNewFolderModal(false); }
+  };
+
+  const deleteFolder = async (id) => {
+    if (!confirm('Delete this folder? Videos inside will be moved to root.')) return;
+    await fetch(`${API}/folders/${id}`, { method: 'DELETE', headers: authHeaders() });
+    setFolders(f => f.filter(x => x._id !== id));
+    setFolderMenuOpen(null);
+  };
+
+  const openRename = (folder) => {
+    setRenameTarget(folder); setRenameName(folder.name);
+    setShowRenameModal(true); setFolderMenuOpen(null);
+  };
+
+  const confirmRename = async () => {
+    if (!renameName.trim()) return;
+    const res = await fetch(`${API}/folders/${renameTarget._id}`, {
+      method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: renameName.trim() }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setFolders(f => f.map(x => x._id === renameTarget._id ? data.data : x));
+      if (currentFolder?._id === renameTarget._id) setCurrentFolder(data.data);
+    }
+    setShowRenameModal(false); setRenameTarget(null);
   };
 
   const uploadingCount = Object.keys(activeUploads).length;
 
-  const sorted = [...videos]
+  const displayFolders = currentFolder ? [] :
+    folders.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
+
+  const displayVideos = [...videos]
     .filter(v => v.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'name') return a.title.localeCompare(b.title);
@@ -155,16 +237,14 @@ export default function GotiVideosStandaloneDashboard() {
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
-  const hasContent = sorted.length > 0 || uploadingCount > 0;
+  const hasContent = displayFolders.length > 0 || displayVideos.length > 0 || uploadingCount > 0;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
-      onClick={() => setShowSortMenu(false)}>
+    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
 
       {/* Header */}
       <div style={{
-        background: '#fff', borderBottom: '1px solid #e5e7eb',
-        padding: '0 32px', height: '60px',
+        background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 32px', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         position: 'sticky', top: 0, zIndex: 100,
       }}>
@@ -174,17 +254,20 @@ export default function GotiVideosStandaloneDashboard() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {uploadingCount > 0 && (
-            <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
-              {uploadingCount} uploading...
-            </span>
+            <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>{uploadingCount} uploading...</span>
+          )}
+          {!currentFolder && (
+            <button onClick={(e) => { e.stopPropagation(); setShowNewFolderModal(true); }} style={{
+              background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
+              padding: '8px 16px', fontSize: '13px', color: '#374151',
+              fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+            }}>📁 New Folder</button>
           )}
           <button onClick={() => fileInputRef.current.click()} style={{
             background: '#0dbaab', border: 'none', borderRadius: '8px',
             padding: '9px 20px', color: '#fff', fontSize: '14px', fontWeight: '700',
             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-          }}>
-            ⬆ Upload Video
-          </button>
+          }}>⬆ Upload Video</button>
         </div>
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" multiple style={{ display: 'none' }} />
       </div>
@@ -192,47 +275,50 @@ export default function GotiVideosStandaloneDashboard() {
       {/* Main Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
 
+        {/* Breadcrumb / Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+          {currentFolder ? (
+            <>
+              <button onClick={() => { setCurrentFolder(null); setSearch(''); setVideos([]); }} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: '20px', fontWeight: '700', color: '#9ca3af', padding: 0
+              }}>All Files</button>
+              <span style={{ color: '#9ca3af', fontSize: '18px' }}>›</span>
+              <span style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>{currentFolder.name}</span>
+            </>
+          ) : (
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>All Files</h2>
+          )}
+        </div>
+
         {/* Search + Sort */}
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '14px' }}>🔍</span>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search videos..."
-              style={{
-                width: '100%', padding: '10px 14px 10px 36px', fontSize: '14px',
-                border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none',
-                background: '#fff', color: '#1a1a1a', boxSizing: 'border-box'
-              }}
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
+              style={{ width: '100%', padding: '10px 14px 10px 36px', fontSize: '14px', border: '1px solid #e5e7eb', borderRadius: '8px', outline: 'none', background: '#fff', color: '#1a1a1a', boxSizing: 'border-box' }} />
           </div>
           <div style={{ position: 'relative' }}>
-            <button onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }}
-              style={{
-                background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px',
-                padding: '10px 16px', fontSize: '13px', color: '#374151',
-                cursor: 'pointer', fontWeight: '500', whiteSpace: 'nowrap'
-              }}>
+            <button onClick={(e) => { e.stopPropagation(); setShowSortMenu(v => !v); }} style={{
+              background: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px',
+              padding: '10px 16px', fontSize: '13px', color: '#374151', cursor: 'pointer', fontWeight: '500', whiteSpace: 'nowrap'
+            }}>
               Sort: {sortBy === 'date' ? 'Newest' : sortBy === 'name' ? 'Name' : 'Size'} ▾
             </button>
             {showSortMenu && (
               <div onClick={e => e.stopPropagation()} style={{
-                position: 'absolute', top: '44px', right: 0, background: '#fff',
-                border: '1px solid #e5e7eb', borderRadius: '8px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '160px', overflow: 'hidden'
+                position: 'absolute', top: '44px', right: 0, background: '#fff', border: '1px solid #e5e7eb',
+                borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '160px', overflow: 'hidden'
               }}>
                 {[['date','Newest first'],['name','Name A–Z'],['size','Largest first']].map(([key, label], i) => (
                   <button key={key} onClick={() => { setSortBy(key); setShowSortMenu(false); }} style={{
                     width: '100%', padding: '10px 14px', background: sortBy === key ? '#f0faf9' : '#fff',
                     border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '13px',
-                    color: sortBy === key ? '#0dbaab' : '#374151',
-                    fontWeight: sortBy === key ? '600' : '400',
+                    color: sortBy === key ? '#0dbaab' : '#374151', fontWeight: sortBy === key ? '600' : '400',
                     borderBottom: i < 2 ? '1px solid #f3f4f6' : 'none',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}>
-                    {label}
-                    {sortBy === key && <span style={{ color: '#0dbaab' }}>✓</span>}
+                    {label}{sortBy === key && <span style={{ color: '#0dbaab' }}>✓</span>}
                   </button>
                 ))}
               </div>
@@ -240,29 +326,13 @@ export default function GotiVideosStandaloneDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}>
-          {[
-            { label: 'Total Videos', value: videos.length },
-            { label: 'Ready', value: videos.filter(v => v.status === 'ready').length },
-            { label: 'Processing', value: videos.filter(v => v.status === 'processing').length },
-            ...(uploadingCount > 0 ? [{ label: 'Uploading', value: uploadingCount }] : []),
-          ].map(stat => (
-            <div key={stat.label} style={{
-              background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
-              padding: '14px 20px', minWidth: '120px'
-            }}>
-              <div style={{ fontSize: '22px', fontWeight: '700', color: '#1a1a1a' }}>{stat.value}</div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
         {/* Empty state */}
         {!hasContent && (
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#9ca3af' }}>
-            <div style={{ fontSize: '56px', marginBottom: '16px' }}>🎬</div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>No videos yet</div>
+            <div style={{ fontSize: '56px', marginBottom: '16px' }}>{currentFolder ? '📁' : '🎬'}</div>
+            <div style={{ fontSize: '18px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>
+              {currentFolder ? `"${currentFolder.name}" is empty` : 'No videos yet'}
+            </div>
             <div style={{ fontSize: '14px', marginBottom: '24px' }}>Upload a video to compress it and get a shareable link</div>
             <button onClick={() => fileInputRef.current.click()} style={{
               background: '#0dbaab', border: 'none', borderRadius: '8px',
@@ -271,9 +341,63 @@ export default function GotiVideosStandaloneDashboard() {
           </div>
         )}
 
-        {/* Grid — upload placeholders + real videos */}
+        {/* Grid */}
         {hasContent && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+
+            {/* Folder cards (root only) */}
+            {displayFolders.map(folder => (
+              <div key={folder._id} style={{ position: 'relative', cursor: 'pointer' }}
+                onMouseEnter={() => setHoveredFolder(folder._id)}
+                onMouseLeave={() => setHoveredFolder(null)}
+                onClick={() => handleFolderClick(folder)}
+              >
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  padding: '16px 8px 10px', borderRadius: '12px',
+                  background: hoveredFolder === folder._id ? '#f3f4f6' : '#fff',
+                  border: '1px solid #e5e7eb', transition: 'background 0.15s', userSelect: 'none'
+                }}>
+                  <FolderSVG size={64} />
+                  <div style={{
+                    marginTop: '8px', fontSize: '13px', fontWeight: '600', color: '#1a1a1a',
+                    textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%'
+                  }}>{folder.name}</div>
+                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Double-click to open</div>
+                </div>
+
+                {/* 3-dot menu button */}
+                {hoveredFolder === folder._id && (
+                  <button onClick={(e) => { e.stopPropagation(); setFolderMenuOpen(folderMenuOpen === folder._id ? null : folder._id); }} style={{
+                    position: 'absolute', top: '8px', right: '8px', width: '26px', height: '26px',
+                    borderRadius: '50%', background: '#fff', border: '1px solid #e5e7eb',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '14px', fontWeight: '700', letterSpacing: '1px', color: '#374151',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)'
+                  }}>···</button>
+                )}
+
+                {/* Dropdown menu */}
+                {folderMenuOpen === folder._id && (
+                  <div onClick={e => e.stopPropagation()} style={{
+                    position: 'absolute', top: '36px', right: '8px', background: '#fff',
+                    border: '1px solid #e5e7eb', borderRadius: '8px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 200, minWidth: '140px', overflow: 'hidden'
+                  }}>
+                    <button onClick={() => openRename(folder)} style={{
+                      width: '100%', padding: '10px 14px', background: '#fff', border: 'none',
+                      cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#374151',
+                      display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f3f4f6'
+                    }}>✏️ Rename</button>
+                    <button onClick={() => deleteFolder(folder._id)} style={{
+                      width: '100%', padding: '10px 14px', background: '#fff', border: 'none',
+                      cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#d72c0d',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>🗑 Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
 
             {/* Upload placeholder cards */}
             {Object.entries(activeUploads).map(([tempId, { name, progress }]) => (
@@ -281,22 +405,15 @@ export default function GotiVideosStandaloneDashboard() {
                 background: '#fff', borderRadius: '12px', overflow: 'hidden',
                 border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
               }}>
-                {/* Thumbnail placeholder */}
-                <div style={{ height: '130px', background: '#f3f4f6', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                  <div style={{ fontSize: '28px' }}>⬆</div>
-                  <div style={{ width: '70%' }}>
+                <div style={{ height: '120px', background: '#f3f4f6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <div style={{ fontSize: '24px' }}>⬆</div>
+                  <div style={{ width: '72%' }}>
                     <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${progress}%`, height: '100%', background: '#0dbaab',
-                        borderRadius: '2px', transition: 'width 0.3s'
-                      }} />
+                      <div style={{ width: `${progress}%`, height: '100%', background: '#0dbaab', borderRadius: '2px', transition: 'width 0.3s' }} />
                     </div>
-                    <div style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', marginTop: '5px', fontWeight: '600' }}>
-                      {progress}%
-                    </div>
+                    <div style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', marginTop: '4px', fontWeight: '600' }}>{progress}%</div>
                   </div>
                 </div>
-                {/* Info */}
                 <div style={{ padding: '10px 12px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
                   <div style={{ fontSize: '11px', color: '#0dbaab', marginTop: '3px', fontWeight: '500' }}>Uploading...</div>
@@ -304,59 +421,40 @@ export default function GotiVideosStandaloneDashboard() {
               </div>
             ))}
 
-            {/* Real video cards */}
-            {sorted.map(video => (
+            {/* Video cards */}
+            {displayVideos.map(video => (
               <div key={video._id}
                 onMouseEnter={() => setHoveredVideo(video._id)}
                 onMouseLeave={() => setHoveredVideo(null)}
                 style={{
-                  background: '#fff', borderRadius: '12px', overflow: 'hidden',
-                  border: '1px solid #e5e7eb', transition: 'box-shadow 0.2s',
+                  background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb',
+                  transition: 'box-shadow 0.2s',
                   boxShadow: hoveredVideo === video._id ? '0 6px 20px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.06)'
                 }}
               >
-                {/* Thumbnail */}
-                <div style={{ height: '130px', background: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ height: '120px', background: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
                   {video.thumbnailUrl
                     ? <img src={video.thumbnailUrl} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🎬</div>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🎬</div>
                   }
-
-                  {/* Compressing overlay */}
                   {video.status === 'processing' && (
-                    <div style={{
-                      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                    }}>
-                      <div style={{ width: '28px', height: '28px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <div style={{ width: '26px', height: '26px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: '600' }}>Compressing...</span>
                     </div>
                   )}
-
-                  {/* Hover actions */}
                   {video.status === 'ready' && hoveredVideo === video._id && (
-                    <div style={{
-                      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                    }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       <ActionBtn icon="▶" title="Play" onClick={() => window.open(video.compressedUrl || video.originalUrl, '_blank')} />
                       <ActionBtn icon={copiedId === video._id ? '✓' : '⧉'} title="Copy link" onClick={() => handleCopyLink(video)} green={copiedId === video._id} />
                       <ActionBtn icon="⬇" title="Download" onClick={() => handleDownload(video)} />
-                      <ActionBtn icon="✕" title="Delete" onClick={() => handleDelete(video._id)} danger />
+                      <ActionBtn icon="✕" title="Delete" onClick={() => handleDeleteVideo(video._id)} danger />
                     </div>
                   )}
-
-                  {/* Size badge */}
                   {video.size && video.status === 'ready' && (
-                    <div style={{
-                      position: 'absolute', bottom: '6px', right: '6px',
-                      background: 'rgba(0,0,0,0.6)', color: '#fff',
-                      borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: '600'
-                    }}>{formatSize(video.size)}</div>
+                    <div style={{ position: 'absolute', bottom: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: '600' }}>{formatSize(video.size)}</div>
                   )}
                 </div>
-
-                {/* Info */}
                 <div style={{ padding: '10px 12px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.title}</div>
                   <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
@@ -371,9 +469,48 @@ export default function GotiVideosStandaloneDashboard() {
         )}
       </div>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      {/* New Folder Modal */}
+      {showNewFolderModal && (
+        <div onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); }} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '12px', padding: '28px', width: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>Create new folder</div>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Folder name</label>
+            <input ref={folderNameRef} value={newFolderName} onChange={e => setNewFolderName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') createFolder(); if (e.key === 'Escape') { setShowNewFolderModal(false); setNewFolderName(''); } }}
+              placeholder="Enter folder name"
+              style={{ width: '100%', padding: '10px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', boxSizing: 'border-box', color: '#1a1a1a', marginBottom: '20px' }} />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowNewFolderModal(false); setNewFolderName(''); }} style={{ padding: '9px 20px', background: '#fff', border: '1px solid #d1d5db', borderRadius: '7px', fontSize: '13px', color: '#374151', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+              <button onClick={createFolder} disabled={!newFolderName.trim()} style={{ padding: '9px 20px', background: newFolderName.trim() ? '#1a1a1a' : '#d1d5db', border: 'none', borderRadius: '7px', fontSize: '13px', color: '#fff', cursor: newFolderName.trim() ? 'pointer' : 'not-allowed', fontWeight: '600' }}>Create folder</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {showRenameModal && renameTarget && (
+        <div onClick={() => setShowRenameModal(false)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '12px', padding: '28px', width: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: '17px', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px' }}>Rename folder</div>
+            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Folder name</label>
+            <input ref={renameRef} value={renameName} onChange={e => setRenameName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') setShowRenameModal(false); }}
+              style={{ width: '100%', padding: '10px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', boxSizing: 'border-box', color: '#1a1a1a', marginBottom: '20px' }} />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowRenameModal(false)} style={{ padding: '9px 20px', background: '#fff', border: '1px solid #d1d5db', borderRadius: '7px', fontSize: '13px', color: '#374151', cursor: 'pointer', fontWeight: '500' }}>Cancel</button>
+              <button onClick={confirmRename} disabled={!renameName.trim()} style={{ padding: '9px 20px', background: renameName.trim() ? '#1a1a1a' : '#d1d5db', border: 'none', borderRadius: '7px', fontSize: '13px', color: '#fff', cursor: renameName.trim() ? 'pointer' : 'not-allowed', fontWeight: '600' }}>Rename</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -381,18 +518,13 @@ export default function GotiVideosStandaloneDashboard() {
 function ActionBtn({ icon, title, onClick, danger, green }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <button
-      title={title}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <button title={title} onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       style={{
         width: '34px', height: '34px', borderRadius: '8px', border: 'none',
         background: green ? '#0dbaab' : danger ? (hovered ? '#d72c0d' : 'rgba(255,255,255,0.15)') : (hovered ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.2)'),
         color: '#fff', fontSize: '14px', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'background 0.15s',
-      }}
-    >{icon}</button>
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s',
+      }}>{icon}</button>
   );
 }
