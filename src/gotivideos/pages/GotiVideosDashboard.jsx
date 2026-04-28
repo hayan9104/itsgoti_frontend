@@ -134,6 +134,17 @@ export default function GotiVideosDashboard() {
     setVideos(v => v.filter(x => x._id !== id));
   };
 
+  const handleDownloadVideo = (video) => {
+    const url = video.compressedUrl || video.originalUrl;
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = video.title + '.mp4';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   // Single click selects, double click opens folder
   const handleFolderClick = (folder) => {
     if (clickTimers.current[folder._id]) {
@@ -567,16 +578,28 @@ export default function GotiVideosDashboard() {
                         {hoveredVideo === video._id && (
                           <div style={{
                             position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px'
                           }}>
-                            <button onClick={() => navigate(`/gotivideos/editor/${video._id}?shop=${shop}`)} style={{
-                              background: '#0dbaab', border: 'none', borderRadius: '6px',
-                              padding: '6px 12px', color: '#fff', fontSize: '12px', fontWeight: '600', cursor: 'pointer'
-                            }}>Tag</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDeleteVideo(video._id); }} style={{
-                              background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)',
-                              borderRadius: '6px', padding: '6px 10px', color: '#fff', fontSize: '12px', cursor: 'pointer'
-                            }}>✕</button>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={(e) => { e.stopPropagation(); window.open(video.compressedUrl || video.originalUrl, '_blank'); }} title="View video" style={{
+                                background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)',
+                                borderRadius: '6px', padding: '5px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer'
+                              }}>▶</button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDownloadVideo(video); }} title="Download video" style={{
+                                background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.5)',
+                                borderRadius: '6px', padding: '5px 10px', color: '#fff', fontSize: '14px', cursor: 'pointer'
+                              }}>⬇</button>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={() => navigate(`/gotivideos/editor/${video._id}?shop=${shop}`)} style={{
+                                background: '#0dbaab', border: 'none', borderRadius: '6px',
+                                padding: '5px 12px', color: '#fff', fontSize: '12px', fontWeight: '600', cursor: 'pointer'
+                              }}>Tag</button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteVideo(video._id); }} style={{
+                                background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.4)',
+                                borderRadius: '6px', padding: '5px 10px', color: '#fff', fontSize: '12px', cursor: 'pointer'
+                              }}>✕</button>
+                            </div>
                           </div>
                         )}
                       </div>
