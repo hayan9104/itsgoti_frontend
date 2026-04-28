@@ -341,131 +341,121 @@ export default function GotiVideosStandaloneDashboard() {
           </div>
         )}
 
-        {/* Grid */}
-        {hasContent && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
-
-            {/* Folder cards (root only) */}
-            {displayFolders.map(folder => (
-              <div key={folder._id} style={{ position: 'relative', cursor: 'pointer' }}
-                onMouseEnter={() => setHoveredFolder(folder._id)}
-                onMouseLeave={() => setHoveredFolder(null)}
-                onClick={() => handleFolderClick(folder)}
-              >
-                <div style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  padding: '16px 8px 10px', borderRadius: '12px',
-                  background: hoveredFolder === folder._id ? '#f3f4f6' : '#fff',
-                  border: '1px solid #e5e7eb', transition: 'background 0.15s', userSelect: 'none'
-                }}>
-                  <FolderSVG size={64} />
+        {/* ── Folders section (root only) ── */}
+        {displayFolders.length > 0 && (
+          <>
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>Folders</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+              {displayFolders.map(folder => (
+                <div key={folder._id} style={{ position: 'relative', cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredFolder(folder._id)}
+                  onMouseLeave={() => setHoveredFolder(null)}
+                  onClick={() => handleFolderClick(folder)}
+                >
                   <div style={{
-                    marginTop: '8px', fontSize: '13px', fontWeight: '600', color: '#1a1a1a',
-                    textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%'
-                  }}>{folder.name}</div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Double-click to open</div>
-                </div>
-
-                {/* 3-dot menu button */}
-                {hoveredFolder === folder._id && (
-                  <button onClick={(e) => { e.stopPropagation(); setFolderMenuOpen(folderMenuOpen === folder._id ? null : folder._id); }} style={{
-                    position: 'absolute', top: '8px', right: '8px', width: '26px', height: '26px',
-                    borderRadius: '50%', background: '#fff', border: '1px solid #e5e7eb',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '14px', fontWeight: '700', letterSpacing: '1px', color: '#374151',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)'
-                  }}>···</button>
-                )}
-
-                {/* Dropdown menu */}
-                {folderMenuOpen === folder._id && (
-                  <div onClick={e => e.stopPropagation()} style={{
-                    position: 'absolute', top: '36px', right: '8px', background: '#fff',
-                    border: '1px solid #e5e7eb', borderRadius: '8px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 200, minWidth: '140px', overflow: 'hidden'
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    padding: '16px 8px 10px', borderRadius: '12px',
+                    background: hoveredFolder === folder._id ? '#f3f4f6' : '#fff',
+                    border: '1px solid #e5e7eb', transition: 'background 0.15s', userSelect: 'none'
                   }}>
-                    <button onClick={() => openRename(folder)} style={{
-                      width: '100%', padding: '10px 14px', background: '#fff', border: 'none',
-                      cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#374151',
-                      display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f3f4f6'
-                    }}>✏️ Rename</button>
-                    <button onClick={() => deleteFolder(folder._id)} style={{
-                      width: '100%', padding: '10px 14px', background: '#fff', border: 'none',
-                      cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#d72c0d',
-                      display: 'flex', alignItems: 'center', gap: '8px'
-                    }}>🗑 Delete</button>
+                    <FolderSVG size={64} />
+                    <div style={{ marginTop: '8px', fontSize: '13px', fontWeight: '600', color: '#1a1a1a', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{folder.name}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Double-click to open</div>
                   </div>
-                )}
-              </div>
-            ))}
+                  {hoveredFolder === folder._id && (
+                    <button onClick={(e) => { e.stopPropagation(); setFolderMenuOpen(folderMenuOpen === folder._id ? null : folder._id); }} style={{
+                      position: 'absolute', top: '8px', right: '8px', width: '26px', height: '26px',
+                      borderRadius: '50%', background: '#fff', border: '1px solid #e5e7eb',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '14px', fontWeight: '700', letterSpacing: '1px', color: '#374151',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)'
+                    }}>···</button>
+                  )}
+                  {folderMenuOpen === folder._id && (
+                    <div onClick={e => e.stopPropagation()} style={{
+                      position: 'absolute', top: '36px', right: '8px', background: '#fff',
+                      border: '1px solid #e5e7eb', borderRadius: '8px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.12)', zIndex: 200, minWidth: '140px', overflow: 'hidden'
+                    }}>
+                      <button onClick={() => openRename(folder)} style={{ width: '100%', padding: '10px 14px', background: '#fff', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f3f4f6' }}>✏️ Rename</button>
+                      <button onClick={() => deleteFolder(folder._id)} style={{ width: '100%', padding: '10px 14px', background: '#fff', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: '13px', color: '#d72c0d', display: 'flex', alignItems: 'center', gap: '8px' }}>🗑 Delete</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
-            {/* Upload placeholder cards */}
-            {Object.entries(activeUploads).map(([tempId, { name, progress }]) => (
-              <div key={tempId} style={{
-                background: '#fff', borderRadius: '12px', overflow: 'hidden',
-                border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-              }}>
-                <div style={{ height: '120px', background: '#f3f4f6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                  <div style={{ fontSize: '24px' }}>⬆</div>
-                  <div style={{ width: '72%' }}>
-                    <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div style={{ width: `${progress}%`, height: '100%', background: '#0dbaab', borderRadius: '2px', transition: 'width 0.3s' }} />
-                    </div>
-                    <div style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', marginTop: '4px', fontWeight: '600' }}>{progress}%</div>
-                  </div>
-                </div>
-                <div style={{ padding: '10px 12px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                  <div style={{ fontSize: '11px', color: '#0dbaab', marginTop: '3px', fontWeight: '500' }}>Uploading...</div>
-                </div>
-              </div>
-            ))}
+        {/* ── Videos section ── */}
+        {(displayVideos.length > 0 || uploadingCount > 0) && (
+          <>
+            {displayFolders.length > 0 && (
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>Videos</div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
 
-            {/* Video cards */}
-            {displayVideos.map(video => (
-              <div key={video._id}
-                onMouseEnter={() => setHoveredVideo(video._id)}
-                onMouseLeave={() => setHoveredVideo(null)}
-                style={{
-                  background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb',
-                  transition: 'box-shadow 0.2s',
-                  boxShadow: hoveredVideo === video._id ? '0 6px 20px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.06)'
-                }}
-              >
-                <div style={{ height: '120px', background: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
-                  {video.thumbnailUrl
-                    ? <img src={video.thumbnailUrl} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🎬</div>
-                  }
-                  {video.status === 'processing' && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <div style={{ width: '26px', height: '26px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                      <span style={{ color: '#fff', fontSize: '11px', fontWeight: '600' }}>Compressing...</span>
+              {/* Upload placeholder cards */}
+              {Object.entries(activeUploads).map(([tempId, { name, progress }]) => (
+                <div key={tempId} style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                  <div style={{ height: '120px', background: '#f3f4f6', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    <div style={{ fontSize: '24px' }}>⬆</div>
+                    <div style={{ width: '72%' }}>
+                      <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${progress}%`, height: '100%', background: '#0dbaab', borderRadius: '2px', transition: 'width 0.3s' }} />
+                      </div>
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', marginTop: '4px', fontWeight: '600' }}>{progress}%</div>
                     </div>
-                  )}
-                  {video.status === 'ready' && hoveredVideo === video._id && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <ActionBtn icon="▶" title="Play" onClick={() => window.open(video.compressedUrl || video.originalUrl, '_blank')} />
-                      <ActionBtn icon={copiedId === video._id ? '✓' : '⧉'} title="Copy link" onClick={() => handleCopyLink(video)} green={copiedId === video._id} />
-                      <ActionBtn icon="⬇" title="Download" onClick={() => handleDownload(video)} />
-                      <ActionBtn icon="✕" title="Delete" onClick={() => handleDeleteVideo(video._id)} danger />
-                    </div>
-                  )}
-                  {video.size && video.status === 'ready' && (
-                    <div style={{ position: 'absolute', bottom: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: '600' }}>{formatSize(video.size)}</div>
-                  )}
-                </div>
-                <div style={{ padding: '10px 12px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.title}</div>
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
-                    {video.status === 'processing'
-                      ? <span style={{ color: '#0dbaab', fontWeight: '500' }}>Compressing...</span>
-                      : new Date(video.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                    <div style={{ fontSize: '11px', color: '#0dbaab', marginTop: '3px', fontWeight: '500' }}>Uploading...</div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+
+              {/* Video cards */}
+              {displayVideos.map(video => (
+                <div key={video._id}
+                  onMouseEnter={() => setHoveredVideo(video._id)}
+                  onMouseLeave={() => setHoveredVideo(null)}
+                  style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', transition: 'box-shadow 0.2s', boxShadow: hoveredVideo === video._id ? '0 6px 20px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.06)' }}
+                >
+                  <div style={{ height: '120px', background: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
+                    {video.thumbnailUrl
+                      ? <img src={video.thumbnailUrl} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🎬</div>
+                    }
+                    {video.status === 'processing' && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <div style={{ width: '26px', height: '26px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                        <span style={{ color: '#fff', fontSize: '11px', fontWeight: '600' }}>Compressing...</span>
+                      </div>
+                    )}
+                    {video.status === 'ready' && hoveredVideo === video._id && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <ActionBtn icon="▶" title="Play" onClick={() => window.open(video.compressedUrl || video.originalUrl, '_blank')} />
+                        <ActionBtn icon={copiedId === video._id ? '✓' : '⧉'} title="Copy link" onClick={() => handleCopyLink(video)} green={copiedId === video._id} />
+                        <ActionBtn icon="⬇" title="Download" onClick={() => handleDownload(video)} />
+                        <ActionBtn icon="✕" title="Delete" onClick={() => handleDeleteVideo(video._id)} danger />
+                      </div>
+                    )}
+                    {video.size && video.status === 'ready' && (
+                      <div style={{ position: 'absolute', bottom: '6px', right: '6px', background: 'rgba(0,0,0,0.6)', color: '#fff', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: '600' }}>{formatSize(video.size)}</div>
+                    )}
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.title}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
+                      {video.status === 'processing'
+                        ? <span style={{ color: '#0dbaab', fontWeight: '500' }}>Compressing...</span>
+                        : new Date(video.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
