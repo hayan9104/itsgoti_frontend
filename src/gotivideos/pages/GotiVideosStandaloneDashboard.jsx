@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API = '/api/goti-videos';
+const MAX_UPLOADS = 20;
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -16,8 +17,7 @@ const formatSize = (bytes) => {
 export default function GotiVideosStandaloneDashboard() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeUploads, setActiveUploads] = useState({}); // { tempId: { name, progress } }
   const [search, setSearch] = useState('');
   const [hoveredVideo, setHoveredVideo] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -62,27 +62,29 @@ export default function GotiVideosStandaloneDashboard() {
     }, 3000);
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = '';
-
+  const uploadFile = (file, tempId) => {
     const formData = new FormData();
     formData.append('video', file);
     formData.append('title', file.name.replace(/\.[^/.]+$/, ''));
 
-    setUploading(true);
-    setUploadProgress(0);
-
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API}/upload`);
     xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`);
+
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        setActiveUploads(prev => ({ ...prev, [tempId]: { ...prev[tempId], progress: pct } }));
+      }
     };
+
     xhr.onload = () => {
-      setUploading(false);
-      setUploadProgress(0);
+      // Remove placeholder
+      setActiveUploads(prev => {
+        const next = { ...prev };
+        delete next[tempId];
+        return next;
+      });
       try {
         const data = JSON.parse(xhr.responseText);
         if (data.success) {
@@ -91,8 +93,29 @@ export default function GotiVideosStandaloneDashboard() {
         }
       } catch {}
     };
-    xhr.onerror = () => { setUploading(false); alert('Upload failed'); };
+
+    xhr.onerror = () => {
+      setActiveUploads(prev => {
+        const next = { ...prev };
+        delete next[tempId];
+        return next;
+      });
+      alert(`Upload failed for: ${file.name}`);
+    };
+
     xhr.send(formData);
+  };
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files).slice(0, MAX_UPLOADS);
+    e.target.value = '';
+    if (!files.length) return;
+
+    files.forEach(file => {
+      const tempId = `${Date.now()}-${Math.random()}`;
+      setActiveUploads(prev => ({ ...prev, [tempId]: { name: file.name.replace(/\.[^/.]+$/, ''), progress: 0 } }));
+      uploadFile(file, tempId);
+    });
   };
 
   const handleDelete = async (id) => {
@@ -122,6 +145,8 @@ export default function GotiVideosStandaloneDashboard() {
     document.body.removeChild(a);
   };
 
+  const uploadingCount = Object.keys(activeUploads).length;
+
   const sorted = [...videos]
     .filter(v => v.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
@@ -129,6 +154,8 @@ export default function GotiVideosStandaloneDashboard() {
       if (sortBy === 'size') return (b.size || 0) - (a.size || 0);
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
+
+  const hasContent = sorted.length > 0 || uploadingCount > 0;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
@@ -145,24 +172,22 @@ export default function GotiVideosStandaloneDashboard() {
           <div style={{ width: '32px', height: '32px', background: '#0dbaab', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🎬</div>
           <span style={{ fontSize: '18px', fontWeight: '700', color: '#1a1a1a' }}>Goti Videos</span>
         </div>
-        <button onClick={() => fileInputRef.current.click()} disabled={uploading} style={{
-          background: uploading ? '#a3e4df' : '#0dbaab', border: 'none', borderRadius: '8px',
-          padding: '9px 20px', color: '#fff', fontSize: '14px', fontWeight: '700',
-          cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-        }}>
-          ⬆ {uploading ? `Uploading ${uploadProgress}%` : 'Upload Video'}
-        </button>
-        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" style={{ display: 'none' }} />
-      </div>
-
-      {/* Upload Progress Bar */}
-      {uploading && (
-        <div style={{ background: '#fff', padding: '0 32px 10px' }}>
-          <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
-            <div style={{ width: `${uploadProgress}%`, height: '100%', background: '#0dbaab', transition: 'width 0.3s' }} />
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {uploadingCount > 0 && (
+            <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>
+              {uploadingCount} uploading...
+            </span>
+          )}
+          <button onClick={() => fileInputRef.current.click()} style={{
+            background: '#0dbaab', border: 'none', borderRadius: '8px',
+            padding: '9px 20px', color: '#fff', fontSize: '14px', fontWeight: '700',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            ⬆ Upload Video
+          </button>
         </div>
-      )}
+        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" multiple style={{ display: 'none' }} />
+      </div>
 
       {/* Main Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
@@ -221,10 +246,11 @@ export default function GotiVideosStandaloneDashboard() {
             { label: 'Total Videos', value: videos.length },
             { label: 'Ready', value: videos.filter(v => v.status === 'ready').length },
             { label: 'Processing', value: videos.filter(v => v.status === 'processing').length },
+            ...(uploadingCount > 0 ? [{ label: 'Uploading', value: uploadingCount }] : []),
           ].map(stat => (
             <div key={stat.label} style={{
               background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
-              padding: '14px 20px', minWidth: '130px'
+              padding: '14px 20px', minWidth: '120px'
             }}>
               <div style={{ fontSize: '22px', fontWeight: '700', color: '#1a1a1a' }}>{stat.value}</div>
               <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{stat.label}</div>
@@ -233,7 +259,7 @@ export default function GotiVideosStandaloneDashboard() {
         </div>
 
         {/* Empty state */}
-        {sorted.length === 0 && !uploading && (
+        {!hasContent && (
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#9ca3af' }}>
             <div style={{ fontSize: '56px', marginBottom: '16px' }}>🎬</div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>No videos yet</div>
@@ -245,14 +271,49 @@ export default function GotiVideosStandaloneDashboard() {
           </div>
         )}
 
-        {/* Video Grid */}
-        {sorted.length > 0 && (
+        {/* Grid — upload placeholders + real videos */}
+        {hasContent && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+
+            {/* Upload placeholder cards */}
+            {Object.entries(activeUploads).map(([tempId, { name, progress }]) => (
+              <div key={tempId} style={{
+                background: '#fff', borderRadius: '12px', overflow: 'hidden',
+                border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+              }}>
+                {/* Thumbnail placeholder */}
+                <div style={{ height: '130px', background: '#f3f4f6', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <div style={{ fontSize: '28px' }}>⬆</div>
+                  <div style={{ width: '70%' }}>
+                    <div style={{ height: '4px', background: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${progress}%`, height: '100%', background: '#0dbaab',
+                        borderRadius: '2px', transition: 'width 0.3s'
+                      }} />
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', marginTop: '5px', fontWeight: '600' }}>
+                      {progress}%
+                    </div>
+                  </div>
+                </div>
+                {/* Info */}
+                <div style={{ padding: '10px 12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                  <div style={{ fontSize: '11px', color: '#0dbaab', marginTop: '3px', fontWeight: '500' }}>Uploading...</div>
+                </div>
+              </div>
+            ))}
+
+            {/* Real video cards */}
             {sorted.map(video => (
               <div key={video._id}
                 onMouseEnter={() => setHoveredVideo(video._id)}
                 onMouseLeave={() => setHoveredVideo(null)}
-                style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb', transition: 'box-shadow 0.2s', boxShadow: hoveredVideo === video._id ? '0 6px 20px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.06)' }}
+                style={{
+                  background: '#fff', borderRadius: '12px', overflow: 'hidden',
+                  border: '1px solid #e5e7eb', transition: 'box-shadow 0.2s',
+                  boxShadow: hoveredVideo === video._id ? '0 6px 20px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.06)'
+                }}
               >
                 {/* Thumbnail */}
                 <div style={{ height: '130px', background: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
@@ -261,13 +322,13 @@ export default function GotiVideosStandaloneDashboard() {
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px' }}>🎬</div>
                   }
 
-                  {/* Processing overlay */}
+                  {/* Compressing overlay */}
                   {video.status === 'processing' && (
                     <div style={{
                       position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px'
                     }}>
-                      <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      <div style={{ width: '28px', height: '28px', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                       <span style={{ color: '#fff', fontSize: '11px', fontWeight: '600' }}>Compressing...</span>
                     </div>
                   )}
@@ -299,7 +360,9 @@ export default function GotiVideosStandaloneDashboard() {
                 <div style={{ padding: '10px 12px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.title}</div>
                   <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '3px' }}>
-                    {video.status === 'processing' ? 'Compressing...' : new Date(video.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {video.status === 'processing'
+                      ? <span style={{ color: '#0dbaab', fontWeight: '500' }}>Compressing...</span>
+                      : new Date(video.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
               </div>
