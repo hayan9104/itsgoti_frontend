@@ -23,7 +23,7 @@ export default function GotiVideosStandaloneDashboard() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [folders, setFolders] = useState([]);
-  const [currentFolder, setCurrentFolder] = useState(null); // null = root, {_id, name} = inside
+  const [folderStack, setFolderStack] = useState([]); // breadcrumb path stack
   const [activeUploads, setActiveUploads] = useState({}); // { tempId: { name, progress } }
   const [search, setSearch] = useState('');
   const [hoveredVideo, setHoveredVideo] = useState(null);
@@ -49,11 +49,12 @@ export default function GotiVideosStandaloneDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/goti/admin/login'); return; }
-    loadFolders();
     return () => Object.values(pollingRef.current).forEach(clearInterval);
   }, []);
 
-  useEffect(() => { loadVideos(); }, [currentFolder]);
+  const currentFolder = folderStack[folderStack.length - 1] || null;
+
+  useEffect(() => { loadFolders(); loadVideos(); }, [folderStack]);
 
   useEffect(() => {
     if (showNewFolderModal && folderNameRef.current) folderNameRef.current.focus();
@@ -71,7 +72,8 @@ export default function GotiVideosStandaloneDashboard() {
 
   const loadFolders = async () => {
     try {
-      const res = await fetch(`${API}/folders`, { headers: authHeaders() });
+      const parentId = folderStack.length > 0 ? folderStack[folderStack.length - 1]._id : 'root';
+      const res = await fetch(`${API}/folders?parentId=${parentId}`, { headers: authHeaders() });
       if (res.status === 401) { navigate('/goti/admin/login'); return; }
       const data = await res.json();
       if (data.success) setFolders(data.data);
@@ -178,9 +180,10 @@ export default function GotiVideosStandaloneDashboard() {
     if (dblClickTimers.current[folder._id]) {
       clearTimeout(dblClickTimers.current[folder._id]);
       delete dblClickTimers.current[folder._id];
-      setCurrentFolder(folder);
+      setFolderStack(s => [...s, folder]);
       setSearch('');
       setVideos([]);
+      setFolders([]);
     } else {
       dblClickTimers.current[folder._id] = setTimeout(() => {
         delete dblClickTimers.current[folder._id];
@@ -188,11 +191,17 @@ export default function GotiVideosStandaloneDashboard() {
     }
   };
 
+  const navigateToStackIndex = (index) => {
+    // index = -1 means root, 0 = first folder, etc.
+    if (index < 0) { setFolderStack([]); } else { setFolderStack(s => s.slice(0, index + 1)); }
+    setSearch(''); setVideos([]); setFolders([]);
+  };
+
   const createFolder = async () => {
     if (!newFolderName.trim()) return;
     const res = await fetch(`${API}/folders`, {
       method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newFolderName.trim() }),
+      body: JSON.stringify({ name: newFolderName.trim(), parentId: currentFolder?._id || null }),
     });
     const data = await res.json();
     if (data.success) { setFolders(f => [...f, data.data]); setNewFolderName(''); setShowNewFolderModal(false); }
@@ -219,15 +228,16 @@ export default function GotiVideosStandaloneDashboard() {
     const data = await res.json();
     if (data.success) {
       setFolders(f => f.map(x => x._id === renameTarget._id ? data.data : x));
-      if (currentFolder?._id === renameTarget._id) setCurrentFolder(data.data);
+      if (currentFolder?._id === renameTarget._id) {
+        setFolderStack(s => s.map(x => x._id === renameTarget._id ? data.data : x));
+      }
     }
     setShowRenameModal(false); setRenameTarget(null);
   };
 
   const uploadingCount = Object.keys(activeUploads).length;
 
-  const displayFolders = currentFolder ? [] :
-    folders.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
+  const displayFolders = folders.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
 
   const displayVideos = [...videos]
     .filter(v => v.title.toLowerCase().includes(search.toLowerCase()))
@@ -256,13 +266,11 @@ export default function GotiVideosStandaloneDashboard() {
           {uploadingCount > 0 && (
             <span style={{ fontSize: '13px', color: '#6b7280', fontWeight: '500' }}>{uploadingCount} uploading...</span>
           )}
-          {!currentFolder && (
-            <button onClick={(e) => { e.stopPropagation(); setShowNewFolderModal(true); }} style={{
-              background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
-              padding: '8px 16px', fontSize: '13px', color: '#374151',
-              fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-            }}>📁 New Folder</button>
-          )}
+          <button onClick={(e) => { e.stopPropagation(); setShowNewFolderModal(true); }} style={{
+            background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
+            padding: '8px 16px', fontSize: '13px', color: '#374151',
+            fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+          }}>📁 New Folder</button>
           <button onClick={() => fileInputRef.current.click()} style={{
             background: '#0dbaab', border: 'none', borderRadius: '8px',
             padding: '9px 20px', color: '#fff', fontSize: '14px', fontWeight: '700',
@@ -275,20 +283,22 @@ export default function GotiVideosStandaloneDashboard() {
       {/* Main Content */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
 
-        {/* Breadcrumb / Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-          {currentFolder ? (
-            <>
-              <button onClick={() => { setCurrentFolder(null); setSearch(''); setVideos([]); }} style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: '20px', fontWeight: '700', color: '#9ca3af', padding: 0
-              }}>All Files</button>
+        {/* Breadcrumb */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          <button onClick={() => navigateToStackIndex(-1)} style={{
+            background: 'none', border: 'none', cursor: folderStack.length > 0 ? 'pointer' : 'default',
+            fontSize: '20px', fontWeight: '700', color: folderStack.length > 0 ? '#9ca3af' : '#1a1a1a', padding: 0
+          }}>All Files</button>
+          {folderStack.map((f, i) => (
+            <span key={f._id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ color: '#9ca3af', fontSize: '18px' }}>›</span>
-              <span style={{ fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>{currentFolder.name}</span>
-            </>
-          ) : (
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#1a1a1a' }}>All Files</h2>
-          )}
+              <button onClick={() => navigateToStackIndex(i)} style={{
+                background: 'none', border: 'none', cursor: i < folderStack.length - 1 ? 'pointer' : 'default',
+                fontSize: '20px', fontWeight: '700',
+                color: i < folderStack.length - 1 ? '#9ca3af' : '#1a1a1a', padding: 0
+              }}>{f.name}</button>
+            </span>
+          ))}
         </div>
 
         {/* Search + Sort */}
@@ -391,7 +401,9 @@ export default function GotiVideosStandaloneDashboard() {
         {(displayVideos.length > 0 || uploadingCount > 0) && (
           <>
             {displayFolders.length > 0 && (
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>Videos</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>
+                {currentFolder ? 'Videos in this folder' : 'Videos'}
+              </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
 
