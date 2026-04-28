@@ -28,6 +28,9 @@ const GotiVideosDashboard = lazy(() => import('./gotivideos/pages/GotiVideosDash
 const GotiVideosEditor = lazy(() => import('./gotivideos/pages/GotiVideosEditor'));
 const GotiVideosAnalytics = lazy(() => import('./gotivideos/pages/GotiVideosAnalytics'));
 
+// Goti Videos - Standalone
+const GotiVideosStandalone = lazy(() => import('./gotivideos/pages/GotiVideosStandaloneDashboard'));
+
 // Workspace (Project Management) - Lazy loaded
 const WorkspaceLogin = lazy(() => import('./workspace/pages/WorkspaceLogin'));
 const SuperAdminDashboard = lazy(() => import('./workspace/pages/SuperAdminDashboard'));
@@ -374,6 +377,9 @@ function App() {
             <Route path="/gotivideos" element={<Suspense fallback={<PageLoader />}><GotiVideosDashboard /></Suspense>} />
             <Route path="/gotivideos/editor/:videoId" element={<Suspense fallback={<PageLoader />}><GotiVideosEditor /></Suspense>} />
             <Route path="/gotivideos/analytics" element={<Suspense fallback={<PageLoader />}><GotiVideosAnalytics /></Suspense>} />
+
+            {/* Goti Videos - Standalone Dashboard */}
+            <Route path="/goti-videos" element={<Suspense fallback={<PageLoader />}><GotiVideosStandalone /></Suspense>} />
 
             {/* Workspace Routes - Project Management System */}
             <Route path="/workspace/login" element={<Suspense fallback={<PageLoader />}><WorkspaceLogin /></Suspense>} />
