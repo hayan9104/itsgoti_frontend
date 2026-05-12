@@ -3115,7 +3115,7 @@ const LandingPage3 = () => {
                   </p>
                   <div style={{
                     fontFamily: "'Barlow', sans-serif",
-                    fontSize: isMobile ? '14px' : '18px',
+                    fontSize: isMobile ? '14px' : '15px',
                     fontWeight: 400,
                     lineHeight: 1.6,
                     color: '#000',
