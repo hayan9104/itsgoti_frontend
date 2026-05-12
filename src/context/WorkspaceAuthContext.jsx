@@ -58,6 +58,11 @@ export const WorkspaceAuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Broadcast token to ItsGoti Chrome Extension
+  const broadcastTokenToExtension = (token, email) => {
+    window.postMessage({ type: 'ITSGOTI_AUTH_TOKEN', token, email }, '*');
+  };
+
   const checkAuth = async () => {
     const token = localStorage.getItem('workspace_token');
     if (!token) {
@@ -69,6 +74,7 @@ export const WorkspaceAuthProvider = ({ children }) => {
       const response = await workspaceAuthAPI.getMe();
       if (response.data.success) {
         setUser(response.data.data);
+        broadcastTokenToExtension(token, response.data.data?.email);
       } else {
         localStorage.removeItem('workspace_token');
         localStorage.removeItem('workspace_view_mode');
@@ -98,7 +104,8 @@ export const WorkspaceAuthProvider = ({ children }) => {
         
         setUser(loggedUser);
         setViewMode(defaultMode);
-        
+        broadcastTokenToExtension(token, loggedUser.email);
+
         return { success: true, user: loggedUser };
       } else {
         setError(response.data.message || 'Login failed');

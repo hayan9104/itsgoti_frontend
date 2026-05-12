@@ -272,9 +272,12 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     if (!confirm('Are you sure you want to delete this meeting?')) return;
     try {
       await workspaceMeetingsAPI.delete(meetingId);
-      setMeetings(meetings.filter(m => m._id !== meetingId));
+      const idx = meetings.findIndex(m => m._id === meetingId);
+      const remaining = meetings.filter(m => m._id !== meetingId);
+      setMeetings(remaining);
       if (selectedMeeting?._id === meetingId) {
-        setSelectedMeeting(null);
+        // Select the one below, or above if it was the last in the list
+        setSelectedMeeting(remaining[idx] || remaining[idx - 1] || null);
       }
     } catch (error) {
       console.error('Failed to delete meeting:', error);

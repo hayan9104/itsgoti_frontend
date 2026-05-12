@@ -425,6 +425,20 @@ export const workspaceMeetingsAPI = {
   toggleActionItem: (id, itemIndex) => workspaceApi.put(`/workspace/meetings/${id}/action-items/${itemIndex}`),
   // Export meeting as PDF
   exportPDF: (id) => workspaceApi.get(`/workspace/meetings/${id}/export-pdf`, { responseType: 'blob' }),
+  // Media Library
+  pin: (id) => workspaceApi.put(`/workspace/meetings/${id}/pin`),
+  archive: (id) => workspaceApi.put(`/workspace/meetings/${id}/archive`),
+  duplicate: (id) => workspaceApi.post(`/workspace/meetings/${id}/duplicate`),
+  getMediaVideos: (params) => workspaceApi.get('/workspace/meetings', { params: { ...params, mediaView: true } }),
+};
+
+// Workspace Screenshots API (Media Library)
+export const workspaceScreenshotsAPI = {
+  getAll: (params) => workspaceApi.get('/workspace/screenshots', { params }),
+  getOne: (id) => workspaceApi.get(`/workspace/screenshots/${id}`),
+  update: (id, data) => workspaceApi.put(`/workspace/screenshots/${id}`, data),
+  delete: (id) => workspaceApi.delete(`/workspace/screenshots/${id}`),
+  duplicate: (id) => workspaceApi.post(`/workspace/screenshots/${id}/duplicate`),
 };
 
 // Plutio Copy Boards API

@@ -112,13 +112,13 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
     }
   };
 
-  // Start/stop mic monitor when includeMic changes in idle state
+  // Start/stop mic monitor only when modal is open and in idle state
   useEffect(() => {
-    if (recState !== 'idle') return;
+    if (!visible || recState !== 'idle') { stopMicMonitor(); return; }
     if (includeMic) { startMicMonitor(); }
     else { stopMicMonitor(); }
     return () => stopMicMonitor();
-  }, [includeMic, recState]);
+  }, [includeMic, recState, visible]);
 
   // Floating pill drag — global mouse move/up listeners
   useEffect(() => {
@@ -489,13 +489,34 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
     chunksRef.current = [];
   };
 
+  const restartRecording = () => {
+    if (!window.confirm('Restart recording? Current recording will be discarded.')) return;
+    if (timerIntervalRef.current) { clearInterval(timerIntervalRef.current); timerIntervalRef.current = null; }
+    timerRef.current = 0;
+    setTimer(0);
+    chunksRef.current = [];
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = null;
+      if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    stopAllStreams();
+    recStateRef.current = 'idle';
+    setRecState('idle');
+    setTimeout(() => startRecording(), 100);
+  };
+
   const handleSave = () => {
     if (recordedBlob && onRecordingComplete) {
-      onRecordingComplete(recordedBlob, {
+      const blob = recordedBlob;
+      const meta = {
         title: recordingTitle.trim() || null,
         boardId: assignToBoard ? selectedBoardId : null,
         taskId: assignToBoard ? selectedTaskId : null,
-      });
+      };
+      discardRecording();
+      onClose();
+      onRecordingComplete(blob, meta);
     }
   };
 
@@ -571,9 +592,18 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
   // Hidden and idle — render nothing (stays mounted so recording state is preserved)
   if (!visible && recState === 'idle') return null;
 
-  // ── Floating pill — shown instead of modal while recording or paused ──
+  // ── Floating pill — matches extension pill design exactly ──
   if (recState === 'recording' || recState === 'paused') {
-    const isRec = recState === 'recording';
+    const isPausedState = recState === 'paused';
+    const pillBtn = {
+      width: '42px', height: '42px', borderRadius: '50%',
+      border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'pointer', padding: 0, flexShrink: 0,
+      outline: 'none', boxShadow: 'none', transition: 'background 0.15s',
+      WebkitAppearance: 'none', appearance: 'none',
+    };
+    const pillBtnSm = { ...pillBtn, width: '36px', height: '36px' };
+
     return createPortal(
       <>
         <div
@@ -583,90 +613,113 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
             left: pillPos.x,
             top: pillPos.y,
             zIndex: 99999,
-            backgroundColor: '#18191b',
-            border: `1px solid ${isRec ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}`,
-            borderRadius: '16px',
-            padding: '14px 10px',
+            background: 'rgba(14,14,14,0.97)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '22px',
+            padding: '14px 0',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '10px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)',
+            gap: '4px',
+            boxShadow: 'none',
             cursor: 'grab',
             userSelect: 'none',
-            width: '62px',
+            width: '58px',
+            fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
+            fontSize: '16px',
+            lineHeight: 1,
+            boxSizing: 'border-box',
           }}
         >
-          {/* Drag handle */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', opacity: 0.25 }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{ width: '22px', height: '2px', backgroundColor: '#fff', borderRadius: '99px' }} />
-            ))}
-          </div>
-
-          {/* Pulsing status dot */}
-          <div style={{
-            width: '10px', height: '10px', borderRadius: '50%',
-            backgroundColor: isRec ? '#ef4444' : '#f59e0b',
-            animation: isRec ? 'pillPulse 1.2s ease-in-out infinite' : 'none',
+          {/* Pulsing red dot */}
+          <span style={{
+            width: '8px', height: '8px', background: '#ef4444',
+            borderRadius: '50%', display: 'block', flexShrink: 0,
+            marginBottom: '2px',
+            animation: 'wsRecPulse 1.5s ease-in-out infinite',
           }} />
 
-          {/* Timer — horizontal, bigger */}
-          <span style={{
-            fontSize: '14px', fontWeight: '700', color: '#ffffff',
-            fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
-            letterSpacing: '1px',
+          {/* Timer */}
+          <div style={{
+            fontSize: '13px', fontWeight: 700, color: '#fff',
+            fontVariantNumeric: 'tabular-nums', letterSpacing: '0.5px',
+            textAlign: 'center', padding: '2px 4px', minWidth: '36px',
           }}>
             {formatTime(timer)}
-          </span>
+          </div>
 
           {/* Divider */}
-          <div style={{ width: '36px', height: '1px', backgroundColor: '#2e2f31' }} />
+          <div style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0, border: 'none' }} />
 
           {/* Pause / Resume */}
           <button
-            onClick={isRec ? pauseRecording : resumeRecording}
-            title={isRec ? 'Pause' : 'Resume'}
+            onClick={isPausedState ? resumeRecording : pauseRecording}
+            title={isPausedState ? 'Resume' : 'Pause'}
             style={{
-              width: '38px', height: '38px', borderRadius: '10px',
-              border: '1px solid #3a3b3d', backgroundColor: '#252628',
-              color: '#e5e7eb', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s',
+              ...pillBtn,
+              background: isPausedState ? 'rgba(59,130,246,0.25)' : 'transparent',
             }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#333436'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#252628'}
+            onMouseEnter={e => e.currentTarget.style.background = isPausedState ? 'rgba(59,130,246,0.38)' : 'rgba(255,255,255,0.09)'}
+            onMouseLeave={e => e.currentTarget.style.background = isPausedState ? 'rgba(59,130,246,0.25)' : 'transparent'}
           >
-            {isRec ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            {isPausedState ? (
+              <div style={{ width: 0, height: 0, borderStyle: 'solid', borderWidth: '7px 0 7px 13px', borderColor: 'transparent transparent transparent #fff', marginLeft: '3px', background: 'transparent' }} />
             ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                <span style={{ width: '3px', height: '13px', background: '#fff', borderRadius: '2px', display: 'block' }} />
+                <span style={{ width: '3px', height: '13px', background: '#fff', borderRadius: '2px', display: 'block' }} />
+              </div>
             )}
           </button>
 
-          {/* Stop */}
+          {/* Stop & Save */}
           <button
             onClick={stopRecording}
-            title="Stop Recording"
-            style={{
-              width: '38px', height: '38px', borderRadius: '10px',
-              border: 'none', backgroundColor: '#dc2626', color: '#fff',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#b91c1c'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#dc2626'}
+            title="Stop & Save"
+            style={{ ...pillBtn, background: '#ef4444' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
+            onMouseLeave={e => e.currentTarget.style.background = '#ef4444'}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2"/>
+            <div style={{ width: '14px', height: '14px', background: '#fff', borderRadius: '3px', flexShrink: 0 }} />
+          </button>
+
+          {/* Divider */}
+          <div style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0, border: 'none' }} />
+
+          {/* Restart */}
+          <button
+            onClick={restartRecording}
+            title="Restart"
+            style={{ ...pillBtnSm, background: 'transparent', color: '#888' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="1 4 1 10 7 10"/>
+              <path d="M3.51 15a9 9 0 1 0 .49-3.87"/>
+            </svg>
+          </button>
+
+          {/* Delete — discards recording immediately */}
+          <button
+            onClick={() => { stopAllStreams(); discardRecording(); onClose(); }}
+            title="Delete"
+            style={{ ...pillBtnSm, background: 'transparent', color: '#777' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.color = '#ef4444'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#777'; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
             </svg>
           </button>
         </div>
 
         <style>{`
-          @keyframes pillPulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-            60% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(239,68,68,0); }
+          @keyframes wsRecPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
           }
         `}</style>
       </>,
@@ -1064,7 +1117,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button className="rec-btn rec-btn-secondary" onClick={discardRecording} style={{ ...btnSecondary, flex: 1, justifyContent: 'center' }}>
+                <button className="rec-btn rec-btn-secondary" onClick={() => { discardRecording(); onClose(); }} style={{ ...btnSecondary, flex: 1, justifyContent: 'center' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                   </svg>

@@ -12,6 +12,9 @@ import CalendarView from '../components/CalendarView';
 import MeetingsView from '../components/MeetingsView';
 import RemindersSidebar from '../components/RemindersSidebar';
 import RemindersContent from '../components/RemindersContent';
+import MediaLibrary from './MediaLibrary';
+import VideoPlayerPage from './VideoPlayerPage';
+import ScreenshotViewerPage from './ScreenshotViewerPage';
 import { workspaceBoardsAPI, workspaceTasksAPI, workspaceUsersAPI, workspaceMessagesAPI } from '../../services/api';
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 
@@ -660,6 +663,7 @@ const SuperAdminDashboard = () => {
     if (location.pathname.includes('/meetings')) return 'meetings';
     if (location.pathname.includes('/reminders')) return 'reminders';
     if (location.pathname.includes('/settings')) return 'settings';
+    if (location.pathname.includes('/media')) return 'media';
     return 'home';
   };
 
@@ -722,6 +726,12 @@ const SuperAdminDashboard = () => {
           />
         } />
         <Route path="/settings" element={<Settings activeTab={settingsTab} />} />
+        <Route path="/media" element={<Navigate to="/workspace/super-admin/media/videos" replace />} />
+        <Route path="/media/videos" element={<MediaLibrary />} />
+        <Route path="/media/screenshots" element={<MediaLibrary />} />
+        <Route path="/media/archive" element={<MediaLibrary />} />
+        <Route path="/media/videos/:id" element={<VideoPlayerPage />} />
+        <Route path="/media/screenshots/:id" element={<ScreenshotViewerPage />} />
         <Route path="*" element={<Navigate to="/workspace/super-admin" replace />} />
       </Routes>
     </WorkspaceLayout>
