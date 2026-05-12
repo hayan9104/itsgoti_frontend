@@ -7,6 +7,7 @@ import useThemeColors from '@/hooks/useThemeColors';
 import useSmoothScroll from '@/hooks/useSmoothScroll';
 import useScrollAnimations from '@/hooks/useScrollAnimations';
 import { pagesAPI, contactsAPI, clientLogosAPI } from '@/services/api';
+import { useBookingModal } from '@/components/BookingModal';
 import EditableSection from '@/components/EditableSection';
 import HighlightImg from '@/assets/Highligh.png';
 import TickMark from '@/assets/Tick mark.png';
@@ -131,6 +132,7 @@ const serviceIcons = {
 const LandingPage3 = () => {
   const { isMobile, isTablet } = useWindowSize();
   const { getSectionColors, getColor, themeColors } = useThemeColors('landing-page-3');
+  const { openBookingModal } = useBookingModal();
 
   // Initialize smooth scrolling and scroll animations (disabled on mobile for performance)
   useSmoothScroll(!isMobile);
@@ -1132,9 +1134,29 @@ const LandingPage3 = () => {
                   fontFamily: "'Barlow', sans-serif",
                   fontSize: '16px',
                   color: '#666',
+                  marginBottom: '20px',
                 }}>
                   We'll get back to you soon.
                 </p>
+                <button
+                  onClick={openBookingModal}
+                  style={{
+                    fontFamily: "'Gabarito', sans-serif",
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: '#fff',
+                    backgroundColor: '#000',
+                    border: 'none',
+                    borderRadius: '100px',
+                    padding: '12px 28px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  📅 Click here to book a call
+                </button>
               </div>
             ) : (
               <div style={{
