@@ -957,7 +957,8 @@ const LandingPage3 = () => {
 
   // Get carousel settings from content
   const carouselAutoPlay = content.carouselAutoPlay !== false && content.carouselAutoPlay !== 'false';
-  const carouselSpeed = parseFloat(content.carouselSpeed) || 1; // Default 1 second
+  const carouselSpeed = parseFloat(content.carouselSpeed) || 1;
+  const phoneBorder = content.phoneBorder !== false && content.phoneBorder !== 'false';
 
   // Auto-rotate phone carousel (continuous loop) - only if autoPlay is enabled
   useEffect(() => {
@@ -1637,6 +1638,8 @@ const LandingPage3 = () => {
                   const centerHeight = 290;
                   const sideHeight = 210;
                   const borderWidth = 4;
+                  const borderStyle = phoneBorder ? `${borderWidth}px solid #000` : 'none';
+                  const shadowStyle = phoneBorder ? `0 0 0 ${borderWidth}px #CCCCCC` : 'none';
 
                   const translateX = isCenter ? 0 : (isLeft ? -135 : (isRight ? 135 : (offset < 0 ? -200 : 200)));
                   const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
@@ -1652,8 +1655,8 @@ const LandingPage3 = () => {
                         height: isCenter ? `${centerHeight}px` : `${sideHeight}px`,
                         backgroundColor: '#c4c4c4',
                         borderRadius: '20px',
-                        border: `${borderWidth}px solid #000`,
-                        boxShadow: `0 0 0 ${borderWidth}px #CCCCCC`,
+                        border: borderStyle,
+                        boxShadow: shadowStyle,
                         overflow: 'hidden',
                         transform: `translateX(${translateX}px) scale(${scale})`,
                         opacity,
@@ -1705,6 +1708,8 @@ const LandingPage3 = () => {
                   const centerHeight = 629;
                   const sideHeight = 533;
                   const borderWidth = 7;
+                  const borderStyle = phoneBorder ? `${borderWidth}px solid #000` : 'none';
+                  const shadowStyle = phoneBorder ? `0 0 0 ${borderWidth}px #CCCCCC` : 'none';
 
                   const translateX = isCenter ? 0 : (isLeft ? -320 : (isRight ? 320 : (offset < 0 ? -450 : 450)));
                   const scale = isCenter ? 1 : (isVisible ? 0.85 : 0.7);
@@ -1720,8 +1725,8 @@ const LandingPage3 = () => {
                         height: isCenter ? `${centerHeight}px` : `${sideHeight}px`,
                         backgroundColor: '#c4c4c4',
                         borderRadius: '37.328px',
-                        border: `${borderWidth}px solid #000`,
-                        boxShadow: `0 0 0 ${borderWidth}px #CCCCCC`,
+                        border: borderStyle,
+                        boxShadow: shadowStyle,
                         overflow: 'hidden',
                         transform: `translateX(${translateX}px) scale(${scale})`,
                         opacity,

@@ -28,9 +28,10 @@ export const landingPage3Sections = [
     label: 'Phone Carousel',
     description: 'Phone mockups showcase',
     fields: [
-      { key: 'portfolioImages', type: 'imageArray', label: 'Phone Screen Images', maxItems: 5, hint: 'Upload phone screen images (3 recommended)' },
+      { key: 'portfolioImages', type: 'imageArray', label: 'Phone Screen Images', hint: 'Upload phone screen images (3 recommended)' },
       { key: 'carouselAutoPlay', type: 'toggle', label: 'Auto-Play Animation', hint: 'Enable/disable automatic carousel rotation' },
       { key: 'carouselSpeed', type: 'range', label: 'Animation Speed (seconds)', min: 1, max: 10, step: 0.5, hint: 'Time between slides (1-10 seconds)' },
+      { key: 'phoneBorder', type: 'toggle', label: 'Show Phone Border', hint: 'Show or hide the black border around phone mockups' },
     ]
   },
   {
