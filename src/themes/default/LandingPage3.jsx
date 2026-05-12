@@ -316,10 +316,7 @@ const LandingPage3 = () => {
         });
       }
 
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setModalFormSubmitted(false);
-      }, 2000);
+      // modal stays open — user closes via the book-a-call button or X
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('Something went wrong. Please try again.');
@@ -1139,23 +1136,21 @@ const LandingPage3 = () => {
                   We'll get back to you soon.
                 </p>
                 <button
-                  onClick={openBookingModal}
+                  onClick={() => { setIsModalOpen(false); setModalFormSubmitted(false); openBookingModal(); }}
                   style={{
-                    fontFamily: "'Gabarito', sans-serif",
+                    fontFamily: "'Barlow', sans-serif",
                     fontSize: '15px',
                     fontWeight: 600,
-                    color: '#fff',
-                    backgroundColor: '#000',
+                    color: '#FFA562',
+                    background: 'none',
                     border: 'none',
-                    borderRadius: '100px',
-                    padding: '12px 28px',
+                    padding: 0,
                     cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
                   }}
                 >
-                  📅 Click here to book a call
+                  Click here to book a call
                 </button>
               </div>
             ) : (
