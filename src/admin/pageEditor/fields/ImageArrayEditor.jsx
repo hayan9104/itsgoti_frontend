@@ -34,7 +34,7 @@ const ImageArrayEditor = ({ field, value = [], onChange }) => {
   const [replaceIndex, setReplaceIndex] = useState(null);
 
   const images = Array.isArray(value) ? value : [];
-  const maxItems = field.maxItems || 10;
+  const maxItems = field.maxItems ?? null; // null = unlimited
   // Use object format if explicitly set in field config OR if existing data is objects
   const useObjects = field.useObjectFormat || isObjectArray(images);
 
@@ -165,7 +165,7 @@ const ImageArrayEditor = ({ field, value = [], onChange }) => {
           fontSize: '12px',
           color: '#9ca3af',
         }}>
-          {images.length}/{maxItems}
+          {maxItems ? `${images.length}/${maxItems}` : images.length}
         </span>
       </div>
 
@@ -413,7 +413,7 @@ const ImageArrayEditor = ({ field, value = [], onChange }) => {
       </div>
 
       {/* Add Button */}
-      {images.length < maxItems && (
+      {(!maxItems || images.length < maxItems) && (
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
