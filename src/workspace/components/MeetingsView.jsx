@@ -4,6 +4,15 @@ import { workspaceMeetingsAPI, workspaceBoardsAPI, workspaceTasksAPI } from '../
 import { useWorkspaceAuth } from '../../context/WorkspaceAuthContext';
 import ScreenRecorder from './ScreenRecorder';
 
+const DATE_PRESETS = [
+  { label: 'All Time', value: 'all' },
+  { label: 'Today', value: 'today' },
+  { label: 'This Week', value: 'week' },
+  { label: 'This Month', value: 'month' },
+  { label: 'Last 30 Days', value: 'last30' },
+  { label: 'Custom Range', value: 'custom' },
+];
+
 const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   const { isSuperAdmin } = useWorkspaceAuth();
   const [boardId, setBoardId] = useState(propBoardId);
@@ -23,9 +32,71 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   // Super admin tabs: 'with_board' | 'without_board'
   const [activeTab, setActiveTab] = useState('with_board');
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Date range filter
+  const [datePreset, setDatePreset] = useState('all');
+  const [localDateFrom, setLocalDateFrom] = useState('');
+  const [localDateTo, setLocalDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const hasUnappliedCustomDates = datePreset === 'custom' && (localDateFrom !== dateFrom || localDateTo !== dateTo);
+
+  const fmtDate = (d) => d.toISOString().split('T')[0];
+
+  const applyPreset = (preset) => {
+    setDatePreset(preset);
+    const today = new Date();
+    if (preset === 'all') {
+      setDateFrom(''); setDateTo('');
+      setLocalDateFrom(''); setLocalDateTo('');
+    } else if (preset === 'today') {
+      const t = fmtDate(today);
+      setDateFrom(t); setDateTo(t);
+    } else if (preset === 'week') {
+      const day = today.getDay();
+      const diff = day === 0 ? -6 : 1 - day; // Monday start
+      const mon = new Date(today); mon.setDate(today.getDate() + diff);
+      setDateFrom(fmtDate(mon)); setDateTo(fmtDate(today));
+    } else if (preset === 'month') {
+      setDateFrom(fmtDate(new Date(today.getFullYear(), today.getMonth(), 1)));
+      setDateTo(fmtDate(today));
+    } else if (preset === 'last30') {
+      const s = new Date(today); s.setDate(today.getDate() - 30);
+      setDateFrom(fmtDate(s)); setDateTo(fmtDate(today));
+    }
+    // 'custom' — wait for explicit Apply click
+  };
+
+  const applyCustomDates = () => {
+    setDateFrom(localDateFrom);
+    setDateTo(localDateTo);
+  };
+
+  const clearAllFilters = () => {
+    setFilterTaskId('');
+    setLocalDateFrom(''); setLocalDateTo('');
+    setDateFrom(''); setDateTo('');
+    setDatePreset('all');
+    setSelectedMeeting(null);
+  };
+
+  // Inline title edit
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState('');
+
+  // Convert to task modal
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertTaskTitle, setConvertTaskTitle] = useState('');
+  const [convertBoardId, setConvertBoardId] = useState('');
+  const [convertingTask, setConvertingTask] = useState(false);
+
   // Screen recording
   const [showRecorder, setShowRecorder] = useState(false);
   const [recordingUploading, setRecordingUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Load all boards
   useEffect(() => {
@@ -76,7 +147,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       if (!boardId) return;
       loadMeetings();
     }
-  }, [boardId, activeTab]);
+  }, [boardId, activeTab, dateFrom, dateTo]);
 
   useEffect(() => {
     if (selectedMeeting && !selectedMeeting.summary) {
@@ -84,6 +155,31 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       fetchMeetingDetails(selectedMeeting._id);
     }
   }, [selectedMeeting?._id]);
+
+  // Auto-poll every 5s while any meeting is processing
+  const isAnyProcessing = meetings.some(m => m.aiProcessingStatus === 'processing');
+
+  useEffect(() => {
+    if (!isAnyProcessing) return;
+    const interval = setInterval(async () => {
+      try {
+        const params = activeTab === 'without_board'
+          ? { unassigned: 'true' }
+          : { board: propBoardId || boardId };
+        if (dateFrom) params.startDate = dateFrom;
+        if (dateTo) params.endDate = dateTo;
+        const res = await workspaceMeetingsAPI.getAll(params);
+        if (res.data.success) {
+          setMeetings(res.data.data);
+          setSelectedMeeting(prev => {
+            if (!prev) return prev;
+            return res.data.data.find(m => m._id === prev._id) || prev;
+          });
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isAnyProcessing, boardId, activeTab, dateFrom, dateTo]);
 
   const fetchMeetingDetails = async (meetingId) => {
     try {
@@ -106,12 +202,10 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       //   await scheduledMeetingsAPI.syncAll(boardId);
       // } catch (syncError) {}
 
-      // Load meetings for this board
+      // Load all meetings for this board (with or without task assignment)
       const params = { board: boardId };
-      // For global "With Boards" tab, only show task-assigned meetings
-      if (!propBoardId) {
-        params.assigned = 'true';
-      }
+      if (dateFrom) params.startDate = dateFrom;
+      if (dateTo) params.endDate = dateTo;
       const res = await workspaceMeetingsAPI.getAll(params);
       if (res.data.success) {
         setMeetings(res.data.data);
@@ -127,7 +221,10 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     setLoading(true);
     try {
       // Load meetings that have no task assignment (legacy/unassigned)
-      const res = await workspaceMeetingsAPI.getAll({ unassigned: 'true' });
+      const params = { unassigned: 'true' };
+      if (dateFrom) params.startDate = dateFrom;
+      if (dateTo) params.endDate = dateTo;
+      const res = await workspaceMeetingsAPI.getAll(params);
       if (res.data.success) {
         setMeetings(res.data.data);
       }
@@ -138,37 +235,6 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     }
   };
 
-  const handleCreateMeeting = async (e) => {
-    e.preventDefault();
-    if (creating) return;
-
-    setCreating(true);
-    setUploadProgress(0);
-    try {
-      const formData = new FormData();
-      formData.append('title', newMeeting.title);
-      formData.append('meetingDate', newMeeting.meetingDate);
-      formData.append('board', boardId);
-      if (newMeeting.recording) {
-        formData.append('recording', newMeeting.recording);
-      }
-
-      const res = await workspaceMeetingsAPI.create(formData, (progress) => {
-        setUploadProgress(progress);
-      });
-      if (res.data.success) {
-        setMeetings([res.data.data, ...meetings]);
-        setShowCreateModal(false);
-        setNewMeeting({ title: '', meetingDate: new Date().toISOString().split('T')[0], recording: null });
-      }
-    } catch (error) {
-      console.error('Failed to create meeting:', error);
-      alert('Failed to create meeting: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setCreating(false);
-      setUploadProgress(0);
-    }
-  };
 
   const handleProcessRecording = async (meetingId) => {
     setProcessing({ ...processing, [meetingId]: true });
@@ -216,6 +282,44 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     }
   };
 
+  const saveTitle = async () => {
+    setEditingTitle(false);
+    if (!titleInput.trim() || titleInput.trim() === selectedMeeting.title) return;
+    try {
+      const res = await workspaceMeetingsAPI.update(selectedMeeting._id, { title: titleInput.trim() });
+      if (res.data.success) {
+        const updated = { ...selectedMeeting, title: titleInput.trim() };
+        setMeetings(prev => prev.map(m => m._id === selectedMeeting._id ? updated : m));
+        setSelectedMeeting(updated);
+      }
+    } catch (err) {
+      console.error('Failed to update title:', err);
+    }
+  };
+
+  const handleConvertToTask = async () => {
+    if (!convertTaskTitle.trim() || !convertBoardId) return;
+    setConvertingTask(true);
+    try {
+      const actionItemsText = selectedMeeting.actionItems?.length > 0
+        ? '\n\nAction Items:\n' + selectedMeeting.actionItems.map(ai => `• ${ai.task}${ai.assignee ? ` (${ai.assignee})` : ''}`).join('\n')
+        : '';
+      const description = (selectedMeeting.summary || '') + actionItemsText;
+      const res = await workspaceTasksAPI.create(convertBoardId, {
+        title: convertTaskTitle.trim(),
+        description,
+        type: 'task',
+      });
+      if (res.data.success) {
+        setShowConvertModal(false);
+      }
+    } catch (err) {
+      console.error('Failed to create task:', err);
+    } finally {
+      setConvertingTask(false);
+    }
+  };
+
   const handleExportPDF = async (meetingId) => {
     try {
       const res = await workspaceMeetingsAPI.exportPDF(meetingId);
@@ -238,6 +342,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
   // Handle screen recording complete — create meeting with optional board/task assignment
   const handleScreenRecordingComplete = async (blob, { title: recTitle, boardId: recBoardId, taskId } = {}) => {
     setRecordingUploading(true);
+    setUploadProgress(0);
     try {
       // Step 1: Create a new meeting
       const formData = new FormData();
@@ -245,9 +350,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       formData.append('title', recTitle || `Screen Recording - ${timestamp}`);
       formData.append('meetingDate', new Date().toISOString().split('T')[0]);
 
-      // Use selected board from recorder, or current board
-      const targetBoardId = recBoardId || boardId;
-      if (targetBoardId) formData.append('board', targetBoardId);
+      // Only use board if user explicitly assigned one in the recorder
+      if (recBoardId) formData.append('board', recBoardId);
 
       // If task is selected, assign for visibility control
       if (taskId) formData.append('assignedTask', taskId);
@@ -256,7 +360,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       const file = new File([blob], `recording-${Date.now()}.webm`, { type: 'video/webm' });
       formData.append('recording', file);
 
-      const res = await workspaceMeetingsAPI.create(formData, () => {});
+      const res = await workspaceMeetingsAPI.create(formData, (percent) => setUploadProgress(percent));
       if (res.data.success) {
         const newMeeting = res.data.data;
         setMeetings(prev => [newMeeting, ...prev]);
@@ -271,20 +375,31 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
     }
   };
 
-  // Filter meetings by task
-  const filteredMeetings = filterTaskId
-    ? meetings.filter(m => m.assignedTask === filterTaskId || m.assignedTask?._id === filterTaskId)
-    : meetings;
+  // Filter meetings by task + search query
+  const filteredMeetings = meetings
+    .filter(m => !filterTaskId || m.assignedTask === filterTaskId || m.assignedTask?._id === filterTaskId)
+    .filter(m => !searchQuery.trim() || m.title?.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return '#f59e0b';
-      case 'processing': return '#3b82f6';
+      case 'pending': return '#6b7280';
       case 'uploaded': return '#8b5cf6';
+      case 'processing': return '#3b82f6';
       case 'completed': return '#22c55e';
       case 'failed': return '#ef4444';
       default: return '#6b7280';
     }
+  };
+
+  const getStatusLabel = (meeting) => {
+    if (meeting.summary) return 'completed';
+    if (meeting.aiProcessingStatus === 'processing') {
+      return meeting.aiProcessingStep ? getProcessingLabel(meeting.aiProcessingStep) : 'Processing...';
+    }
+    // If recording exists, always show uploaded even if AI failed
+    if (meeting.recording?.url || meeting.localRecordingPath) return 'uploaded';
+    if (meeting.aiProcessingStatus === 'failed' || meeting.status === 'failed') return 'failed';
+    return 'pending';
   };
 
   const getProcessingLabel = (step) => {
@@ -293,6 +408,15 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
       case 'analyzing': return 'Analyzing points...';
       case 'finalizing': return 'Finalizing summary...';
       default: return 'AI is processing...';
+    }
+  };
+
+  const getCardProcessingLabel = (step) => {
+    switch (step) {
+      case 'transcribing': return 'Transcribing...';
+      case 'analyzing': return 'Analyzing...';
+      case 'finalizing': return 'Finalizing...';
+      default: return 'Processing...';
     }
   };
 
@@ -406,65 +530,159 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
           </div>
         )}
 
-        {/* Filters (only for "with board" tab or admin view) */}
-        {activeTab === 'with_board' && !propBoardId && allBoards.length > 0 && (
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Board Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Board</label>
-              <select
-                value={boardId || ''}
-                onChange={(e) => {
-                  const selected = allBoards.find(b => b._id === e.target.value);
-                  setBoardId(e.target.value);
-                  setBoardName(selected?.name || '');
-                  setSelectedMeeting(null);
-                  setFilterTaskId('');
-                }}
-                style={filterSelectStyle}
-              >
-                {allBoards.map(b => (
-                  <option key={b._id} value={b._id}>{b.name}</option>
-                ))}
-              </select>
+        {/* Filters */}
+        {!propBoardId && isSuperAdmin && (
+          <div style={{ marginBottom: '16px' }}>
+            {/* Board + Task — only on "With Boards" tab */}
+            {activeTab === 'with_board' && allBoards.length > 0 && (
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Board</label>
+                  <select
+                    value={boardId || ''}
+                    onChange={(e) => {
+                      const selected = allBoards.find(b => b._id === e.target.value);
+                      setBoardId(e.target.value);
+                      setBoardName(selected?.name || '');
+                      setSelectedMeeting(null);
+                      setFilterTaskId('');
+                    }}
+                    style={filterSelectStyle}
+                  >
+                    {allBoards.map(b => (
+                      <option key={b._id} value={b._id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Task</label>
+                  <select
+                    value={filterTaskId}
+                    onChange={(e) => { setFilterTaskId(e.target.value); setSelectedMeeting(null); }}
+                    style={filterSelectStyle}
+                    disabled={loadingTasks}
+                  >
+                    <option value="">All Tasks</option>
+                    {boardTasks.map(t => (
+                      <option key={t._id} value={t._id}>{t.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Date preset pills */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {DATE_PRESETS.map(p => {
+                const active = datePreset === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => applyPreset(p.value)}
+                    style={{
+                      padding: '5px 13px',
+                      fontSize: '12px',
+                      fontWeight: active ? '600' : '500',
+                      borderRadius: '20px',
+                      border: active ? '1px solid #6366f1' : '1px solid #333436',
+                      backgroundColor: active ? 'rgba(99,102,241,0.18)' : 'transparent',
+                      color: active ? '#818cf8' : '#9ca3af',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+
+              {/* Reset — only if any non-default filter active */}
+              {(filterTaskId || datePreset !== 'all') && (
+                <button
+                  onClick={clearAllFilters}
+                  style={{
+                    padding: '5px 12px', fontSize: '12px', fontWeight: '500',
+                    borderRadius: '20px', border: '1px solid rgba(239,68,68,0.3)',
+                    backgroundColor: 'rgba(239,68,68,0.08)', color: '#f87171',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reset
+                </button>
+              )}
             </div>
 
-            {/* Task Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Task</label>
-              <select
-                value={filterTaskId}
-                onChange={(e) => { setFilterTaskId(e.target.value); setSelectedMeeting(null); }}
-                style={filterSelectStyle}
-                disabled={loadingTasks}
-              >
-                <option value="">All Tasks</option>
-                {boardTasks.map(t => (
-                  <option key={t._id} value={t._id}>{t.title}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Clear filters */}
-            {filterTaskId && (
-              <button
-                onClick={() => { setFilterTaskId(''); setSelectedMeeting(null); }}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  color: '#dc2626',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                }}
-              >
-                Clear
-              </button>
+            {/* Custom date inputs — only shown when "Custom Range" is selected */}
+            {datePreset === 'custom' && (
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>From</label>
+                  <input
+                    type="date"
+                    value={localDateFrom}
+                    onChange={(e) => setLocalDateFrom(e.target.value)}
+                    style={{ ...filterSelectStyle, colorScheme: 'dark' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>To</label>
+                  <input
+                    type="date"
+                    value={localDateTo}
+                    onChange={(e) => setLocalDateTo(e.target.value)}
+                    style={{ ...filterSelectStyle, colorScheme: 'dark' }}
+                  />
+                </div>
+                {hasUnappliedCustomDates && (
+                  <button
+                    onClick={applyCustomDates}
+                    style={{
+                      padding: '7px 16px', fontSize: '12px', fontWeight: '600',
+                      color: '#fff', backgroundColor: '#6366f1',
+                      border: 'none', borderRadius: '8px', cursor: 'pointer',
+                      boxShadow: '0 0 0 3px rgba(99,102,241,0.25)',
+                    }}
+                  >
+                    Apply
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
+
+        {/* Search Bar */}
+        <div style={{ position: 'relative', marginBottom: '12px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#6b7280" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search meetings..."
+            style={{
+              width: '100%', padding: '8px 32px 8px 30px',
+              borderRadius: '8px', border: '1px solid #2e2f31',
+              backgroundColor: '#1e1f21', color: '#e5e7eb',
+              fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => e.target.style.borderColor = '#4b4c4f'}
+            onBlur={e => e.target.style.borderColor = '#2e2f31'}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} style={{
+              position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#6b7280',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* Meetings List */}
         {filteredMeetings.length === 0 ? (
@@ -484,61 +702,82 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
-            {filteredMeetings.filter(m => m && m._id).map((meeting) => (
-              <div
-                key={meeting._id}
-                onClick={() => setSelectedMeeting(meeting)}
-                style={{
-                  padding: '14px 16px',
-                  backgroundColor: selectedMeeting?._id === meeting._id ? '#3a3b3d' : '#2a2b2d',
-                  border: selectedMeeting?._id === meeting._id ? '2px solid #6f6e6f' : '1px solid #333436',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '500', color: '#f1f1f1' }}>
-                      {meeting.title}
-                    </h4>
-                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                      {formatDate(meeting.meetingDate)}
-                      {meeting.duration > 0 && <span> • {meeting.duration} min</span>}
-                    </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)' }}>
+            {filteredMeetings.filter(m => m && m._id).map((meeting) => {
+              const statusLabel = getStatusLabel(meeting);
+              const statusColor = getStatusColor(statusLabel);
+              const isSelected = selectedMeeting?._id === meeting._id;
+              return (
+                <div
+                  key={meeting._id}
+                  onClick={() => setSelectedMeeting(meeting)}
+                  style={{
+                    padding: '12px 14px 12px 16px',
+                    backgroundColor: isSelected ? '#313234' : '#252628',
+                    border: `1px solid ${isSelected ? '#4b4c4f' : '#2e2f31'}`,
+                    borderLeft: `3px solid ${isSelected ? statusColor : statusColor + '80'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = '#2d2e30'; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = '#252628'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        margin: 0, fontSize: '13px', fontWeight: '600', color: '#e5e7eb',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {meeting.title}
+                      </h4>
+                      <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#6b7280' }}>
+                        {formatDate(meeting.meetingDate)}
+                        {meeting.duration > 0 && <span> · {meeting.duration} min</span>}
+                      </p>
+                    </div>
+                    {/* Status badge */}
+                    {meeting.aiProcessingStatus === 'processing' ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                        <div className="processing-dot" />
+                        <span style={{ fontSize: '11px', color: '#60a5fa', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                          {getCardProcessingLabel(meeting.aiProcessingStep)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{
+                        flexShrink: 0,
+                        padding: '3px 10px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        borderRadius: '20px',
+                        backgroundColor: statusColor + '22',
+                        color: statusColor,
+                        border: `1px solid ${statusColor}55`,
+                        letterSpacing: '0.2px',
+                        textTransform: 'capitalize',
+                      }}>
+                        {statusLabel}
+                      </span>
+                    )}
                   </div>
-                  <span
-                    style={{
-                      padding: '4px 8px',
+                  {meeting.summary && (
+                    <p style={{
+                      margin: '6px 0 0',
                       fontSize: '11px',
-                      fontWeight: '500',
-                      borderRadius: '6px',
-                      backgroundColor: getStatusColor(meeting.aiProcessingStatus || meeting.status) + '20',
-                      color: getStatusColor(meeting.aiProcessingStatus || meeting.status),
-                    }}
-                  >
-                    {meeting.aiProcessingStatus === 'processing' 
-                      ? (meeting.aiProcessingStep ? getProcessingLabel(meeting.aiProcessingStep) : 'Processing...') 
-                      : (meeting.summary ? 'completed' : (meeting.aiProcessingStatus === 'failed' || meeting.status === 'failed' ? 'failed' : 'pending'))}
-                  </span>
+                      color: '#9ca3af',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 1,
+                      WebkitBoxOrient: 'vertical',
+                    }}>
+                      {meeting.summary}
+                    </p>
+                  )}
                 </div>
-                {meeting.summary && (
-                  <p style={{
-                    margin: '8px 0 0',
-                    fontSize: '12px',
-                    color: '#6b7280',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                  }}>
-                    {meeting.summary}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -562,10 +801,33 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
             justifyContent: 'space-between',
             alignItems: 'flex-start',
           }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1' }}>
-                {selectedMeeting.title}
-              </h3>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {editingTitle ? (
+                <input
+                  autoFocus
+                  value={titleInput}
+                  onChange={(e) => setTitleInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setEditingTitle(false); }}
+                  onBlur={saveTitle}
+                  style={{
+                    width: '100%', fontSize: '18px', fontWeight: '600', color: '#f1f1f1',
+                    backgroundColor: '#1e1f21', border: '1px solid #6366f1',
+                    borderRadius: '6px', padding: '4px 10px', outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              ) : (
+                <h3
+                  onClick={() => { setTitleInput(selectedMeeting.title); setEditingTitle(true); }}
+                  title="Click to rename"
+                  style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#f1f1f1', cursor: 'text', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {selectedMeeting.title}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#4b4c4f" style={{ flexShrink: 0 }}>
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                  </svg>
+                </h3>
+              )}
               <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
                 {formatDate(selectedMeeting.meetingDate)}
                 {selectedMeeting.duration > 0 && <span> • {selectedMeeting.duration} min</span>}
@@ -574,31 +836,45 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 )}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {selectedMeeting.recording?.url && (
-                <a 
-                  href={selectedMeeting.recording.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+              {(() => {
+                const rawPath = selectedMeeting.localRecordingPath || selectedMeeting.recording?.url || '';
+                const recUrl = rawPath.startsWith('http') ? rawPath : `${window.location.origin}${rawPath}`;
+                return rawPath ? (
+                  <a
+                    href={recUrl}
+                    download={selectedMeeting.recording?.fileName || 'recording.webm'}
+                    style={{
+                      padding: '8px 14px', backgroundColor: '#2a2b2d', color: '#e5e7eb',
+                      border: '1px solid #333436', borderRadius: '8px', fontSize: '13px',
+                      fontWeight: '500', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px',
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                    Download
+                  </a>
+                ) : null;
+              })()}
+              {selectedMeeting.summary && (
+                <button
+                  onClick={() => {
+                    setConvertTaskTitle(selectedMeeting.title);
+                    setConvertBoardId(boardId || allBoards[0]?._id || '');
+                    setShowConvertModal(true);
+                  }}
                   style={{
-                    padding: '8px 14px',
-                    backgroundColor: '#2a2b2d',
-                    color: '#e5e7eb',
-                    border: '1px solid #333436',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
+                    padding: '8px 14px', backgroundColor: '#7c3aed', color: '#fff',
+                    border: 'none', borderRadius: '8px', fontSize: '13px',
+                    fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
                   </svg>
-                  View Recording
-                </a>
+                  Convert to Task
+                </button>
               )}
               <button
                 onClick={() => handleExportPDF(selectedMeeting._id)}
@@ -622,7 +898,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                 </svg>
                 Export PDF
               </button>
-              {(!selectedMeeting.summary && selectedMeeting.status !== 'processing' && selectedMeeting.recording?.url) && (
+              {(!selectedMeeting.summary && selectedMeeting.recording?.url && selectedMeeting.aiProcessingStatus !== 'processing') && (
                 <button
                   onClick={() => handleProcessRecording(selectedMeeting._id)}
                   style={{
@@ -645,7 +921,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                   Process with AI
                 </button>
               )}
-              {selectedMeeting.aiProcessingStatus === 'processing' && (
+              {selectedMeeting.aiProcessingStatus === 'processing' && selectedMeeting.status !== 'failed' && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -780,7 +1056,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
               );
             })()}
 
-            {selectedMeeting.status === 'processing' && (
+            {selectedMeeting.aiProcessingStatus === 'processing' && (
               <div style={{
                 padding: '20px',
                 backgroundColor: '#3a3b3d',
@@ -805,16 +1081,16 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
               </div>
             )}
 
-            {selectedMeeting.status === 'failed' && (
+            {selectedMeeting.aiProcessingStatus === 'failed' && !selectedMeeting.summary && (
               <div style={{
-                padding: '20px',
-                backgroundColor: '#fef2f2',
+                padding: '14px 20px',
+                backgroundColor: 'rgba(220,38,38,0.08)',
                 borderRadius: '10px',
                 marginBottom: '20px',
-                border: '1px solid #fecaca',
+                border: '1px solid rgba(220,38,38,0.2)',
               }}>
-                <p style={{ margin: 0, fontSize: '14px', color: '#dc2626', fontWeight: '500' }}>
-                  Processing failed. Please try again or upload a different recording.
+                <p style={{ margin: 0, fontSize: '13px', color: '#f87171', fontWeight: '500' }}>
+                  AI processing failed. Your recording is safe — click "Process with AI" to try again.
                 </p>
               </div>
             )}
@@ -902,8 +1178,8 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                           onClick={() => handleToggleActionItem(selectedMeeting._id, idx)}
                           style={{
                             padding: '14px 16px',
-                            backgroundColor: item.completed ? '#f0fdf4' : '#1e1f21',
-                            border: `1px solid ${item.completed ? '#bbf7d0' : '#333436'}`,
+                            backgroundColor: item.completed ? 'rgba(34,197,94,0.1)' : '#252628',
+                            border: `1px solid ${item.completed ? 'rgba(34,197,94,0.3)' : '#333436'}`,
                             borderRadius: '10px',
                             cursor: 'pointer',
                             display: 'flex',
@@ -933,7 +1209,7 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
                             <p style={{
                               margin: 0,
                               fontSize: '14.5px',
-                              color: item.completed ? '#6b7280' : '#111827',
+                              color: item.completed ? '#6b7280' : '#e5e7eb',
                               textDecoration: item.completed ? 'line-through' : 'none',
                               fontWeight: item.completed ? '400' : '500',
                             }}>
@@ -1076,37 +1352,133 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
         </div>
       )}
 
-      {/* Screen Recorder Modal */}
-      {showRecorder && (
-        <ScreenRecorder
-          onRecordingComplete={handleScreenRecordingComplete}
-          onClose={() => setShowRecorder(false)}
-        />
-      )}
+      {/* Screen Recorder — always mounted so floating pill stays alive during recording */}
+      <ScreenRecorder
+        visible={showRecorder}
+        onRecordingComplete={handleScreenRecordingComplete}
+        onClose={() => setShowRecorder(false)}
+      />
 
       {/* Uploading Overlay */}
       {recordingUploading && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.7)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10000,
         }}>
           <div style={{
             backgroundColor: '#2a2b2d', borderRadius: '16px', padding: '32px 40px',
-            textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+            textAlign: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+            width: '320px',
           }}>
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⬆️</div>
+            <p style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: '600', color: '#f1f1f1' }}>
+              Uploading Recording...
+            </p>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#6b7280' }}>
+              {uploadProgress < 100 ? `${uploadProgress}% complete` : 'Saving to server...'}
+            </p>
+            {/* Progress bar track */}
             <div style={{
-              width: '40px', height: '40px', margin: '0 auto 16px',
-              border: '4px solid #333436', borderTop: '4px solid #6f6e6f',
-              borderRadius: '50%', animation: 'spin 1s linear infinite',
-            }} />
-            <p style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#f1f1f1' }}>
-              Saving Recording...
+              width: '100%', height: '8px',
+              backgroundColor: '#333436', borderRadius: '99px', overflow: 'hidden',
+            }}>
+              <div style={{
+                width: `${uploadProgress}%`, height: '100%',
+                backgroundColor: '#6366f1',
+                borderRadius: '99px',
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+            <p style={{ margin: '10px 0 0', fontSize: '12px', color: '#4b5563' }}>
+              Do not close this window
             </p>
-            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-              Uploading recording to server
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Task Modal */}
+      {showConvertModal && (
+        <div style={{
+          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001,
+        }}>
+          <div style={{
+            backgroundColor: '#242526', borderRadius: '14px', border: '1px solid #333436',
+            padding: '28px 32px', width: '440px', boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+          }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: '700', color: '#f1f1f1' }}>
+              Convert to Task
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#6b7280' }}>
+              Creates a task with the meeting summary and action items as description.
             </p>
+
+            <label style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              Task Title
+            </label>
+            <input
+              autoFocus
+              value={convertTaskTitle}
+              onChange={(e) => setConvertTaskTitle(e.target.value)}
+              style={{
+                width: '100%', padding: '9px 12px', borderRadius: '8px',
+                border: '1px solid #3a3b3d', backgroundColor: '#1e1f21',
+                color: '#f1f1f1', fontSize: '14px', outline: 'none',
+                boxSizing: 'border-box', marginBottom: '16px',
+              }}
+            />
+
+            <label style={{ fontSize: '12px', fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+              Board
+            </label>
+            <select
+              value={convertBoardId}
+              onChange={(e) => setConvertBoardId(e.target.value)}
+              style={{
+                width: '100%', padding: '9px 12px', borderRadius: '8px',
+                border: '1px solid #3a3b3d', backgroundColor: '#1e1f21',
+                color: '#f1f1f1', fontSize: '14px', outline: 'none',
+                boxSizing: 'border-box', marginBottom: '24px',
+              }}
+            >
+              {allBoards.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+            </select>
+
+            {selectedMeeting?.actionItems?.length > 0 && (
+              <div style={{
+                padding: '10px 14px', backgroundColor: 'rgba(99,102,241,0.08)',
+                borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)',
+                marginBottom: '20px', fontSize: '12px', color: '#818cf8',
+              }}>
+                {selectedMeeting.actionItems.length} action item{selectedMeeting.actionItems.length !== 1 ? 's' : ''} will be included in the description.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowConvertModal(false)}
+                style={{
+                  padding: '9px 18px', fontSize: '13px', fontWeight: '500',
+                  color: '#9ca3af', backgroundColor: 'transparent',
+                  border: '1px solid #3a3b3d', borderRadius: '8px', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConvertToTask}
+                disabled={convertingTask || !convertTaskTitle.trim() || !convertBoardId}
+                style={{
+                  padding: '9px 20px', fontSize: '13px', fontWeight: '600',
+                  color: '#fff', backgroundColor: convertingTask ? '#5b21b6' : '#7c3aed',
+                  border: 'none', borderRadius: '8px', cursor: convertingTask ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {convertingTask ? 'Creating...' : 'Create Task'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1115,6 +1487,18 @@ const MeetingsView = ({ boardId: propBoardId, boardName: propBoardName }) => {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        .processing-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #3b82f6;
+          flex-shrink: 0;
+          animation: processingPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes processingPulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(59,130,246,0.6); }
+          60% { opacity: 0.75; box-shadow: 0 0 0 5px rgba(59,130,246,0); }
         }
         .rec-meeting-btn:hover {
           opacity: 0.85;
