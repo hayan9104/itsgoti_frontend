@@ -41,39 +41,80 @@
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 
-    <!-- LP3 critical image preload: reads cached portfolioImages from localStorage and
-         injects <link rel="preload"> tags before the React bundle loads. Works for both
-         desktop and mobile (same image set). No-op on first visit (no cache yet). -->
+    <!--
+      LP3 critical-image bootstrap. Two strategies run before React mounts:
+
+      STRATEGY A (instant, repeat visit): read base64 data URIs from localStorage and
+      put them on window.__LP3_CRITICAL__. React reads this on mount and uses the data
+      URI directly — zero network requests for the above-the-fold phone mockups.
+
+      STRATEGY B (parallel, first visit): fire fetch('/api/lp3/critical') alongside the
+      bundle. The endpoint returns ~150KB of base64 covering 3 images. Save to localStorage
+      for next time. Race condition is fine: if the fetch finishes after React mounts, the
+      image swap happens via a custom event.
+
+      STRATEGY C (fallback): also inject <link rel="preload"> for the URL versions, so
+      even if base64 isn't ready in time, the browser is already downloading the files.
+    -->
     <script>
       (function () {
+        window.__LP3_CRITICAL__ = null;
+        var CACHE_KEY = 'lp3_critical_b64_v1';
+        var CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+        var contentKey = 'lp3_content';
+
+        // STRATEGY A: synchronous localStorage read
         try {
-          var cached = localStorage.getItem('lp3_content');
-          if (!cached) return;
-          var data = JSON.parse(cached);
-          var imgs = data && data.portfolioImages;
-          if (!Array.isArray(imgs)) return;
-
-          var injected = 0;
-          var MAX_PRELOAD = 3; // first 3 phones are above the fold on every viewport
-
-          for (var i = 0; i < imgs.length && injected < MAX_PRELOAD; i++) {
-            var src = imgs[i];
-            if (typeof src !== 'string') continue;
-            // Skip placeholders and data URIs — only real uploaded files
-            if (src.indexOf('placeholder') !== -1) continue;
-            if (src.indexOf('data:') === 0) continue;
-            // Must be an http(s) or root-relative URL
-            if (src[0] !== '/' && src.indexOf('http') !== 0) continue;
-
-            var link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'image';
-            link.href = src;
-            link.setAttribute('fetchpriority', 'high');
-            document.head.appendChild(link);
-            injected++;
+          var raw = localStorage.getItem(CACHE_KEY);
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && parsed.t && (Date.now() - parsed.t) < CACHE_TTL && Array.isArray(parsed.images)) {
+              window.__LP3_CRITICAL__ = parsed.images;
+            }
           }
-        } catch (e) { /* localStorage blocked or bad JSON — ignore */ }
+        } catch (e) {}
+
+        // STRATEGY C: <link rel="preload"> for URLs we know from the content cache
+        try {
+          var contentRaw = localStorage.getItem(contentKey);
+          if (contentRaw) {
+            var content = JSON.parse(contentRaw);
+            var imgs = content && content.portfolioImages;
+            if (Array.isArray(imgs)) {
+              var n = 0;
+              for (var i = 0; i < imgs.length && n < 3; i++) {
+                var src = imgs[i];
+                if (typeof src !== 'string') continue;
+                if (src.indexOf('placeholder') !== -1 || src.indexOf('data:') === 0) continue;
+                if (src[0] !== '/' && src.indexOf('http') !== 0) continue;
+                var link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = src;
+                link.setAttribute('fetchpriority', 'high');
+                document.head.appendChild(link);
+                n++;
+              }
+            }
+          }
+        } catch (e) {}
+
+        // STRATEGY B: fetch fresh base64 in parallel with bundle download.
+        // Even on slow first visit, this finishes around the same time React mounts.
+        if (window.fetch) {
+          fetch('/api/lp3/critical', { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+              if (!d || !Array.isArray(d.images)) return;
+              window.__LP3_CRITICAL__ = d.images;
+              try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), images: d.images }));
+              } catch (e) {}
+              // Tell LP3 to re-render if it's already mounted
+              try { window.dispatchEvent(new CustomEvent('lp3-critical-ready', { detail: d.images })); } catch (e) {}
+            })
+            .catch(function () {});
+        }
       })();
     </script>
   </head>
