@@ -15,6 +15,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
 
   // Floating pill drag position — default: left sidebar, below Reminders icon
   const [pillPos, setPillPos] = useState({ x: 8, y: 340 });
+  const [pillHovered, setPillHovered] = useState(false);
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const [includeMic, setIncludeMic] = useState(true);
@@ -608,6 +609,8 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
       <>
         <div
           onMouseDown={onPillDragStart}
+          onMouseEnter={() => setPillHovered(true)}
+          onMouseLeave={() => setPillHovered(false)}
           style={{
             position: 'fixed',
             left: pillPos.x,
@@ -683,37 +686,47 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
             <div style={{ width: '14px', height: '14px', background: '#fff', borderRadius: '3px', flexShrink: 0 }} />
           </button>
 
-          {/* Divider */}
-          <div style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0, border: 'none' }} />
+          {/* Collapsible section — restart + delete, shown on hover or when paused */}
+          <div style={{
+            maxHeight: (pillHovered || isPausedState) ? '120px' : '0px',
+            opacity: (pillHovered || isPausedState) ? 1 : 0,
+            overflow: 'hidden',
+            pointerEvents: (pillHovered || isPausedState) ? 'auto' : 'none',
+            transition: 'max-height 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', width: '100%',
+          }}>
+            {/* Divider */}
+            <div style={{ width: '34px', height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 0', flexShrink: 0, border: 'none' }} />
 
-          {/* Restart */}
-          <button
-            onClick={restartRecording}
-            title="Restart"
-            style={{ ...pillBtnSm, background: 'transparent', color: '#888' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="1 4 1 10 7 10"/>
-              <path d="M3.51 15a9 9 0 1 0 .49-3.87"/>
-            </svg>
-          </button>
+            {/* Restart */}
+            <button
+              onClick={restartRecording}
+              title="Restart"
+              style={{ ...pillBtnSm, background: 'transparent', color: '#888' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.87"/>
+              </svg>
+            </button>
 
-          {/* Delete — discards recording immediately */}
-          <button
-            onClick={() => { stopAllStreams(); discardRecording(); onClose(); }}
-            title="Delete"
-            style={{ ...pillBtnSm, background: 'transparent', color: '#777' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.color = '#ef4444'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#777'; }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
-            </svg>
-          </button>
+            {/* Delete — discards recording immediately */}
+            <button
+              onClick={() => { stopAllStreams(); discardRecording(); onClose(); }}
+              title="Delete"
+              style={{ ...pillBtnSm, background: 'transparent', color: '#777' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.color = '#ef4444'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#777'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <style>{`
