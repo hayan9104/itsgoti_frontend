@@ -35,6 +35,13 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
 
   // Quality
 
+  // Live camera PIP preview (floating circle on page while recording)
+  const [showCameraPip, setShowCameraPip] = useState(false);
+  const [camPipPos, setCamPipPos] = useState({ bottom: 20, right: 20 });
+  const camPipVideoRef = useRef(null);
+  const camPipDraggingRef = useRef(false);
+  const camPipStartRef = useRef({ mouseX: 0, mouseY: 0, bottom: 20, right: 20 });
+
   // Countdown
   const [countdown, setCountdown] = useState(0);
   const [countdownFading, setCountdownFading] = useState(false);
@@ -74,6 +81,34 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
       if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     };
+  }, []);
+
+  // Wire camera stream into the floating PIP video element when it appears
+  useEffect(() => {
+    if (showCameraPip && camPipVideoRef.current && cameraStreamRef.current) {
+      camPipVideoRef.current.srcObject = cameraStreamRef.current;
+      camPipVideoRef.current.play().catch(() => {});
+    }
+    if (!showCameraPip && camPipVideoRef.current) {
+      camPipVideoRef.current.srcObject = null;
+    }
+  }, [showCameraPip]);
+
+  // Camera PIP drag handlers (attached to window so they work outside the element)
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!camPipDraggingRef.current) return;
+      const dx = e.clientX - camPipStartRef.current.mouseX;
+      const dy = e.clientY - camPipStartRef.current.mouseY;
+      setCamPipPos({
+        right: Math.max(0, camPipStartRef.current.right - dx),
+        bottom: Math.max(0, camPipStartRef.current.bottom - dy),
+      });
+    };
+    const onUp = () => { camPipDraggingRef.current = false; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
 
   const stopMicMonitor = () => {
@@ -254,13 +289,18 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
   const startRecording = async () => {
     setError('');
     chunksRef.current = [];
-    stopMicMonitor(); // stop idle monitor, recording's audio ctx takes over
+    stopMicMonitor();
+
+    // Close modal immediately — screen picker should be the only thing on screen
+    recStateRef.current = 'starting'; // keeps component alive while picker is open
+    setRecState('starting');
+    onClose();
 
     try {
       // Step 1: Get screen/tab stream (browser shows native picker)
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
-        audio: true, // system audio from the tab
+        audio: true,
       });
       screenStreamRef.current = screenStream;
 
@@ -271,57 +311,43 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
         }
       };
 
-      // 3-2-1 countdown before recording begins
-      const countdownResult = await runCountdown();
+      // Run countdown AND fetch mic/camera streams IN PARALLEL
+      // so by the time the countdown finishes, streams are ready → pill appears instantly
+      const [countdownResult, micStream, cameraStream] = await Promise.all([
+        runCountdown(),
+        includeMic
+          ? navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null)
+          : Promise.resolve(null),
+        includeCamera
+          ? navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
+              audio: false,
+            }).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
       if (countdownResult === 'cancel') {
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
+        if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
         stopAllStreams();
-        startMicMonitor();
         recStateRef.current = 'idle';
         setRecState('idle');
         return;
       }
 
-      // Step 2: Get microphone stream (optional)
-      let micStream = null;
-      if (includeMic) {
-        try {
-          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          micStreamRef.current = micStream;
-        } catch (micErr) {
-          console.warn('Mic access denied, continuing without mic:', micErr);
-        }
-      }
+      if (micStream) micStreamRef.current = micStream;
+      if (cameraStream) cameraStreamRef.current = cameraStream;
 
-      // Step 3: Combine audio streams
+      // Combine audio streams
       const audioContext = new AudioContext();
       const destination = audioContext.createMediaStreamDestination();
 
-      // Add system audio (from screen share)
       const screenAudioTracks = screenStream.getAudioTracks();
       if (screenAudioTracks.length > 0) {
-        const screenAudioStream = new MediaStream(screenAudioTracks);
-        const screenSource = audioContext.createMediaStreamSource(screenAudioStream);
-        screenSource.connect(destination);
+        audioContext.createMediaStreamSource(new MediaStream(screenAudioTracks)).connect(destination);
       }
-
-      // Add microphone audio
       if (micStream) {
-        const micSource = audioContext.createMediaStreamSource(micStream);
-        micSource.connect(destination);
-      }
-
-      // Step 3.5: Get camera stream if requested (for PIP overlay)
-      let cameraStream = null;
-      if (includeCamera) {
-        try {
-          cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
-            audio: false,
-          });
-          cameraStreamRef.current = cameraStream;
-        } catch (camErr) {
-          console.warn('Camera access denied, continuing without camera:', camErr);
-        }
+        audioContext.createMediaStreamSource(micStream).connect(destination);
       }
 
       // Step 4: Build video track — with canvas PIP if camera enabled, otherwise raw screen
@@ -397,6 +423,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
       };
 
       recorder.onstop = () => {
+        setShowCameraPip(false);
         const rawBlob = new Blob(chunksRef.current, { type: mimeType });
         stopAllStreams();
         if (micLevelAnimRef.current) { cancelAnimationFrame(micLevelAnimRef.current); micLevelAnimRef.current = null; }
@@ -429,6 +456,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
       setRecState('recording');
       setTimer(0);
       timerRef.current = 0;
+      if (cameraStream) setShowCameraPip(true);
 
       // Start timer
       timerIntervalRef.current = setInterval(() => {
@@ -439,14 +467,10 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
 
     } catch (err) {
       console.error('Failed to start recording:', err);
-      if (err.name === 'NotAllowedError') {
-        setError('Screen sharing was cancelled. Click "Start Recording" to try again.');
-      } else {
-        setError('Failed to start recording: ' + err.message);
-      }
       stopAllStreams();
       recStateRef.current = 'idle';
       setRecState('idle');
+      // Component will return null (modal is closed) — user clicks Record button to try again
     }
   };
 
@@ -481,6 +505,7 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
   }, []);
 
   const discardRecording = () => {
+    setShowCameraPip(false);
     if (recordedUrl) URL.revokeObjectURL(recordedUrl);
     setRecordedBlob(null);
     setRecordedUrl('');
@@ -729,10 +754,138 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
           </div>
         </div>
 
+        {/* Floating live camera PIP — shown on page so user can see themselves */}
+        {showCameraPip && (
+          <div
+            onMouseDown={(e) => {
+              camPipDraggingRef.current = true;
+              camPipStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, ...camPipPos };
+              e.preventDefault();
+            }}
+            style={{
+              position: 'fixed',
+              bottom: camPipPos.bottom,
+              right: camPipPos.right,
+              width: '160px',
+              height: '160px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              zIndex: 99998,
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.75), 0 4px 24px rgba(0,0,0,0.5)',
+              cursor: 'grab',
+              userSelect: 'none',
+              background: '#000',
+              flexShrink: 0,
+            }}
+          >
+            <video
+              ref={camPipVideoRef}
+              autoPlay
+              muted
+              playsInline
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', pointerEvents: 'none', display: 'block' }}
+            />
+          </div>
+        )}
+
         <style>{`
           @keyframes wsRecPulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
+          }
+        `}</style>
+      </>,
+      document.body
+    );
+  }
+
+  // Countdown-only portal during 'starting' state (modal is closed, screen was picked)
+  if (recState === 'starting') {
+    return createPortal(
+      <>
+        {(countdown > 0 || countdownFading) && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.84)',
+            backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            zIndex: 99999,
+            fontFamily: "'Inter','Plus Jakarta Sans',system-ui,sans-serif",
+            animation: countdownFading ? 'overlayFadeOut 0.5s ease forwards' : 'none',
+            gap: 0,
+          }}>
+            <p style={{ margin: '0 0 28px', fontSize: '11px', fontWeight: 700, letterSpacing: '2.5px', color: '#6b7280', textTransform: 'uppercase', fontFamily: 'inherit' }}>
+              Starting in
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '36px' }}>
+              {/* Cancel */}
+              <button onClick={cancelCountdown} style={{
+                width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#9ca3af', transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#9ca3af'; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+
+              {/* Circle with absolutely-centered number */}
+              <div key={countdown} style={{
+                width: '160px', height: '160px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(99,102,241,0.10)',
+                border: '3px solid rgba(99,102,241,0.7)',
+                boxShadow: '0 0 0 10px rgba(99,102,241,0.07), 0 0 60px rgba(99,102,241,0.18)',
+                position: 'relative',
+                animation: 'countPop 0.75s cubic-bezier(0.34,1.46,0.64,1) forwards',
+              }}>
+                <span style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: '86px', fontWeight: 800, color: '#fff',
+                  lineHeight: '0.85',
+                  fontFamily: "'Inter',system-ui,sans-serif",
+                  display: 'block', whiteSpace: 'nowrap', userSelect: 'none',
+                }}>
+                  {countdown}
+                </span>
+              </div>
+
+              {/* Skip */}
+              <button onClick={skipCountdown} style={{
+                width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.4)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#a5b4fc', transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.25)'; e.currentTarget.style.color = '#c7d2fe'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; e.currentTarget.style.color = '#a5b4fc'; }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
+                </svg>
+              </button>
+            </div>
+
+            <p style={{ margin: '28px 0 0', fontSize: '15px', color: '#9ca3af', fontWeight: 500, fontFamily: 'inherit' }}>
+              Get ready — recording starts soon
+            </p>
+          </div>
+        )}
+        <style>{`
+          @keyframes countPop {
+            0%   { transform: scale(1.4);  opacity: 0; }
+            60%  { transform: scale(0.97); opacity: 1; }
+            100% { transform: scale(1);    opacity: 1; }
+          }
+          @keyframes overlayFadeOut {
+            0%   { opacity: 1; }
+            100% { opacity: 0; }
           }
         `}</style>
       </>,
@@ -1152,62 +1305,74 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
       {(countdown > 0 || countdownFading) && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.80)',
+          backgroundColor: 'rgba(0,0,0,0.84)',
+          backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           zIndex: 99999,
+          fontFamily: "'Inter','Plus Jakarta Sans',system-ui,sans-serif",
           animation: countdownFading ? 'overlayFadeOut 0.5s ease forwards' : 'none',
+          gap: 0,
         }}>
-          {/* Three-button row: Cancel — Number — Skip */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+          <p style={{ margin: '0 0 28px', fontSize: '11px', fontWeight: 700, letterSpacing: '2.5px', color: '#6b7280', textTransform: 'uppercase', fontFamily: 'inherit' }}>
+            Starting in
+          </p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '36px' }}>
             {/* Cancel */}
             <button onClick={cancelCountdown} style={{
-              width: '72px', height: '72px', borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.4)',
+              width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s',
+              color: '#9ca3af', transition: 'all 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#9ca3af'; }}
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
               </svg>
             </button>
 
-            {/* Countdown number */}
+            {/* Circle with absolutely-centered number */}
             <div key={countdown} style={{
-              width: '140px', height: '140px', borderRadius: '50%',
-              backgroundColor: 'rgba(99,102,241,0.3)',
-              border: '4px solid rgba(99,102,241,0.8)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '72px', fontWeight: '800', color: '#fff',
-              animation: 'countPop 0.9s ease-out forwards',
+              width: '160px', height: '160px', borderRadius: '50%', flexShrink: 0,
+              background: 'rgba(99,102,241,0.10)',
+              border: '3px solid rgba(99,102,241,0.7)',
+              boxShadow: '0 0 0 10px rgba(99,102,241,0.07), 0 0 60px rgba(99,102,241,0.18)',
+              position: 'relative',
+              animation: 'countPop 0.75s cubic-bezier(0.34,1.46,0.64,1) forwards',
             }}>
-              {countdown}
+              <span style={{
+                position: 'absolute', top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '86px', fontWeight: 800, color: '#fff',
+                lineHeight: '0.85',
+                fontFamily: "'Inter',system-ui,sans-serif",
+                display: 'block', whiteSpace: 'nowrap', userSelect: 'none',
+              }}>
+                {countdown}
+              </span>
             </div>
 
             {/* Skip */}
             <button onClick={skipCountdown} style={{
-              width: '72px', height: '72px', borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.4)',
+              width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
+              background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.4)',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s',
+              color: '#a5b4fc', transition: 'all 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.25)'; e.currentTarget.style.color = '#c7d2fe'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; e.currentTarget.style.color = '#a5b4fc'; }}
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/>
               </svg>
             </button>
           </div>
 
-          <p style={{ color: '#9ca3af', fontSize: '16px', marginTop: '24px', fontWeight: '500' }}>
+          <p style={{ margin: '28px 0 0', fontSize: '15px', color: '#9ca3af', fontWeight: 500, fontFamily: 'inherit' }}>
             Get ready — recording starts soon
-          </p>
-          <p style={{ color: '#4b5563', fontSize: '12px', marginTop: '6px' }}>
-            ✕ Cancel &nbsp;&nbsp;|&nbsp;&nbsp; Skip to start immediately →
           </p>
         </div>
       )}
@@ -1219,8 +1384,8 @@ const ScreenRecorder = ({ onRecordingComplete, onClose, visible = false }) => {
           50% { opacity: 0.3; }
         }
         @keyframes countPop {
-          0%   { transform: scale(1.35); opacity: 0; }
-          12%  { transform: scale(1);    opacity: 1; }
+          0%   { transform: scale(1.4);  opacity: 0; }
+          60%  { transform: scale(0.97); opacity: 1; }
           100% { transform: scale(1);    opacity: 1; }
         }
         @keyframes recFadeIn {

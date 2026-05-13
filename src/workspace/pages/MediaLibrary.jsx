@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { workspaceMeetingsAPI, workspaceScreenshotsAPI } from '../../services/api';
+import ScreenRecorder from '../components/ScreenRecorder';
 
 const BASE = '/workspace/super-admin';
 
@@ -207,10 +208,10 @@ function MediaCard({
       onClick={handleCardClick}
     >
       {/* ── Thumbnail area ─────────────────────────────────────── */}
-      <div style={{ position: 'relative', borderRadius: '10px', aspectRatio: '16/9', outline: selected ? '2.5px solid #6366f1' : 'none', outlineOffset: '0px' }}>
+      <div style={{ position: 'relative', borderRadius: '12px', aspectRatio: '16/9', outline: selected ? '2.5px solid #6366f1' : '1px solid rgba(255,255,255,0.06)', outlineOffset: '0px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
 
         {/* Media (overflow:hidden only on this inner shell for border-radius) */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: '10px', overflow: 'hidden', background: '#111' }}>
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden', background: '#111' }}>
           {type === 'video' && fullVideoUrl && (
             <VideoThumbnail src={fullVideoUrl} style={{ width: '100%', height: '100%' }} />
           )}
@@ -280,7 +281,7 @@ function MediaCard({
             className="mc-overlay"
             style={{
               position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.42)', borderRadius: '10px',
+              background: 'rgba(0,0,0,0.42)', borderRadius: '12px',
               display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
               padding: '8px', gap: '6px',
             }}
@@ -362,7 +363,7 @@ function MediaCard({
       </div>
 
       {/* ── Title ─────────────────────────────────────────────── */}
-      <div style={{ marginTop: '8px', padding: '0 2px' }} onClick={(e) => { if (!selectionMode) e.stopPropagation(); }}>
+      <div style={{ marginTop: '9px', padding: '0 1px' }} onClick={(e) => { if (!selectionMode) e.stopPropagation(); }}>
         {renaming ? (
           <input
             ref={renameRef}
@@ -370,14 +371,14 @@ function MediaCard({
             onChange={e => setRenameVal(e.target.value)}
             onBlur={submitRename}
             onKeyDown={e => { if (e.key === 'Enter') submitRename(); if (e.key === 'Escape') setRenaming(false); }}
-            style={{ width: '100%', background: '#1e1f20', border: '1px solid #6366f1', borderRadius: '4px', color: '#fff', fontSize: '13px', padding: '3px 6px', outline: 'none', fontFamily: 'inherit' }}
+            style={{ width: '100%', background: '#1e1f21', border: '1px solid #6366f1', borderRadius: '6px', color: '#fff', fontSize: '13px', padding: '3px 8px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', boxShadow: '0 0 0 2px rgba(99,102,241,0.15)' }}
           />
         ) : (
-          <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: selected ? '#a5b4fc' : '#e5e7eb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: selected ? '#a5b4fc' : '#d1d5db', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '1.4' }}>
             {item.title}
           </p>
         )}
-        <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#6b7280' }}>{timeAgo(item.createdAt)}</p>
+        <p style={{ margin: '3px 0 0', fontSize: '11.5px', color: '#4b5563' }}>{timeAgo(item.createdAt)}</p>
       </div>
     </div>
   );
@@ -389,6 +390,39 @@ const TABS = [
   { key: 'archive', label: 'Archive', path: 'archive' },
 ];
 
+const DATE_FILTERS = [
+  { key: 'all', label: 'All time' },
+  { key: 'today', label: 'Today' },
+  { key: 'yesterday', label: 'Yesterday' },
+  { key: 'last7', label: 'Last 7 days' },
+  { key: 'last30', label: 'Last 30 days' },
+  { key: 'thismonth', label: 'This month' },
+];
+
+function getDateBoundary(filterKey) {
+  const now = new Date();
+  const sod = (d) => { d.setHours(0, 0, 0, 0); return d; };
+  if (filterKey === 'today') return sod(new Date());
+  if (filterKey === 'yesterday') { const d = sod(new Date()); d.setDate(d.getDate() - 1); return d; }
+  if (filterKey === 'last7') { const d = new Date(); d.setDate(d.getDate() - 7); return d; }
+  if (filterKey === 'last30') { const d = new Date(); d.setDate(d.getDate() - 30); return d; }
+  if (filterKey === 'thismonth') { return new Date(now.getFullYear(), now.getMonth(), 1); }
+  return null;
+}
+
+function matchesDateFilter(item, filterKey) {
+  if (filterKey === 'all') return true;
+  const boundary = getDateBoundary(filterKey);
+  if (!boundary) return true;
+  const itemDate = new Date(item.createdAt);
+  if (filterKey === 'yesterday') {
+    const yStart = boundary;
+    const yEnd = new Date(boundary); yEnd.setDate(yEnd.getDate() + 1);
+    return itemDate >= yStart && itemDate < yEnd;
+  }
+  return itemDate >= boundary;
+}
+
 const MediaLibrary = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -398,9 +432,15 @@ const MediaLibrary = () => {
   const [archivedScreenshots, setArchivedScreenshots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState('newest');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('all');
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
+
+  const [showRecorder, setShowRecorder] = useState(false);
+  const [recordingUploading, setRecordingUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const activeTab = location.pathname.includes('/archive')
     ? 'archive'
@@ -411,6 +451,8 @@ const MediaLibrary = () => {
   useEffect(() => {
     setSelectedKeys(new Set());
     setSelectionMode(false);
+    setSearchQuery('');
+    setDateFilter('all');
   }, [activeTab]);
 
   const sortItems = (arr) => {
@@ -447,6 +489,28 @@ const MediaLibrary = () => {
     loadAll().finally(() => setLoading(false));
   }, [loadAll]);
 
+  const handleRecordingComplete = async (blob, { title: recTitle } = {}) => {
+    setRecordingUploading(true);
+    setUploadProgress(0);
+    try {
+      const formData = new FormData();
+      const timestamp = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      formData.append('title', recTitle || `Screen Recording — ${timestamp}`);
+      formData.append('meetingDate', new Date().toISOString().split('T')[0]);
+      formData.append('source', 'website');
+      const file = new File([blob], `recording-${Date.now()}.webm`, { type: 'video/webm' });
+      formData.append('recording', file);
+      await workspaceMeetingsAPI.create(formData, (pct) => setUploadProgress(pct));
+      setShowRecorder(false);
+      loadAll();
+    } catch (err) {
+      console.error('Failed to save recording:', err);
+      alert('Failed to save recording: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setRecordingUploading(false);
+    }
+  };
+
   const handlePinVideo = async (id) => { await workspaceMeetingsAPI.pin(id); loadAll(); };
   const handleArchiveVideo = async (id) => { await workspaceMeetingsAPI.archive(id); loadAll(); };
   const handleDeleteVideo = async (id) => { await workspaceMeetingsAPI.delete(id); loadAll(); };
@@ -467,8 +531,15 @@ const MediaLibrary = () => {
     ? new Date(a.createdAt) - new Date(b.createdAt)
     : new Date(b.createdAt) - new Date(a.createdAt));
 
-  const currentItems = activeTab === 'videos' ? videos : activeTab === 'screenshots' ? screenshots : archiveItems;
+  const rawItems = activeTab === 'videos' ? videos : activeTab === 'screenshots' ? screenshots : archiveItems;
   const archiveCount = archivedVideos.length + archivedScreenshots.length;
+
+  const currentItems = rawItems.filter(item => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q && !item.title?.toLowerCase().includes(q)) return false;
+    if (!matchesDateFilter(item, dateFilter)) return false;
+    return true;
+  });
 
   const getItemKey = (item, type) => `${type}-${item._id}`;
 
@@ -552,64 +623,171 @@ const MediaLibrary = () => {
   };
 
   const toolbarBtn = {
-    padding: '7px 14px', borderRadius: '8px', border: '1px solid #3a3b3d',
-    background: '#2a2b2d', color: '#e5e7eb', fontSize: '13px', cursor: 'pointer',
+    padding: '7px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.04)', color: '#d1d5db', fontSize: '13px', cursor: 'pointer',
     display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit',
-    whiteSpace: 'nowrap',
+    whiteSpace: 'nowrap', transition: 'background 0.15s',
   };
 
   return (
+    <>
     <div style={{ minHeight: '100%', color: '#e5e7eb', fontFamily: "'Plus Jakarta Sans','Inter',sans-serif", padding: '8px 4px' }}>
       {/* Header */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#f9fafb' }}>Media</h1>
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#f9fafb', letterSpacing: '-0.3px' }}>Media</h1>
+          <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#6b7280' }}>Your recordings and screenshots</p>
+        </div>
+        <button
+          onClick={() => setShowRecorder(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '9px 18px', borderRadius: '9px',
+            background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+            color: '#fff', border: 'none', cursor: 'pointer',
+            fontSize: '13px', fontWeight: 600,
+            boxShadow: '0 4px 14px rgba(220,38,38,0.3)',
+            transition: 'box-shadow 0.15s',
+            fontFamily: 'inherit',
+          }}
+          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(220,38,38,0.45)'}
+          onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(220,38,38,0.3)'}
+        >
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', animation: 'mediaPulse 1.5s ease-in-out infinite' }} />
+          Record Video
+        </button>
+        <style>{`@keyframes mediaPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #2a2b2d', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: '24px' }}>
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => { exitSelection(); navigate(`${BASE}/media/${t.path}`); }}
             style={{
-              padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
-              fontSize: '14px', fontWeight: activeTab === t.key ? 600 : 400,
-              color: activeTab === t.key ? '#fff' : '#6b7280',
+              padding: '9px 18px', border: 'none', background: 'transparent', cursor: 'pointer',
+              fontSize: '13.5px', fontWeight: activeTab === t.key ? 600 : 400,
+              color: activeTab === t.key ? '#e5e7eb' : '#6b7280',
               borderBottom: activeTab === t.key ? '2px solid #6366f1' : '2px solid transparent',
               marginBottom: '-1px', fontFamily: 'inherit', transition: 'color 0.15s',
-              display: 'flex', alignItems: 'center', gap: '6px',
+              display: 'flex', alignItems: 'center', gap: '7px',
             }}
           >
             {t.label}
+            {t.key === 'archive' && archiveCount > 0 && (
+              <span style={{ background: activeTab === 'archive' ? '#6366f1' : 'rgba(255,255,255,0.1)', color: activeTab === 'archive' ? '#fff' : '#9ca3af', fontSize: '11px', fontWeight: 600, padding: '1px 7px', borderRadius: '20px', lineHeight: '1.5' }}>
+                {archiveCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px' }}>
+      <div style={{ marginBottom: '20px' }}>
 
-        {/* Left side */}
-        {selectionMode ? (
-          <div
-            onClick={toggleSelectAll}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none', flexShrink: 0 }}
-          >
-            <Checkbox checked={allSelected} />
-            <span style={{ fontSize: '13px', color: '#e5e7eb' }}>
-              {allSelected ? 'Deselect all' : 'Select all'}
-            </span>
-            {selectedKeys.size > 0 && (
-              <span style={{ fontSize: '13px', color: '#6b7280' }}>· {selectedKeys.size} selected</span>
+        {/* Search + filters row */}
+        {!selectionMode && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+            {/* Search input */}
+            <div style={{ position: 'relative', flex: 1 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by name…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', color: '#e5e7eb',
+                  border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                  padding: '8px 12px 8px 36px', fontSize: '13px',
+                  fontFamily: 'inherit', outline: 'none',
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Date filter */}
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              style={{ background: dateFilter !== 'all' ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.04)', color: dateFilter !== 'all' ? '#a5b4fc' : '#d1d5db', border: dateFilter !== 'all' ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', outline: 'none', flexShrink: 0 }}
+            >
+              {DATE_FILTERS.map(f => (
+                <option key={f.key} value={f.key}>{f.label}</option>
+              ))}
+            </select>
+
+            {/* Sort */}
+            <select
+              value={sort}
+              onChange={e => setSort(e.target.value)}
+              style={{ background: 'rgba(255,255,255,0.04)', color: '#d1d5db', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', outline: 'none', flexShrink: 0 }}
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+
+            {/* Select button */}
+            {rawItems.length > 0 && (
+              <button
+                onClick={() => setSelectionMode(true)}
+                style={{ ...toolbarBtn, flexShrink: 0 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.09)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 11 12 14 22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                Select
+              </button>
             )}
           </div>
-        ) : (
-          <span style={{ fontSize: '13px', color: '#6b7280', flexShrink: 0 }}>
-            {currentItems.length} item{currentItems.length !== 1 ? 's' : ''}
-          </span>
         )}
 
-        {/* Right side */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        {/* Count row / selection toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          {selectionMode ? (
+            <div
+              onClick={toggleSelectAll}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none', flexShrink: 0 }}
+            >
+              <Checkbox checked={allSelected} />
+              <span style={{ fontSize: '13px', color: '#e5e7eb' }}>
+                {allSelected ? 'Deselect all' : 'Select all'}
+              </span>
+              {selectedKeys.size > 0 && (
+                <span style={{ fontSize: '13px', color: '#6b7280' }}>· {selectedKeys.size} selected</span>
+              )}
+            </div>
+          ) : (
+            <span style={{ fontSize: '12px', color: '#4b5563' }}>
+              {currentItems.length !== rawItems.length
+                ? `${currentItems.length} of ${rawItems.length} item${rawItems.length !== 1 ? 's' : ''}`
+                : `${currentItems.length} item${currentItems.length !== 1 ? 's' : ''}`}
+            </span>
+          )}
+
+          {/* Right side — only bulk actions when in selection mode */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {selectionMode ? (
             <>
               {/* Bulk actions inline — always visible */}
@@ -619,8 +797,8 @@ const MediaLibrary = () => {
                     onClick={handleBulkArchive}
                     disabled={bulkLoading}
                     style={{ ...toolbarBtn, opacity: bulkLoading ? 0.6 : 1, cursor: bulkLoading ? 'not-allowed' : 'pointer' }}
-                    onMouseEnter={e => { if (!bulkLoading) e.currentTarget.style.background = '#353638'; }}
-                    onMouseLeave={e => e.currentTarget.style.background = '#2a2b2d'}
+                    onMouseEnter={e => { if (!bulkLoading) e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
@@ -631,9 +809,9 @@ const MediaLibrary = () => {
                   <button
                     onClick={handleBulkDelete}
                     disabled={bulkLoading}
-                    style={{ ...toolbarBtn, border: '1px solid rgba(239,68,68,0.35)', color: '#ef4444', opacity: bulkLoading ? 0.6 : 1, cursor: bulkLoading ? 'not-allowed' : 'pointer' }}
-                    onMouseEnter={e => { if (!bulkLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
-                    onMouseLeave={e => e.currentTarget.style.background = '#2a2b2d'}
+                    style={{ ...toolbarBtn, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)', color: '#f87171', opacity: bulkLoading ? 0.6 : 1, cursor: bulkLoading ? 'not-allowed' : 'pointer' }}
+                    onMouseEnter={e => { if (!bulkLoading) e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.04)'}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6"/>
@@ -642,73 +820,69 @@ const MediaLibrary = () => {
                     </svg>
                     Delete
                   </button>
-                  <div style={{ width: '1px', height: '20px', background: '#3a3b3d' }} />
+                  <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.08)' }} />
                 </>
               )}
               <button
                 onClick={exitSelection}
-                style={{ ...toolbarBtn, background: 'transparent', border: '1px solid #3a3b3d', color: '#9ca3af' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#2a2b2d'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                style={{ ...toolbarBtn, color: '#9ca3af' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
               >
                 Cancel
               </button>
             </>
-          ) : (
-            <>
-              {currentItems.length > 0 && (
-                <button
-                  onClick={() => setSelectionMode(true)}
-                  style={toolbarBtn}
-                  onMouseEnter={e => e.currentTarget.style.background = '#353638'}
-                  onMouseLeave={e => e.currentTarget.style.background = '#2a2b2d'}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 11 12 14 22 4"/>
-                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                  </svg>
-                  Select
-                </button>
-              )}
-              <select
-                value={sort}
-                onChange={e => setSort(e.target.value)}
-                style={{ background: '#2a2b2d', color: '#e5e7eb', border: '1px solid #3a3b3d', borderRadius: '8px', padding: '7px 12px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}
-              >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-              </select>
-            </>
-          )}
+          ) : null}
+          </div>
         </div>
       </div>
 
       {/* Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', color: '#6b7280', paddingTop: '80px', fontSize: '14px' }}>Loading...</div>
+        <div style={{ textAlign: 'center', color: '#6b7280', paddingTop: '100px', fontSize: '14px' }}>
+          <div style={{ width: '28px', height: '28px', border: '2px solid #3a3b3d', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          Loading…
+        </div>
       ) : currentItems.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#6b7280', paddingTop: '80px' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.25, display: 'block', margin: '0 auto 12px' }}>
-            {activeTab === 'archive'
-              ? <path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM6.24 5h11.52l.83 1H5.42l.82-1zM5 19V8h14v11H5zm8.45-9h-2.9v3H8l4 4 4-4h-2.55z"/>
-              : activeTab === 'videos'
-                ? <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/>
-                : <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-            }
-          </svg>
-          <p style={{ margin: 0, fontSize: '15px' }}>
-            {activeTab === 'archive' ? 'No archived items' : `No ${activeTab} yet`}
+        <div style={{ textAlign: 'center', color: '#4b5563', paddingTop: '100px' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.5 }}>
+              {searchQuery || dateFilter !== 'all'
+                ? <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                : activeTab === 'archive'
+                  ? <path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM6.24 5h11.52l.83 1H5.42l.82-1zM5 19V8h14v11H5zm8.45-9h-2.9v3H8l4 4 4-4h-2.55z"/>
+                  : activeTab === 'videos'
+                    ? <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/>
+                    : <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+              }
+            </svg>
+          </div>
+          <p style={{ margin: 0, fontSize: '15px', color: '#6b7280', fontWeight: 500 }}>
+            {searchQuery || dateFilter !== 'all'
+              ? 'No results found'
+              : activeTab === 'archive' ? 'No archived items' : `No ${activeTab} yet`}
           </p>
-          <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#4b5563' }}>
-            {activeTab === 'archive'
-              ? 'Archived videos and screenshots will appear here.'
-              : activeTab === 'videos'
-                ? 'Record a meeting to see it here.'
-                : 'Take a screenshot from the extension.'}
+          <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#374151' }}>
+            {searchQuery || dateFilter !== 'all'
+              ? 'Try a different search term or date range.'
+              : activeTab === 'archive'
+                ? 'Archived videos and screenshots will appear here.'
+                : activeTab === 'videos'
+                  ? 'Record your screen from the extension to see videos here.'
+                  : 'Take a screenshot from the extension to see it here.'}
           </p>
+          {(searchQuery || dateFilter !== 'all') && (
+            <button
+              onClick={() => { setSearchQuery(''); setDateFilter('all'); }}
+              style={{ marginTop: '14px', padding: '7px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#9ca3af', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '20px' }}>
           {currentItems.map(item => {
             const isArchiveTab = activeTab === 'archive';
             const itemType = isArchiveTab ? item._type : (activeTab === 'videos' ? 'video' : 'screenshot');
@@ -747,6 +921,43 @@ const MediaLibrary = () => {
       )}
 
     </div>
+    {/* Screen Recorder — always mounted so the floating pill stays alive */}
+    <ScreenRecorder
+      visible={showRecorder}
+      onRecordingComplete={handleRecordingComplete}
+      onClose={() => setShowRecorder(false)}
+    />
+
+    {/* Upload progress overlay */}
+    {recordingUploading && (
+      <div style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,0.75)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 10000,
+      }}>
+        <div style={{
+          background: '#1e1f21', borderRadius: '16px', padding: '32px 40px',
+          textAlign: 'center', minWidth: '300px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ fontSize: '15px', fontWeight: 600, color: '#f9fafb', marginBottom: '6px', fontFamily: "'Plus Jakarta Sans','Inter',sans-serif" }}>
+            Uploading recording…
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '20px', fontFamily: 'inherit' }}>
+            Please don't close this tab
+          </div>
+          <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '99px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${uploadProgress}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '99px', transition: 'width 0.3s ease' }} />
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px', fontFamily: 'inherit' }}>
+            {uploadProgress}%
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
