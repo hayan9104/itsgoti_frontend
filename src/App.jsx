@@ -10,6 +10,8 @@ import { BookingModalProvider } from './components/BookingModal';
 import LandingPage3 from './themes/default/LandingPage3';
 
 // Lazy load EVERYTHING else
+const CalendarLanding = lazy(() => import('./pages/CalendarLanding'));
+const CalendarDashboard = lazy(() => import('./pages/CalendarDashboard'));
 const Layout = lazy(() => import('./components/Layout').then(m => ({ default: m.Layout })));
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const AdminLogin = lazy(() => import('./admin/Login'));
@@ -355,6 +357,12 @@ function App() {
 
             {/* Booking Page Route */}
             <Route path="/book" element={<Suspense fallback={<PageLoader />}><BookingPage /></Suspense>} />
+
+            {/* Calendar landing (Calendly-style) — no navbar, no login buttons in nav */}
+            <Route path="/calender" element={<Suspense fallback={<PageLoader />}><CalendarLanding /></Suspense>} />
+            <Route path="/calender/signup" element={<Suspense fallback={<PageLoader />}><CalendarLanding /></Suspense>} />
+            <Route path="/calender/signin" element={<Suspense fallback={<PageLoader />}><CalendarLanding /></Suspense>} />
+            <Route path="/calender/dashboard" element={<Suspense fallback={<PageLoader />}><CalendarDashboard /></Suspense>} />
 
             {/* Slot Change Page Route (WhatsApp link) */}
             <Route path="/book/change/:token" element={<Suspense fallback={<PageLoader />}><ChangeSlotPage /></Suspense>} />

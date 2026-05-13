@@ -428,6 +428,7 @@ const ThemePagesWrapper = () => {
     { name: 'landing', label: landingPageSlugs['landing']?.label || 'Landing Page 1' },
     { name: 'landing-page-2', label: landingPageSlugs['landing-page-2']?.label || 'Landing Page 2' },
     { name: 'landing-page-3', label: landingPageSlugs['landing-page-3']?.label || 'Landing Page 3' },
+    { name: 'calender', label: 'Calendar Landing (Calendly-style)' },
     { name: 'home', label: 'Home Page' },
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
@@ -441,7 +442,7 @@ const ThemePagesWrapper = () => {
   const defaultPages = getDefaultPages();
 
   // Pages that use the visual editor
-  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
+  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3', 'calender'];
   // Special pages that have their own manager
   const specialPages = ['client-logos', 'reviews'];
   // All editable pages
@@ -760,6 +761,7 @@ const ThemePagesWrapper = () => {
                 const routePath = page.name === 'landing' ? `/${landingPageSlugs['landing']?.slug || 'landing_page1'}`
                   : page.name === 'landing-page-2' ? `/${landingPageSlugs['landing-page-2']?.slug || 'landing_page2'}`
                   : page.name === 'landing-page-3' ? `/${landingPageSlugs['landing-page-3']?.slug || 'landing_page3'}`
+                  : page.name === 'calender' ? '/calender'
                   : `/${page.name}`;
                 return (
                   <button

@@ -255,6 +255,52 @@ const pageDefaults = {
     footerText: 'Thanks for visiting',
     copyrightText: '\u00A9 Goti 2025. All rights reserved.',
   },
+  'calender': {
+    // Section Visibility
+    headerVisible: true,
+    topNavVisible: true,
+    heroVisible: true,
+    slideshowVisible: true,
+    signupFormVisible: true,
+    signupFeaturesVisible: true,
+    // Header / Logo
+    logoImage: '',
+    logoText: 'ItsGoti',
+    // Top Nav Buttons
+    loginButtonText: 'Log In',
+    getStartedButtonText: 'Get started for free',
+    // Hero
+    heroTitle: 'Easy\nscheduling\nahead',
+    heroDescription: 'Join thousands of professionals who easily book meetings with ItsGoti \u2014 the simplest scheduling tool for your team.',
+    googleButtonText: 'Sign up with Google',
+    emailLinkText: 'Sign up free with email',
+    // Slideshow
+    slideshowImages: [],
+    slideshowInterval: 3,
+    // Signup Page \u2014 Left Form
+    signupTitle: 'Create your free account',
+    signupSubtitle: 'No credit card required. Upgrade anytime.',
+    signupEmailPlaceholder: 'Enter your email',
+    signupContinueEmailText: 'Continue with email',
+    signupGoogleText: 'Continue with Google',
+    signupFooterText: 'Continue with your Google account to connect your calendar.',
+    signupLoginPromptText: 'Already have an account?',
+    signupLoginLinkText: 'Log In \u2192',
+    // Signup Page \u2014 Right Features Card
+    signupBadgeText: 'Try Teams plan free',
+    signupFeaturesTitle: 'Explore premium features with your free 14-day Teams plan trial',
+    signupFeaturesList: 'Multi-person and co-hosted meetings\nRound Robin meeting distribution\nMeeting reminders, follow-ups, and notifications\nConnect payment tools like PayPal or Stripe\nRemove ItsGoti branding',
+    signupJoinText: 'Join leading companies using the #1 scheduling tool',
+    signupCompanyLogos: [],
+    // Signin Page
+    signinPageVisible: true,
+    signinTitle: 'Log in to your account',
+    signinEmailPlaceholder: 'Enter your email',
+    signinContinueButtonText: 'Continue',
+    signinGoogleText: 'Continue with Google',
+    signinSignupPromptText: "Don't have an account?",
+    signinSignupLinkText: 'Sign up for free →',
+  },
   'landing-page-3': {
     // Section Visibility (all visible by default)
     headerVisible: true,

@@ -17,6 +17,7 @@ const VisualPageEditor = () => {
     'landing': 'Landing Page',
     'landing-page-2': 'Landing Page 2 (Shopify)',
     'landing-page-3': 'Landing Page 3 (Shopify Pro)',
+    'calender': 'Calendar Landing (Calendly-style)',
     'footer': 'Footer',
   };
 

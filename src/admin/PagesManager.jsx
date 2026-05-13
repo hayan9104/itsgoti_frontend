@@ -19,12 +19,13 @@ const PagesManager = () => {
   const [savingDefault, setSavingDefault] = useState(false);
 
   // Pages that use the new visual editor
-  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3'];
+  const visualEditorPages = ['about', 'work', 'contact', 'approach', 'footer', 'landing', 'home', 'landing-page-2', 'landing-page-3', 'calender'];
 
   const defaultPages = [
     { name: 'landing', label: 'Landing Page' },
     { name: 'landing-page-2', label: 'Landing Page 2 (Shopify)' },
     { name: 'landing-page-3', label: 'Landing Page 3 (Shopify Pro)' },
+    { name: 'calender', label: 'Calendar Landing (Calendly-style)' },
     { name: 'home', label: 'Home Page' },
     { name: 'about', label: 'About Us' },
     { name: 'approach', label: 'Our Approach' },
@@ -302,7 +303,7 @@ const PagesManager = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
         {defaultPages.map((page) => {
           const pageData = getPageData(page.name);
-          const hasEditor = ['work', 'about', 'contact', 'home', 'approach', 'footer', 'landing', 'landing-page-2', 'landing-page-3'].includes(page.name);
+          const hasEditor = ['work', 'about', 'contact', 'home', 'approach', 'footer', 'landing', 'landing-page-2', 'landing-page-3', 'calender'].includes(page.name);
           const isPublished = pageData?.published !== false; // Default to true if not set
           const isToggling = togglingPage === page.name;
 
@@ -514,6 +515,7 @@ const PagesManager = () => {
                 const routePath = page.name === 'landing' ? '/'
                   : page.name === 'landing-page-2' ? '/landing_page2'
                   : page.name === 'landing-page-3' ? '/landing_page3'
+                  : page.name === 'calender' ? '/calender'
                   : `/${page.name}`;
 
                 return (

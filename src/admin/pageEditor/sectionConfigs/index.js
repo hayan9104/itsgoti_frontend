@@ -7,6 +7,7 @@ import { footerSections } from './footerSections';
 import { landingSections } from './landingSections';
 import { landingPage2Sections } from './landingPage2Sections';
 import { landingPage3Sections } from './landingPage3Sections';
+import { calenderSections } from './calenderSections';
 
 // Map page names to their section configurations
 const sectionConfigs = {
@@ -19,6 +20,7 @@ const sectionConfigs = {
   'landing': landingSections,
   'landing-page-2': landingPage2Sections,
   'landing-page-3': landingPage3Sections,
+  'calender': calenderSections,
 };
 
 export const getSectionsForPage = (pageName) => {
@@ -30,4 +32,4 @@ export const getSectionById = (pageName, sectionId) => {
   return sections.find(s => s.id === sectionId);
 };
 
-export { aboutSections, workSections, contactSections, homeSections, approachSections, footerSections, landingSections, landingPage2Sections, landingPage3Sections };
+export { aboutSections, workSections, contactSections, homeSections, approachSections, footerSections, landingSections, landingPage2Sections, landingPage3Sections, calenderSections };
