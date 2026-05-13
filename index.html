@@ -40,6 +40,42 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&family=Caveat+Brush&family=Gabarito:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+
+    <!-- LP3 critical image preload: reads cached portfolioImages from localStorage and
+         injects <link rel="preload"> tags before the React bundle loads. Works for both
+         desktop and mobile (same image set). No-op on first visit (no cache yet). -->
+    <script>
+      (function () {
+        try {
+          var cached = localStorage.getItem('lp3_content');
+          if (!cached) return;
+          var data = JSON.parse(cached);
+          var imgs = data && data.portfolioImages;
+          if (!Array.isArray(imgs)) return;
+
+          var injected = 0;
+          var MAX_PRELOAD = 3; // first 3 phones are above the fold on every viewport
+
+          for (var i = 0; i < imgs.length && injected < MAX_PRELOAD; i++) {
+            var src = imgs[i];
+            if (typeof src !== 'string') continue;
+            // Skip placeholders and data URIs — only real uploaded files
+            if (src.indexOf('placeholder') !== -1) continue;
+            if (src.indexOf('data:') === 0) continue;
+            // Must be an http(s) or root-relative URL
+            if (src[0] !== '/' && src.indexOf('http') !== 0) continue;
+
+            var link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'image';
+            link.href = src;
+            link.setAttribute('fetchpriority', 'high');
+            document.head.appendChild(link);
+            injected++;
+          }
+        } catch (e) { /* localStorage blocked or bad JSON — ignore */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
