@@ -33,6 +33,12 @@ const GotiVideosAnalytics = lazy(() => import('./gotivideos/pages/GotiVideosAnal
 // Goti Videos - Standalone
 const GotiVideosStandalone = lazy(() => import('./gotivideos/pages/GotiVideosStandaloneDashboard'));
 
+// Team Dashboard - internal employee management
+const TeamLogin = lazy(() => import('./team/pages/TeamLogin'));
+const TeamDashboard = lazy(() => import('./team/pages/TeamDashboard'));
+import { TeamAuthProvider } from './team/TeamAuthContext';
+import TeamProtectedRoute from './team/TeamProtectedRoute';
+
 // Workspace (Project Management) - Lazy loaded
 const WorkspaceLogin = lazy(() => import('./workspace/pages/WorkspaceLogin'));
 const SuperAdminDashboard = lazy(() => import('./workspace/pages/SuperAdminDashboard'));
@@ -339,6 +345,7 @@ function App() {
     <Router>
       <WorkspaceAuthProvider>
         <PlutioCopyAuthProvider>
+          <TeamAuthProvider>
           <BookingModalProvider>
             <PageSlugsProvider>
               <ScrollToTop />
@@ -445,11 +452,25 @@ function App() {
               }
             />
 
+            {/* Team Dashboard - internal employee management */}
+            <Route path="/team" element={<Suspense fallback={<PageLoader />}><TeamLogin /></Suspense>} />
+            <Route
+              path="/team/dashboard"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <TeamProtectedRoute>
+                    <TeamDashboard />
+                  </TeamProtectedRoute>
+                </Suspense>
+              }
+            />
+
             {/* Dynamic Page Route - matches any custom slug (landing pages + main pages) */}
             <Route path="/:slug" element={<DynamicPageRouter />} />
             </Routes>
             </PageSlugsProvider>
           </BookingModalProvider>
+          </TeamAuthProvider>
         </PlutioCopyAuthProvider>
       </WorkspaceAuthProvider>
     </Router>
