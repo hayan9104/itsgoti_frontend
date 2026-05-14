@@ -93,7 +93,7 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
       >
         <StatTile palette={palette} label="Total hours" value={`${data.summary.totalActiveHours}h`} />
         <StatTile palette={palette} label="Tasks done" value={data.summary.completedCount} />
-        <StatTile palette={palette} label="Late starts" value={data.summary.lateDays} />
+        <StatTile palette={palette} label="Total break" value={`${data.summary.totalBreakHours ?? 0}h`} />
         <StatTile palette={palette} label="Avg / day" value={`${data.summary.avgHoursPerDay}h`} />
       </div>
 
@@ -102,14 +102,14 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr',
-            gap: 16,
+            gridTemplateColumns: '1.4fr 100px 1.6fr 1.6fr 100px 90px',
+            gap: 14,
             padding: '12px 20px',
             borderBottom: `1px solid ${palette.border}`,
             backgroundColor: palette.surfaceAlt,
           }}
         >
-          {['DATE', 'HOURS', 'BREAK', 'AFK', 'DSM'].map((h) => (
+          {['DATE', 'START', 'BREAK', 'AFK', 'END', 'HOURS'].map((h) => (
             <div key={h} style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}>
               {h}
             </div>
@@ -123,9 +123,10 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
               key={d.date + i}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr',
-                gap: 16,
-                padding: '12px 20px',
+                gridTemplateColumns: '1.4fr 100px 1.6fr 1.6fr 100px 90px',
+                gap: 14,
+                padding: '14px 20px',
+                alignItems: 'center',
                 borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
               }}
             >
@@ -134,25 +135,36 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
                   {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
                 <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, marginTop: 2 }}>
-                  {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
+                  {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}
                 </div>
               </div>
-              <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{(d.activeSec / 3600).toFixed(1)}h</div>
-              <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.textDim }}>{Math.round(d.breakSec / 60)}m</div>
-              <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.textDim }}>{Math.round(d.afkSec / 60)}m</div>
-              <div>
-                <span
-                  style={{
-                    fontFamily: monoFont,
-                    fontSize: 11,
-                    letterSpacing: '0.06em',
-                    fontWeight: 500,
-                    color: d.wasLate ? palette.danger : '#10B981',
-                  }}
-                >
-                  {d.wasLate ? 'LATE' : 'ON TIME'}
-                </span>
+              <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>
+                {d.startedAt ? new Date(d.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
               </div>
+              <div>
+                <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{Math.round(d.breakSec / 60)}m</div>
+                {d.breaks?.length ? (
+                  <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
+                    {d.breaks
+                      .map((b) => `${new Date(b.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}–${b.endedAt ? new Date(b.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'now'}`)
+                      .join(' · ')}
+                  </div>
+                ) : null}
+              </div>
+              <div>
+                <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{Math.round(d.afkSec / 60)}m</div>
+                {d.afkPeriods?.length ? (
+                  <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
+                    {d.afkPeriods
+                      .map((a) => `${new Date(a.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}–${a.endedAt ? new Date(a.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'now'}`)
+                      .join(' · ')}
+                  </div>
+                ) : null}
+              </div>
+              <div style={{ fontFamily: monoFont, fontSize: 13, color: d.endedAt ? palette.text : palette.textMute }}>
+                {d.endedAt ? new Date(d.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
+              </div>
+              <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{(d.activeSec / 3600).toFixed(1)}h</div>
             </div>
           ))
         )}
@@ -267,9 +279,9 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
         <StatTile palette={palette} label="Avg daily hours" value={`${data.summary.avgDailyHours}h`} sub={`${data.summary.totalDays} sessions`} />
         <StatTile
           palette={palette}
-          label="On-time rate"
-          value={data.summary.onTimeRate != null ? `${data.summary.onTimeRate}%` : '—'}
-          sub={`${data.summary.totalDays - data.summary.lateDays} of ${data.summary.totalDays}`}
+          label="Total break"
+          value={`${data.summary.totalBreakHours ?? 0}h`}
+          sub="across the period"
         />
         <StatTile palette={palette} label="Tasks completed" value={data.summary.completedTasks} sub={data.summary.estAccuracy != null ? `${Math.round(data.summary.estAccuracy)}% of estimate` : ''} />
       </div>
@@ -295,20 +307,6 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
                     minHeight: 2,
                   }}
                 >
-                  {d.late > 0 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: `${Math.min(40, d.late * 8)}%`,
-                        backgroundColor: '#DC2626',
-                        opacity: 0.45,
-                        borderRadius: '4px 4px 0 0',
-                      }}
-                    />
-                  )}
                 </div>
                 <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim }}>
                   {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
@@ -321,10 +319,6 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: palette.accent }} />
             <span style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim }}>Active hours</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#DC2626', opacity: 0.45 }} />
-            <span style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim }}>Late starts</span>
           </div>
         </div>
       </Card>
@@ -364,7 +358,7 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>{p.name}</div>
                   <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, marginTop: 2 }}>
-                    {p.days} {p.days === 1 ? 'day' : 'days'} · {p.lateDays} late
+                    {p.days} {p.days === 1 ? 'session' : 'sessions'}
                   </div>
                 </div>
                 <div style={{ width: 200, height: 6, borderRadius: 3, backgroundColor: palette.surfaceAlt }}>

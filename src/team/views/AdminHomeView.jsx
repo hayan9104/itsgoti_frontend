@@ -34,7 +34,6 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
     (a, s) => ({ ...a, [s.status]: (a[s.status] || 0) + 1 }),
     {}
   );
-  const lateToday = snapshot.filter((s) => s.wasLate);
   const movingTasks = tasks.filter((t) => t.status !== 'completed').slice(0, 5);
 
   const todayText = new Date().toLocaleDateString('en-IN', {
@@ -133,11 +132,6 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
                     <span style={{ fontFamily: baseFont, fontSize: 14.5, fontWeight: 500, color: palette.text }}>{s.employee.name}</span>
                     <span style={{ fontFamily: baseFont, fontSize: 12, color: palette.textMute }}>· {s.employee.jobTitle}</span>
-                    {s.wasLate && (
-                      <span style={{ fontFamily: monoFont, fontSize: 10, color: palette.danger, letterSpacing: '0.06em', fontWeight: 500 }}>
-                        LATE{s.lateReason ? ' · ' + s.lateReason : ''}
-                      </span>
-                    )}
                   </div>
                   <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim }}>
                     {s.status === 'offline' ? 'Not joined yet' : s.activeTask || 'No task set'}
@@ -161,34 +155,7 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
-        <Card palette={palette}>
-          <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, margin: 0, marginBottom: 4 }}>
-            Late today
-          </h3>
-          <p style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim, marginBottom: 16 }}>
-            Daily stand-up is at 10:00 AM IST.
-          </p>
-          {lateToday.length === 0 ? (
-            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>Everyone on time.</div>
-          ) : (
-            lateToday.map((s) => (
-              <div key={s.employee.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, paddingTop: 12, borderTop: `1px solid ${palette.border}`, marginTop: 12 }}>
-                <Avatar initials={s.employee.avatar} size={28} palette={palette} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{s.employee.name}</div>
-                  <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim, marginTop: 2 }}>
-                    {s.lateReason || 'No reason given'}
-                  </div>
-                </div>
-                <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>
-                  {s.startedAt ? new Date(s.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
-                </div>
-              </div>
-            ))
-          )}
-        </Card>
-
+      <div>
         <Card palette={palette}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
             <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, margin: 0 }}>Tasks moving</h3>

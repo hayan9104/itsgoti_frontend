@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Clock, Coffee, Circle } from 'lucide-react';
 import { teamReportsAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont, fmtMinutes } from '../theme';
 import { PageHeader, Card, StatTile } from '../components/Primitives';
 import PeriodPicker from '../components/PeriodPicker';
+
+function fmtTime(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function intervalsLine(intervals = []) {
+  if (!intervals.length) return '';
+  return intervals
+    .map((i) => `${fmtTime(i.startedAt)}–${i.endedAt ? fmtTime(i.endedAt) : 'now'}`)
+    .join(' · ');
+}
 
 export default function HistoryView({ palette, isDark, currentUserId }) {
   const [period, setPeriod] = useState('month');
@@ -22,6 +34,10 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
   const kicker = date
     ? `YOUR ACTIVITY · ${new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`
     : `YOUR ACTIVITY · ${period.toUpperCase()}`;
+
+  // Column widths — keep proportions in one place.
+  // DATE | START | BREAK | AFK | END | HOURS
+  const cols = '1.4fr 100px 1.6fr 1.6fr 100px 90px';
 
   return (
     <div>
@@ -55,7 +71,7 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
           >
             <StatTile palette={palette} label="Total active" value={`${data.summary.totalActiveHours}h`} />
             <StatTile palette={palette} label="Tasks completed" value={data.summary.completedCount} />
-            <StatTile palette={palette} label="Late starts" value={data.summary.lateDays} />
+            <StatTile palette={palette} label="Total break" value={`${data.summary.totalBreakHours ?? 0}h`} />
             <StatTile palette={palette} label="Daily avg" value={`${data.summary.avgHoursPerDay}h`} />
           </div>
 
@@ -64,21 +80,21 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr',
-                gap: 16,
+                gridTemplateColumns: cols,
+                gap: 14,
                 padding: '12px 20px',
                 borderBottom: `1px solid ${palette.border}`,
                 backgroundColor: palette.surfaceAlt,
               }}
             >
-              {['DATE', 'HOURS', 'BREAK', 'AFK', 'DSM'].map((h) => (
+              {['DATE', 'START', 'BREAK', 'AFK', 'END', 'HOURS'].map((h) => (
                 <div key={h} style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}>
                   {h}
                 </div>
               ))}
             </div>
             {data.days.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
+              <div style={{ padding: 28, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
                 No sessions in this period yet.
               </div>
             ) : (
@@ -87,9 +103,10 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                   key={d.date + i}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr',
-                    gap: 16,
-                    padding: '12px 20px',
+                    gridTemplateColumns: cols,
+                    gap: 14,
+                    padding: '14px 20px',
+                    alignItems: 'center',
                     borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
                   }}
                 >
@@ -98,25 +115,28 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                       {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </div>
                     <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, marginTop: 2 }}>
-                      {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
+                      {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}
                     </div>
                   </div>
-                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{(d.activeSec / 3600).toFixed(1)}h</div>
-                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.textDim }}>{Math.round(d.breakSec / 60)}m</div>
-                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.textDim }}>{Math.round(d.afkSec / 60)}m</div>
+                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtTime(d.startedAt)}</div>
                   <div>
-                    <span
-                      style={{
-                        fontFamily: monoFont,
-                        fontSize: 11,
-                        letterSpacing: '0.06em',
-                        fontWeight: 500,
-                        color: d.wasLate ? palette.danger : '#10B981',
-                      }}
-                    >
-                      {d.wasLate ? 'LATE' : 'ON TIME'}
-                    </span>
+                    <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtMinutes(Math.round(d.breakSec / 60))}</div>
+                    {d.breaks?.length ? (
+                      <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
+                        {intervalsLine(d.breaks)}
+                      </div>
+                    ) : null}
                   </div>
+                  <div>
+                    <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtMinutes(Math.round(d.afkSec / 60))}</div>
+                    {d.afkPeriods?.length ? (
+                      <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
+                        {intervalsLine(d.afkPeriods)}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div style={{ fontFamily: monoFont, fontSize: 13, color: d.endedAt ? palette.text : palette.textMute }}>{d.endedAt ? fmtTime(d.endedAt) : '—'}</div>
+                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{(d.activeSec / 3600).toFixed(1)}h</div>
                 </div>
               ))
             )}
