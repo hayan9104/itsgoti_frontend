@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Check, X as XIcon, Heart, Wallet, Coins, Minus, Pencil } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Check, X as XIcon, Heart, Wallet, Coins, Minus, Pencil, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { teamLeavesAPI, teamSettingsAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont } from '../theme';
 import { Avatar, PageHeader, Card, SolidButton, GhostButton, Modal, FieldLabel, TextInput, Textarea } from '../components/Primitives';
@@ -158,7 +158,7 @@ function BalanceTile({ palette, label, used, total, available, accentColor, icon
   );
 }
 
-export default function LeavesView({ palette, isDark, isAdmin }) {
+export default function LeavesView({ palette, isDark, isAdmin, highlightLeaveId, clearHighlight, openLeave }) {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
@@ -166,9 +166,12 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
     startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)),
     endDate: '',
     type: 'full',
+    durationHours: 2,
     category: 'paid',
     reason: '',
   });
+  const [applyAttachments, setApplyAttachments] = useState([]);
+  const [applyUploading, setApplyUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [cursor, setCursor] = useState(startOfMonth(new Date()));
@@ -201,6 +204,25 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
   useEffect(() => {
     refresh();
   }, [isAdmin]);
+
+  // Flash the matching leave row when arriving from a notification.
+  useEffect(() => {
+    if (!highlightLeaveId || leaves.length === 0) return;
+    const el = document.getElementById(`team-leave-${highlightLeaveId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const original = el.style.transition;
+      el.style.transition = 'background-color 800ms ease';
+      el.style.backgroundColor = palette.accentBg;
+      setTimeout(() => {
+        el.style.backgroundColor = 'transparent';
+        setTimeout(() => {
+          el.style.transition = original;
+          clearHighlight && clearHighlight();
+        }, 900);
+      }, 2200);
+    }
+  }, [highlightLeaveId, leaves.length, palette.accentBg, clearHighlight]);
 
   const monthName = cursor.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   const totalDays = daysInMonth(cursor);
@@ -236,21 +258,39 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
       type: form.type,
       category: form.category,
       reason: form.reason.trim(),
+      attachments: applyAttachments,
     };
+    if (form.type === 'hours') payload.durationHours = form.durationHours;
     const { data } = await teamLeavesAPI.apply(payload).catch((err) => ({ data: err.response?.data }));
     setSubmitting(false);
     if (data?.success) {
       setLeaves((prev) => [data.leave, ...prev]);
-      // Refresh balance after applying (won't change until approved, but keeps UI honest)
       teamLeavesAPI.myBalance().then(({ data }) => {
         if (data?.success) setMyBalance(data.balance);
       });
       setShowApply(false);
-      setForm({ startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)), endDate: '', type: 'full', category: 'paid', reason: '' });
+      setForm({ startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)), endDate: '', type: 'full', durationHours: 2, category: 'paid', reason: '' });
+      setApplyAttachments([]);
     } else {
       setError(data?.message || 'Could not apply');
     }
   };
+
+  const onPickPrescription = async (fileList) => {
+    if (!fileList || fileList.length === 0) return;
+    setApplyUploading(true);
+    setError('');
+    try {
+      const { data } = await teamLeavesAPI.uploadFiles(Array.from(fileList));
+      if (data?.success) setApplyAttachments((prev) => [...prev, ...(data.files || [])]);
+      else setError(data?.message || 'Upload failed');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Upload failed');
+    } finally {
+      setApplyUploading(false);
+    }
+  };
+  const removeAttachment = (idx) => setApplyAttachments((prev) => prev.filter((_, i) => i !== idx));
 
   const onDecide = async (leave, decision) => {
     const { data } = await teamLeavesAPI.decide(leave._id, decision);
@@ -803,12 +843,18 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
             return (
               <div
                 key={l._id}
+                id={`team-leave-${l._id}`}
+                onClick={() => openLeave && openLeave(l._id)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 14,
                   padding: '14px 18px',
                   borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                  transition: 'background-color 200ms ease',
+                  cursor: openLeave ? 'pointer' : 'default',
                 }}
               >
                 <Avatar initials={l.employee?.avatar || '?'} size={32} palette={palette} />
@@ -828,7 +874,10 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button
                       type="button"
-                      onClick={() => onDecide(l, 'approved')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDecide(l, 'approved');
+                      }}
                       style={{
                         padding: '6px 12px',
                         borderRadius: 8,
@@ -848,7 +897,10 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDecide(l, 'rejected')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDecide(l, 'rejected');
+                      }}
                       style={{
                         padding: '6px 12px',
                         borderRadius: 8,
@@ -882,7 +934,10 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
                 {!isAdmin && l.status === 'pending' && (
                   <button
                     type="button"
-                    onClick={() => onCancel(l)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCancel(l);
+                    }}
                     title="Cancel"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textMute }}
                   >
@@ -971,6 +1026,7 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
               {[
                 { v: 'full', label: 'Full day' },
                 { v: 'half', label: 'Half day' },
+                { v: 'hours', label: 'Hours' },
               ].map((opt) => (
                 <button
                   key={opt.v}
@@ -993,7 +1049,107 @@ export default function LeavesView({ palette, isDark, isAdmin }) {
                 </button>
               ))}
             </div>
+            {form.type === 'hours' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                <span style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim }}>For</span>
+                <select
+                  value={form.durationHours}
+                  onChange={(e) => setForm({ ...form, durationHours: Number(e.target.value) })}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    backgroundColor: palette.surfaceAlt,
+                    border: `1px solid ${palette.border}`,
+                    color: palette.text,
+                    fontFamily: baseFont,
+                    fontSize: 13,
+                    outline: 'none',
+                  }}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                    <option key={h} value={h}>
+                      {h} hour{h === 1 ? '' : 's'}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute }}>(counted as {(form.durationHours / 8).toFixed(2)} day)</span>
+              </div>
+            )}
           </div>
+
+          {form.category === 'sick' && (
+            <div style={{ marginBottom: 14 }}>
+              <FieldLabel palette={palette}>Prescription (optional, you can add it later)</FieldLabel>
+              <label
+                htmlFor="sick-prescription-input"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  backgroundColor: palette.surfaceAlt,
+                  border: `1px dashed ${palette.border}`,
+                  color: palette.textDim,
+                  cursor: applyUploading ? 'wait' : 'pointer',
+                  fontFamily: baseFont,
+                  fontSize: 13,
+                }}
+              >
+                <Paperclip size={13} />
+                {applyUploading ? 'Uploading…' : 'Attach prescription'}
+              </label>
+              <input
+                id="sick-prescription-input"
+                type="file"
+                hidden
+                multiple
+                accept="image/*,application/pdf"
+                onChange={(e) => {
+                  onPickPrescription(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+              {applyAttachments.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {applyAttachments.map((a, idx) => {
+                    const isImg = (a.mimetype || '').startsWith('image/');
+                    return (
+                      <span
+                        key={a.url + idx}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 6px 4px 8px',
+                          borderRadius: 8,
+                          backgroundColor: palette.surfaceAlt,
+                          border: `1px solid ${palette.border}`,
+                          fontFamily: baseFont,
+                          fontSize: 12,
+                          color: palette.text,
+                          maxWidth: 240,
+                        }}
+                      >
+                        {isImg ? <ImageIcon size={12} style={{ color: palette.textMute }} /> : <FileText size={12} style={{ color: palette.textMute }} />}
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={a.originalName}>
+                          {a.originalName}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(idx)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 2, display: 'inline-flex' }}
+                          title="Remove"
+                        >
+                          <XIcon size={12} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ marginBottom: 14 }}>
             <FieldLabel palette={palette}>Reason</FieldLabel>
             <Textarea

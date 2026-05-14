@@ -36,8 +36,25 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
     : `YOUR ACTIVITY · ${period.toUpperCase()}`;
 
   // Column widths — keep proportions in one place.
-  // DATE | START | BREAK | AFK | END | HOURS
-  const cols = '1.4fr 100px 1.6fr 1.6fr 100px 90px';
+  // DATE | START | AFK | END | HOURS | DSM
+  const cols = '1.3fr 90px 1.6fr 90px 80px 120px';
+
+  const renderDsm = (dsm) => {
+    if (!dsm) return <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>—</span>;
+    if (dsm.status === 'on_time')
+      return <span style={{ fontFamily: monoFont, fontSize: 11, color: '#10B981', letterSpacing: '0.06em', fontWeight: 500 }}>ON TIME</span>;
+    if (dsm.status === 'late')
+      return (
+        <span style={{ fontFamily: monoFont, fontSize: 11, color: '#DC2626', letterSpacing: '0.06em', fontWeight: 500 }}>
+          LATE <span style={{ color: palette.textMute }}>({dsm.offsetMin}min)</span>
+        </span>
+      );
+    return (
+      <span style={{ fontFamily: monoFont, fontSize: 11, color: '#0E7490', letterSpacing: '0.06em', fontWeight: 500 }}>
+        EARLY <span style={{ color: palette.textMute }}>({dsm.offsetMin}min)</span>
+      </span>
+    );
+  };
 
   return (
     <div>
@@ -87,7 +104,7 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                 backgroundColor: palette.surfaceAlt,
               }}
             >
-              {['DATE', 'START', 'BREAK', 'AFK', 'END', 'HOURS'].map((h) => (
+              {['DATE', 'START', 'AFK', 'END', 'HOURS', `DSM${data.dsmTime ? ' · ' + data.dsmTime : ''}`].map((h) => (
                 <div key={h} style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}>
                   {h}
                 </div>
@@ -120,14 +137,6 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                   </div>
                   <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtTime(d.startedAt)}</div>
                   <div>
-                    <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtMinutes(Math.round(d.breakSec / 60))}</div>
-                    {d.breaks?.length ? (
-                      <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
-                        {intervalsLine(d.breaks)}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div>
                     <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtMinutes(Math.round(d.afkSec / 60))}</div>
                     {d.afkPeriods?.length ? (
                       <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
@@ -137,6 +146,7 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                   </div>
                   <div style={{ fontFamily: monoFont, fontSize: 13, color: d.endedAt ? palette.text : palette.textMute }}>{d.endedAt ? fmtTime(d.endedAt) : '—'}</div>
                   <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{(d.activeSec / 3600).toFixed(1)}h</div>
+                  <div>{renderDsm(d.dsm)}</div>
                 </div>
               ))
             )}

@@ -9,7 +9,7 @@ const ROLES = [
   { value: 'admin', label: 'Admin' },
 ];
 
-export default function TeamView({ palette, isDark, currentUserId, setView, setDrilldownEmployeeId }) {
+export default function TeamView({ palette, isDark, currentUserId, setView, goToDrilldown }) {
   const [employees, setEmployees] = useState([]);
   const [snapshot, setSnapshot] = useState({});
   const [loading, setLoading] = useState(true);
@@ -24,6 +24,13 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
   const [editForm, setEditForm] = useState({ name: '', jobTitle: '', role: 'employee' });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Reset-password modal state
+  const [resetting, setResetting] = useState(null); // employee being reset
+  const [resetPwd, setResetPwd] = useState('');
+  const [resetPwdConfirm, setResetPwdConfirm] = useState('');
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   const refresh = async () => {
     const [eRes, sRes] = await Promise.all([teamEmployeesAPI.list(), teamSessionsAPI.todayAll()]);
@@ -57,12 +64,51 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
     }
   };
 
-  const onResetPassword = async (emp) => {
-    if (!window.confirm(`Reset password for ${emp.name}? They'll have to use the new one.`)) return;
-    const { data } = await teamEmployeesAPI.resetPassword(emp._id);
+  // Open the reset modal — admin chooses to set manually or auto-generate.
+  const openResetModal = (emp) => {
+    setResetting(emp);
+    setResetPwd('');
+    setResetPwdConfirm('');
+    setResetError('');
+  };
+
+  const closeResetModal = () => {
+    setResetting(null);
+    setResetPwd('');
+    setResetPwdConfirm('');
+    setResetError('');
+    setResetSubmitting(false);
+  };
+
+  const onSubmitManualReset = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    if (!resetPwd || resetPwd.length < 8) return setResetError('Password must be at least 8 characters');
+    if (resetPwd !== resetPwdConfirm) return setResetError('Passwords do not match');
+    setResetSubmitting(true);
+    const { data } = await teamEmployeesAPI.setPassword(resetting._id, resetPwd).catch((err) => ({ data: err.response?.data }));
+    setResetSubmitting(false);
     if (data?.success) {
+      closeResetModal();
+      window.alert(`Password updated for ${resetting.name}.`);
+    } else {
+      setResetError(data?.message || 'Could not update password');
+    }
+  };
+
+  // "Forgot password" path — auto-generate and show once.
+  const onForgotGenerate = async () => {
+    if (!resetting) return;
+    setResetSubmitting(true);
+    const { data } = await teamEmployeesAPI.resetPassword(resetting._id).catch((err) => ({ data: err.response?.data }));
+    setResetSubmitting(false);
+    if (data?.success) {
+      const targetEmail = resetting.email;
+      closeResetModal();
       setGeneratedPassword(data.generatedPassword);
-      setGeneratedFor(emp.email);
+      setGeneratedFor(targetEmail);
+    } else {
+      setResetError(data?.message || 'Could not generate password');
     }
   };
 
@@ -170,6 +216,9 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
           employees.map((emp, i) => (
             <div
               key={emp._id}
+              onClick={() => goToDrilldown(emp._id)}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 1.8fr) minmax(0, 2.6fr) 110px 150px',
@@ -177,6 +226,8 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
                 padding: '14px 20px',
                 alignItems: 'center',
                 borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                cursor: 'pointer',
+                transition: 'background-color 120ms',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -205,11 +256,14 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
               <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textMute }}>
                 {new Date(emp.joinedAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   title="Edit role & allowances"
-                  onClick={() => openEdit(emp)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(emp);
+                  }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textDim }}
                 >
                   <Settings2 size={14} />
@@ -217,27 +271,22 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
                 <button
                   type="button"
                   title="View history"
-                  onClick={() => {
-                    setDrilldownEmployeeId(emp._id);
-                    setView('reports');
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToDrilldown(emp._id);
                   }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textDim }}
                 >
                   <HistoryIcon size={14} />
                 </button>
-                <button
-                  type="button"
-                  title="Reset password"
-                  onClick={() => onResetPassword(emp)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textDim }}
-                >
-                  <KeyRound size={14} />
-                </button>
                 {emp._id !== currentUserId && (
                   <button
                     type="button"
                     title="Delete"
-                    onClick={() => onDelete(emp)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(emp);
+                    }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textDim }}
                   >
                     <Trash2 size={14} />
@@ -352,6 +401,93 @@ export default function TeamView({ palette, isDark, currentUserId, setView, setD
             </SolidButton>
           </div>
         </form>
+      </Modal>
+
+      {/* Reset password modal — manual entry, with Forgot fallback */}
+      <Modal
+        open={!!resetting && !generatedPassword}
+        onClose={closeResetModal}
+        title={resetting ? `Reset password · ${resetting.name}` : ''}
+        palette={palette}
+        width={460}
+      >
+        {resetting && (
+          <form onSubmit={onSubmitManualReset}>
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginBottom: 16, lineHeight: 1.55 }}>
+              Choose a new password for <span style={{ color: palette.text, fontWeight: 500 }}>{resetting.email}</span>.
+              They'll start using it immediately on their next login.
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <FieldLabel palette={palette}>New password (8+ characters)</FieldLabel>
+              <TextInput
+                palette={palette}
+                type="password"
+                autoFocus
+                value={resetPwd}
+                onChange={(e) => setResetPwd(e.target.value)}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <FieldLabel palette={palette}>Re-enter new password</FieldLabel>
+              <TextInput
+                palette={palette}
+                type="password"
+                value={resetPwdConfirm}
+                onChange={(e) => setResetPwdConfirm(e.target.value)}
+              />
+            </div>
+
+            {resetError && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  backgroundColor: palette.dangerBg,
+                  color: palette.danger,
+                  fontFamily: baseFont,
+                  fontSize: 13,
+                  marginBottom: 14,
+                }}
+              >
+                {resetError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 16 }}>
+              <GhostButton onClick={closeResetModal} palette={palette}>
+                Cancel
+              </GhostButton>
+              <SolidButton type="submit" palette={palette} disabled={resetSubmitting} icon={Check}>
+                {resetSubmitting ? 'Saving…' : 'Update password'}
+              </SolidButton>
+            </div>
+
+            <div style={{ paddingTop: 14, borderTop: `1px solid ${palette.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim }}>
+                Don't want to pick one yourself?
+              </div>
+              <button
+                type="button"
+                onClick={onForgotGenerate}
+                disabled={resetSubmitting}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontFamily: baseFont,
+                  fontSize: 13,
+                  color: palette.accent,
+                  fontWeight: 500,
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 3,
+                }}
+              >
+                Forgot password? Generate one
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
 
       {/* Edit employee modal */}

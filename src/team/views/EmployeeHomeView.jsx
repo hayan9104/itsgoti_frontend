@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Play, Coffee, Circle } from 'lucide-react';
+import { Play, Circle } from 'lucide-react';
 import { teamSessionsAPI, teamTasksAPI, teamReportsAPI } from '../teamAPI';
-import { baseFont, serifFont, monoFont, fmtClock, fmtMinutes, priorityMeta } from '../theme';
+import { baseFont, serifFont, monoFont, fmtMinutes, priorityMeta } from '../theme';
 import { PageHeader, Card, StatusPill, SolidButton, GhostButton, Modal, StatTile } from '../components/Primitives';
+import TimelineLog from '../components/TimelineLog';
+import { broadcastSessionChange } from '../components/JoinEndButton';
 
 const AFK_PRESETS = ['Lunch', 'Personal call', 'Outside work', 'Prayer'];
 
-export default function EmployeeHomeView({ palette, isDark, user, setView }) {
+export default function EmployeeHomeView({ palette, isDark, user, setView, openTask }) {
   const [session, setSession] = useState(null);
-  const [tick, setTick] = useState(0);
   const [tasks, setTasks] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [afkOpen, setAfkOpen] = useState(false);
   const [afkReason, setAfkReason] = useState('');
-  const [endOpen, setEndOpen] = useState(false);
 
   const refresh = async () => {
     try {
@@ -34,53 +34,23 @@ export default function EmployeeHomeView({ palette, isDark, user, setView }) {
 
   useEffect(() => {
     refresh();
+    const onChange = () => refresh();
+    window.addEventListener('team-session-change', onChange);
+    return () => window.removeEventListener('team-session-change', onChange);
   }, []);
-
-  // Live ticking — only updates the displayed elapsed time
-  useEffect(() => {
-    if (!session) return;
-    if (session.status === 'ended') return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [session]);
 
   const callApi = async (fn) => {
     setBusy(true);
     try {
       const { data } = await fn();
-      if (data?.success) setSession(data.session);
+      if (data?.success) {
+        setSession(data.session);
+        broadcastSessionChange();
+      }
     } finally {
       setBusy(false);
     }
   };
-
-  const baseSec = (() => {
-    if (!session) return 0;
-    if (session.status === 'ended') return session.totals.activeSec;
-    const elapsed = Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 1000);
-    return Math.max(0, elapsed - session.totals.breakSec - session.totals.afkSec);
-  })();
-  const liveActiveSec = session && session.status === 'working' ? baseSec + tick : baseSec;
-
-  const liveBreakSec = (() => {
-    if (!session) return 0;
-    let extra = 0;
-    if (session.status === 'break') {
-      const open = session.breaks[session.breaks.length - 1];
-      if (open && !open.endedAt) extra = Math.floor((Date.now() - new Date(open.startedAt).getTime()) / 1000);
-    }
-    return session.totals.breakSec + (session.status === 'break' ? extra : 0);
-  })();
-
-  const liveAfkSec = (() => {
-    if (!session) return 0;
-    let extra = 0;
-    if (session.status === 'afk') {
-      const open = session.afkPeriods[session.afkPeriods.length - 1];
-      if (open && !open.endedAt) extra = Math.floor((Date.now() - new Date(open.startedAt).getTime()) / 1000);
-    }
-    return session.totals.afkSec + (session.status === 'afk' ? extra : 0);
-  })();
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -102,104 +72,76 @@ export default function EmployeeHomeView({ palette, isDark, user, setView }) {
     <div>
       <PageHeader kicker={todayText.toUpperCase()} title={`Good ${greeting},`} accentWord={user?.name?.split(' ')[0] || ''} palette={palette} />
 
-      {/* Tracker */}
-      <Card palette={palette} padding={32} style={{ marginBottom: 32 }}>
+      {/* Tracker — compact: status + actions + today's log */}
+      <Card palette={palette} padding={24} style={{ marginBottom: 32 }}>
         {!session && !loading && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.textDim, marginBottom: 22 }}>
+            <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.textDim, marginBottom: 8 }}>
               Ready to start your day?
             </div>
-            <SolidButton onClick={() => callApi(teamSessionsAPI.startDay)} icon={Play} palette={palette} disabled={busy}>
-              Start day
-            </SolidButton>
-            <div style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textMute, marginTop: 14 }}>
-              Daily stand-up at 10:00 AM IST.
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
+              Click <span style={{ fontWeight: 500, color: palette.text }}>Join day</span> in the top bar to clock in.
             </div>
           </div>
         )}
 
         {session && session.status !== 'ended' && (
           <div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
-              <div>
-                <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.08em' }}>
-                  {session.status === 'working'
-                    ? 'ACTIVE · STARTED ' + new Date(session.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-                    : session.status === 'break'
-                    ? 'ON BREAK'
-                    : 'AFK'}
-                </div>
-                <div
-                  style={{
-                    fontFamily: monoFont,
-                    fontSize: 64,
-                    fontWeight: 400,
-                    color: palette.text,
-                    letterSpacing: '-0.03em',
-                    lineHeight: 1,
-                    marginTop: 8,
-                  }}
-                >
-                  {fmtClock(liveActiveSec)}
-                </div>
-                <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginTop: 8 }}>
-                  Break <span style={{ fontFamily: monoFont, color: palette.text }}>{fmtClock(liveBreakSec)}</span>
-                  <span style={{ marginInline: 10, color: palette.textMute }}>·</span>
-                  AFK <span style={{ fontFamily: monoFont, color: palette.text }}>{fmtClock(liveAfkSec)}</span>
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <StatusPill status={session.status} palette={palette} isDark={isDark} />
+                <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.08em' }}>
+                  STARTED {new Date(session.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </span>
               </div>
-              <StatusPill status={session.status} palette={palette} isDark={isDark} />
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {session.status === 'break' ? (
-                <GhostButton onClick={() => callApi(teamSessionsAPI.endBreak)} icon={Play} palette={palette} disabled={busy}>
-                  Resume work
-                </GhostButton>
-              ) : session.status === 'afk' ? (
-                <GhostButton onClick={() => callApi(teamSessionsAPI.endAfk)} icon={Play} palette={palette} disabled={busy}>
-                  Back to work
-                </GhostButton>
-              ) : (
-                <>
-                  <GhostButton onClick={() => callApi(teamSessionsAPI.startBreak)} icon={Coffee} palette={palette} disabled={busy}>
-                    Start break
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {session.status === 'afk' ? (
+                  <GhostButton onClick={() => callApi(teamSessionsAPI.endAfk)} icon={Play} palette={palette} disabled={busy}>
+                    Back to work
                   </GhostButton>
+                ) : session.status === 'break' ? (
+                  // Legacy: if someone is on a break from before the break action was removed,
+                  // still let them come back to work.
+                  <GhostButton onClick={() => callApi(teamSessionsAPI.endBreak)} icon={Play} palette={palette} disabled={busy}>
+                    Resume work
+                  </GhostButton>
+                ) : (
                   <GhostButton onClick={() => setAfkOpen(true)} icon={Circle} palette={palette} disabled={busy}>
                     Mark AFK
                   </GhostButton>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() => setEndOpen(true)}
-                disabled={busy}
-                style={{
-                  marginLeft: 'auto',
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  border: `1px solid ${palette.border}`,
-                  color: palette.textDim,
-                  fontFamily: baseFont,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                End day
-              </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{ borderTop: `1px solid ${palette.border}`, paddingTop: 16, marginTop: 4 }}>
+              <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.08em', marginBottom: 12 }}>
+                TODAY'S LOG
+              </div>
+              <TimelineLog palette={palette} session={session} emptyHint="No activity yet today." />
             </div>
           </div>
         )}
 
         {session && session.status === 'ended' && (
-          <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.text, marginBottom: 6 }}>
-              Day wrapped. <em style={{ fontStyle: 'italic' }}>Good work.</em>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.text }}>
+                  Day wrapped. <em style={{ fontStyle: 'italic' }}>Good work.</em>
+                </div>
+                <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginTop: 4 }}>
+                  {new Date(session.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  {' '}–{' '}
+                  {new Date(session.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </div>
+              </div>
+              <StatusPill status="ended" palette={palette} isDark={isDark} />
             </div>
-            <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.textDim }}>
-              {fmtClock(session.totals.activeSec)} active · {fmtClock(session.totals.breakSec)} break
+            <div style={{ borderTop: `1px solid ${palette.border}`, paddingTop: 16, marginTop: 4 }}>
+              <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.08em', marginBottom: 12 }}>
+                TODAY'S LOG
+              </div>
+              <TimelineLog palette={palette} session={session} />
             </div>
           </div>
         )}
@@ -226,12 +168,17 @@ export default function EmployeeHomeView({ palette, isDark, user, setView }) {
             myTasks.map((t, i) => (
               <div
                 key={t._id}
+                onClick={() => openTask && openTask(t._id)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 14,
                   padding: '14px 18px',
                   borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                  cursor: openTask ? 'pointer' : 'default',
+                  transition: 'background-color 120ms',
                 }}
               >
                 <span style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: priorityMeta[t.priority].color }} />
@@ -269,9 +216,9 @@ export default function EmployeeHomeView({ palette, isDark, user, setView }) {
         />
         <StatTile
           palette={palette}
-          label="On-time DSMs"
-          value={(stats?.totalDays ?? 0) - (stats?.lateDays ?? 0)}
-          sub={`of ${stats?.totalDays ?? 0}`}
+          label="Sessions"
+          value={stats?.totalDays ?? 0}
+          sub="this week"
         />
       </div>
 
@@ -338,27 +285,6 @@ export default function EmployeeHomeView({ palette, isDark, user, setView }) {
         </div>
       </Modal>
 
-      {/* End-day confirm */}
-      <Modal open={endOpen} onClose={() => setEndOpen(false)} title="End your day?" palette={palette} width={420}>
-        <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.textDim, marginBottom: 18 }}>
-          Once you end the day, the timer stops and the session is closed. You can start a fresh session tomorrow.
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <GhostButton onClick={() => setEndOpen(false)} palette={palette}>
-            Cancel
-          </GhostButton>
-          <SolidButton
-            palette={palette}
-            disabled={busy}
-            onClick={async () => {
-              await callApi(teamSessionsAPI.endDay);
-              setEndOpen(false);
-            }}
-          >
-            End day
-          </SolidButton>
-        </div>
-      </Modal>
     </div>
   );
 }

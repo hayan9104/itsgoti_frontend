@@ -1,15 +1,31 @@
-import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { teamReportsAPI } from '../teamAPI';
-import { baseFont, serifFont, monoFont, fmtMinutes } from '../theme';
+import { baseFont, serifFont, monoFont, fmtMinutes, priorityMeta, taskStatusMeta } from '../theme';
 import { Avatar, PageHeader, Card, StatTile } from '../components/Primitives';
 import PeriodPicker from '../components/PeriodPicker';
+import TimelineLog from '../components/TimelineLog';
+import TaskTooltip from '../components/TaskTooltip';
+import StatusFilterDropdown from '../components/StatusFilterDropdown';
 
-function Drilldown({ palette, isDark, employeeId, onBack }) {
+function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
   const [period, setPeriod] = useState('month');
   const [date, setDate] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hover, setHover] = useState(null);
+  const hoverTimer = useRef(null);
+  const [statusFilter, setStatusFilter] = useState([]); // empty = all
+
+  const showHover = (task, anchor) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHover({ task, anchor }), 350);
+  };
+  const hideHover = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+    setHover(null);
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -97,19 +113,34 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
         <StatTile palette={palette} label="Avg / day" value={`${data.summary.avgHoursPerDay}h`} />
       </div>
 
+      {/* Day timeline — only when viewing a single day */}
+      {(period === 'today' || period === 'day') && data.days.length > 0 && (
+        <>
+          <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>
+            Day timeline
+            <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, fontWeight: 400, letterSpacing: '0.06em', marginLeft: 10 }}>
+              {new Date(data.days[0].date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
+            </span>
+          </h3>
+          <Card palette={palette} padding={20} style={{ marginBottom: 28 }}>
+            <TimelineLog palette={palette} session={data.days[0]} emptyHint="No activity recorded for this day." />
+          </Card>
+        </>
+      )}
+
       <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Daily breakdown</h3>
       <Card palette={palette} padding={0} style={{ marginBottom: 28 }}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.4fr 100px 1.6fr 1.6fr 100px 90px',
+            gridTemplateColumns: '1.3fr 90px 1.6fr 90px 80px 120px',
             gap: 14,
             padding: '12px 20px',
             borderBottom: `1px solid ${palette.border}`,
             backgroundColor: palette.surfaceAlt,
           }}
         >
-          {['DATE', 'START', 'BREAK', 'AFK', 'END', 'HOURS'].map((h) => (
+          {['DATE', 'START', 'AFK', 'END', 'HOURS', `DSM${data.dsmTime ? ' · ' + data.dsmTime : ''}`].map((h) => (
             <div key={h} style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}>
               {h}
             </div>
@@ -123,7 +154,7 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
               key={d.date + i}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1.4fr 100px 1.6fr 1.6fr 100px 90px',
+                gridTemplateColumns: '1.3fr 90px 1.6fr 90px 80px 120px',
                 gap: 14,
                 padding: '14px 20px',
                 alignItems: 'center',
@@ -142,16 +173,6 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
                 {d.startedAt ? new Date(d.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
               </div>
               <div>
-                <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{Math.round(d.breakSec / 60)}m</div>
-                {d.breaks?.length ? (
-                  <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
-                    {d.breaks
-                      .map((b) => `${new Date(b.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })}–${b.endedAt ? new Date(b.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'now'}`)
-                      .join(' · ')}
-                  </div>
-                ) : null}
-              </div>
-              <div>
                 <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{Math.round(d.afkSec / 60)}m</div>
                 {d.afkPeriods?.length ? (
                   <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
@@ -165,45 +186,121 @@ function Drilldown({ palette, isDark, employeeId, onBack }) {
                 {d.endedAt ? new Date(d.endedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'}
               </div>
               <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{(d.activeSec / 3600).toFixed(1)}h</div>
-            </div>
-          ))
-        )}
-      </Card>
-
-      <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Past completed tasks</h3>
-      <Card palette={palette} padding={0}>
-        {data.completedTasks.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>None yet.</div>
-        ) : (
-          data.completedTasks.map((t, i) => (
-            <div
-              key={t.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '14px 18px',
-                borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
-              }}
-            >
-              <Check size={14} style={{ color: palette.accent, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: baseFont, fontSize: 14, color: palette.text, fontWeight: 500 }}>{t.title}</div>
-                <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, marginTop: 2 }}>
-                  {new Date(t.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · est{' '}
-                  <span style={{ fontFamily: monoFont }}>{fmtMinutes(t.estMinutes)}</span> · spent{' '}
-                  <span style={{ fontFamily: monoFont }}>{fmtMinutes(t.spentMinutes)}</span>
-                </div>
+              <div>
+                {!d.dsm ? (
+                  <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>—</span>
+                ) : d.dsm.status === 'on_time' ? (
+                  <span style={{ fontFamily: monoFont, fontSize: 11, color: '#10B981', letterSpacing: '0.06em', fontWeight: 500 }}>ON TIME</span>
+                ) : d.dsm.status === 'late' ? (
+                  <span style={{ fontFamily: monoFont, fontSize: 11, color: '#DC2626', letterSpacing: '0.06em', fontWeight: 500 }}>
+                    LATE <span style={{ color: palette.textMute }}>({d.dsm.offsetMin}min)</span>
+                  </span>
+                ) : (
+                  <span style={{ fontFamily: monoFont, fontSize: 11, color: '#0E7490', letterSpacing: '0.06em', fontWeight: 500 }}>
+                    EARLY <span style={{ color: palette.textMute }}>({d.dsm.offsetMin}min)</span>
+                  </span>
+                )}
               </div>
             </div>
           ))
         )}
       </Card>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+        <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, margin: 0 }}>
+          Tasks in this period <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, fontWeight: 400, letterSpacing: '0.06em', marginLeft: 6 }}>{(data.tasks || []).length}</span>
+        </h3>
+        {(data.tasks || []).length > 0 && (
+          <StatusFilterDropdown
+            palette={palette}
+            isDark={isDark}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            counts={(data.tasks || []).reduce((acc, t) => {
+              acc[t.status] = (acc[t.status] || 0) + 1;
+              return acc;
+            }, {})}
+          />
+        )}
+      </div>
+
+      <Card palette={palette} padding={0}>
+        {(() => {
+          const allowed = statusFilter.length === 0 || statusFilter.length === 5 ? null : new Set(statusFilter);
+          const filtered = (data.tasks || []).filter((t) => !allowed || allowed.has(t.status));
+          if (filtered.length === 0) {
+            return (
+              <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
+                {(data.tasks || []).length === 0 ? 'No tasks for this period.' : 'No tasks match this filter.'}
+              </div>
+            );
+          }
+          return filtered.map((t, i) => {
+            const statusM = taskStatusMeta(palette, isDark)[t.status] || {};
+            const priM = priorityMeta[t.priority] || {};
+            const dateLabel =
+              t.status === 'completed' && t.completedAt
+                ? `Done ${new Date(t.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+                : `Added ${new Date(t.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+            return (
+              <div
+                key={t._id}
+                onClick={() => openTask && openTask(t._id)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  hideHover();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '14px 18px',
+                  borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                  cursor: openTask ? 'pointer' : 'default',
+                  transition: 'background-color 120ms',
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: priM.color || palette.textMute, flexShrink: 0 }} />
+                <div
+                  style={{ flex: 1, minWidth: 0 }}
+                  onMouseEnter={(e) => showHover(t, e.currentTarget.parentElement)}
+                  onMouseLeave={hideHover}
+                >
+                  <div style={{ fontFamily: baseFont, fontSize: 14, color: palette.text, fontWeight: 500 }}>{t.title}</div>
+                  <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, marginTop: 2 }}>
+                    {dateLabel} · est <span style={{ fontFamily: monoFont }}>{fmtMinutes(t.estMinutes)}</span> · spent{' '}
+                    <span style={{ fontFamily: monoFont }}>{fmtMinutes(t.spentMinutes)}</span>
+                  </div>
+                </div>
+                <span
+                  style={{
+                    padding: '3px 10px',
+                    borderRadius: 999,
+                    backgroundColor: statusM.bg,
+                    color: statusM.text,
+                    fontFamily: baseFont,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    flexShrink: 0,
+                  }}
+                >
+                  {statusM.label || t.status}
+                </span>
+              </div>
+            );
+          });
+        })()}
+      </Card>
+
+      {hover && (
+        <TaskTooltip task={hover.task} anchor={hover.anchor} palette={palette} isDark={isDark} />
+      )}
     </div>
   );
 }
 
-export default function ReportsView({ palette, isDark, drilldownEmployeeId, setDrilldownEmployeeId }) {
+export default function ReportsView({ palette, isDark, drilldownEmployeeId, setDrilldownEmployeeId, openTask }) {
   const [period, setPeriod] = useState('week');
   const [date, setDate] = useState(null);
   const [data, setData] = useState(null);
@@ -227,6 +324,7 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
         isDark={isDark}
         employeeId={drilldownEmployeeId}
         onBack={() => setDrilldownEmployeeId(null)}
+        openTask={openTask}
       />
     );
   }

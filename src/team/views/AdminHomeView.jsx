@@ -1,15 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { teamSessionsAPI, teamTasksAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont, statusMeta, priorityMeta, taskStatusMeta, fmtMinutes } from '../theme';
 import { Avatar, StatusPill, PageHeader, Card } from '../components/Primitives';
+import EmployeeDayTooltip from '../components/EmployeeDayTooltip';
+import StatusFilterDropdown from '../components/StatusFilterDropdown';
 
 const STATUSES = ['working', 'break', 'afk', 'offline'];
 
-export default function AdminHomeView({ palette, isDark, setView, setDrilldownEmployeeId }) {
+export default function AdminHomeView({ palette, isDark, setView, goToDrilldown, openTask }) {
   const [snapshot, setSnapshot] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState('');
+  const [hover, setHover] = useState(null); // { snap, anchor }
+  const hoverTimer = useRef(null);
+
+  const showHover = (snap, anchor) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHover({ snap, anchor }), 350);
+  };
+  const hideHover = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+    setHover(null);
+  };
 
   const fetchAll = async () => {
     try {
@@ -34,7 +48,22 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
     (a, s) => ({ ...a, [s.status]: (a[s.status] || 0) + 1 }),
     {}
   );
-  const movingTasks = tasks.filter((t) => t.status !== 'completed').slice(0, 5);
+  // Status filter — default to non-completed.
+  const [statusFilter, setStatusFilter] = useState(['pending', 'in_progress', 'review', 'blocked']);
+
+  const filteredMovingTasks = useMemo(() => {
+    const allowed = statusFilter.length === 0 || statusFilter.length === 5 ? null : new Set(statusFilter);
+    return tasks
+      .filter((t) => !allowed || allowed.has(t.status))
+      .slice(0, 8);
+  }, [tasks, statusFilter]);
+
+  const taskCounts = useMemo(() => {
+    return tasks.reduce((acc, t) => {
+      acc[t.status] = (acc[t.status] || 0) + 1;
+      return acc;
+    }, {});
+  }, [tasks]);
 
   const todayText = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
@@ -108,12 +137,15 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
               <button
                 type="button"
                 key={s.employee.id}
-                onClick={() => {
-                  setDrilldownEmployeeId(s.employee.id);
-                  setView('reports');
+                onClick={() => goToDrilldown(s.employee.id)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = palette.surfaceAlt;
+                  showHover(s, e.currentTarget);
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  hideHover();
+                }}
                 style={{
                   width: '100%',
                   display: 'flex',
@@ -157,22 +189,54 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
 
       <div>
         <Card palette={palette}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
             <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, margin: 0 }}>Tasks moving</h3>
-            <button
-              type="button"
-              onClick={() => setView('tasks')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 12.5, color: palette.accent, fontWeight: 500 }}
-            >
-              All tasks
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <StatusFilterDropdown
+                palette={palette}
+                isDark={isDark}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                counts={taskCounts}
+                compact
+              />
+              <button
+                type="button"
+                onClick={() => setView('tasks')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 12.5, color: palette.accent, fontWeight: 500 }}
+              >
+                All tasks
+              </button>
+            </div>
           </div>
-          {movingTasks.length === 0 ? (
-            <div style={{ padding: '12px 0', fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>No active tasks yet.</div>
+          {filteredMovingTasks.length === 0 ? (
+            <div style={{ padding: '12px 0', fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
+              {tasks.length === 0 ? 'No active tasks yet.' : 'No tasks match this filter.'}
+            </div>
           ) : (
-            movingTasks.map((t, idx) => (
-              <div key={t._id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: idx === 0 ? 'none' : `1px solid ${palette.border}` }}>
-                <span style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: priorityMeta[t.priority].color }} />
+            filteredMovingTasks.map((t, idx) => (
+              <button
+                type="button"
+                key={t._id}
+                onClick={() => openTask && openTask(t._id)}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '12px 8px',
+                  margin: '0 -8px',
+                  borderTop: idx === 0 ? 'none' : `1px solid ${palette.border}`,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'background-color 120ms',
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: priorityMeta[t.priority].color, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>{t.title}</div>
                   <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, marginTop: 2 }}>
@@ -193,11 +257,15 @@ export default function AdminHomeView({ palette, isDark, setView, setDrilldownEm
                 >
                   {taskStatusMeta(palette, isDark)[t.status].label}
                 </span>
-              </div>
+              </button>
             ))
           )}
         </Card>
       </div>
+
+      {hover && (
+        <EmployeeDayTooltip snapshot={hover.snap} anchor={hover.anchor} palette={palette} isDark={isDark} />
+      )}
     </div>
   );
 }

@@ -66,8 +66,9 @@ export function taskStatusMeta(palette, isDark) {
   return {
     pending: { label: 'Pending', bg: palette.surfaceAlt, text: palette.textDim },
     in_progress: { label: 'In progress', bg: isDark ? '#10301F' : '#ECFDF5', text: isDark ? '#7BC09A' : '#065F46' },
-    completed: { label: 'Done', bg: palette.infoBg, text: palette.info },
+    review: { label: 'In review', bg: palette.warnBg, text: palette.warn },
     blocked: { label: 'Blocked', bg: palette.dangerBg, text: palette.danger },
+    completed: { label: 'Done', bg: palette.infoBg, text: palette.info },
   };
 }
 

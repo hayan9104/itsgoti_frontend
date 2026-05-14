@@ -10,13 +10,14 @@ import {
   Sun,
   Moon,
   LogOut,
-  Bell,
   Search,
 } from 'lucide-react';
 import { useTeamAuth } from '../TeamAuthContext';
 import { getPalette, baseFont, serifFont, monoFont, ensureFontsLoaded } from '../theme';
 import { Avatar } from '../components/Primitives';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import NotificationsBell from '../components/NotificationsBell';
+import JoinEndButton from '../components/JoinEndButton';
 
 import AdminHomeView from '../views/AdminHomeView';
 import EmployeeHomeView from '../views/EmployeeHomeView';
@@ -25,6 +26,9 @@ import TeamView from '../views/TeamView';
 import LeavesView from '../views/LeavesView';
 import ReportsView from '../views/ReportsView';
 import HistoryView from '../views/HistoryView';
+import TaskDetailView from '../views/TaskDetailView';
+import TeamSettingsView from '../views/TeamSettingsView';
+import LeaveDetailView from '../views/LeaveDetailView';
 
 function SidebarItem({ icon: Icon, label, id, active, onClick, palette, badge }) {
   return (
@@ -69,6 +73,11 @@ export default function TeamDashboard() {
   const [view, setView] = useState('dashboard');
   const [isDark, setIsDark] = useState(() => localStorage.getItem('team_theme') === 'dark');
   const [drilldownEmployeeId, setDrilldownEmployeeId] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [selectedLeaveId, setSelectedLeaveId] = useState(null);
+  const [highlightTaskId, setHighlightTaskId] = useState(null);
+  const [highlightLeaveId, setHighlightLeaveId] = useState(null);
+  const [previousView, setPreviousView] = useState(null);
   const palette = getPalette(isDark);
   const [showChangePassword, setShowChangePassword] = useState(false);
 
@@ -93,6 +102,38 @@ export default function TeamDashboard() {
   const switchView = (v) => {
     setView(v);
     setDrilldownEmployeeId(null);
+    setSelectedTaskId(null);
+    setSelectedLeaveId(null);
+    setPreviousView(null);
+  };
+
+  // Used by AdminHomeView + TeamView when clicking a person — jumps straight to that drilldown.
+  const goToDrilldown = (employeeId) => {
+    setDrilldownEmployeeId(employeeId);
+    setView('reports');
+  };
+
+  // Open a single task's detail page. Remembers where the user came from.
+  const openTask = (taskId) => {
+    setPreviousView(view);
+    setSelectedTaskId(taskId);
+    setView('task-detail');
+  };
+  const closeTask = () => {
+    setSelectedTaskId(null);
+    setView(previousView || 'dashboard');
+    setPreviousView(null);
+  };
+
+  const openLeave = (leaveId) => {
+    setPreviousView(view);
+    setSelectedLeaveId(leaveId);
+    setView('leave-detail');
+  };
+  const closeLeave = () => {
+    setSelectedLeaveId(null);
+    setView(previousView || 'leaves');
+    setPreviousView(null);
   };
 
   if (!user) return null;
@@ -110,6 +151,10 @@ export default function TeamDashboard() {
             borderRight: `1px solid ${palette.border}`,
             backgroundColor: palette.surfaceAlt,
             padding: '20px 12px',
+            position: 'sticky',
+            top: 0,
+            alignSelf: 'flex-start',
+            height: '100vh',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 28 }}>
@@ -182,32 +227,63 @@ export default function TeamDashboard() {
             )}
           </nav>
 
-          <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+          <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: `1px solid ${palette.border}` }}>
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                padding: '8px 6px',
-                borderTop: `1px solid ${palette.border}`,
-                marginTop: 8,
-                paddingTop: 14,
+                gap: 4,
+                padding: '8px 4px',
               }}
             >
-              <Avatar initials={user.avatar} size={32} palette={palette} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.text, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {user.name}
+              <button
+                type="button"
+                onClick={() => switchView('settings')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surface)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = view === 'settings' ? palette.accentBg : 'transparent')}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 8px',
+                  border: 'none',
+                  background: view === 'settings' ? palette.accentBg : 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  borderRadius: 8,
+                  transition: 'background-color 120ms',
+                }}
+                title="Account settings"
+              >
+                <Avatar initials={user.avatar} size={32} palette={palette} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontFamily: baseFont,
+                      fontSize: 13,
+                      color: view === 'settings' ? palette.accent : palette.text,
+                      fontWeight: 500,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {user.name}
+                  </div>
+                  <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>
+                    {user.jobTitle} · {isAdmin ? 'Admin' : 'Member'}
+                  </div>
                 </div>
-                <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>
-                  {user.jobTitle} · {isAdmin ? 'Admin' : 'Member'}
-                </div>
-              </div>
+              </button>
               <button
                 type="button"
                 title="Log out"
                 onClick={onLogout}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textDim, padding: 6 }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textDim, padding: 8, borderRadius: 6 }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surface)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <LogOut size={14} />
               </button>
@@ -245,48 +321,74 @@ export default function TeamDashboard() {
                 }}
               />
             </div>
-            <button
-              type="button"
-              style={{
-                position: 'relative',
-                padding: 8,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: palette.textDim,
+            {!isAdmin && <JoinEndButton palette={palette} />}
+            <NotificationsBell
+              palette={palette}
+              onNavigate={(n) => {
+                if (n.relatedType === 'task') {
+                  setHighlightTaskId(n.relatedId);
+                  switchView('tasks');
+                } else if (n.relatedType === 'leave') {
+                  setHighlightLeaveId(n.relatedId);
+                  switchView('leaves');
+                }
               }}
-              title="Notifications"
-            >
-              <Bell size={15} />
-            </button>
+            />
           </div>
 
           <div style={{ padding: '36px 40px', maxWidth: 1180, margin: '0 auto' }}>
             {view === 'dashboard' && (isAdmin ? (
-              <AdminHomeView palette={palette} isDark={isDark} setView={switchView} setDrilldownEmployeeId={setDrilldownEmployeeId} />
+              <AdminHomeView palette={palette} isDark={isDark} setView={switchView} goToDrilldown={goToDrilldown} openTask={openTask} />
             ) : (
-              <EmployeeHomeView palette={palette} isDark={isDark} user={user} setView={switchView} />
+              <EmployeeHomeView palette={palette} isDark={isDark} user={user} setView={switchView} openTask={openTask} />
             ))}
-            {view === 'tasks' && <TasksView palette={palette} isDark={isDark} isAdmin={isAdmin} currentUserId={user.id} />}
+            {view === 'tasks' && (
+              <TasksView
+                palette={palette}
+                isDark={isDark}
+                isAdmin={isAdmin}
+                currentUserId={user.id}
+                highlightTaskId={highlightTaskId}
+                clearHighlight={() => setHighlightTaskId(null)}
+                openTask={openTask}
+              />
+            )}
+            {view === 'task-detail' && selectedTaskId && (
+              <TaskDetailView palette={palette} isDark={isDark} taskId={selectedTaskId} onBack={closeTask} />
+            )}
             {view === 'team' && isAdmin && (
               <TeamView
                 palette={palette}
                 isDark={isDark}
                 currentUserId={user.id}
                 setView={switchView}
-                setDrilldownEmployeeId={setDrilldownEmployeeId}
+                goToDrilldown={goToDrilldown}
               />
             )}
-            {view === 'leaves' && <LeavesView palette={palette} isDark={isDark} isAdmin={isAdmin} />}
+            {view === 'leaves' && (
+              <LeavesView
+                palette={palette}
+                isDark={isDark}
+                isAdmin={isAdmin}
+                highlightLeaveId={highlightLeaveId}
+                clearHighlight={() => setHighlightLeaveId(null)}
+                openLeave={openLeave}
+              />
+            )}
+            {view === 'leave-detail' && selectedLeaveId && (
+              <LeaveDetailView palette={palette} isDark={isDark} leaveId={selectedLeaveId} onBack={closeLeave} />
+            )}
             {view === 'reports' && isAdmin && (
               <ReportsView
                 palette={palette}
                 isDark={isDark}
                 drilldownEmployeeId={drilldownEmployeeId}
                 setDrilldownEmployeeId={setDrilldownEmployeeId}
+                openTask={openTask}
               />
             )}
             {view === 'history' && !isAdmin && <HistoryView palette={palette} isDark={isDark} currentUserId={user.id} />}
+            {view === 'settings' && <TeamSettingsView palette={palette} isDark={isDark} />}
           </div>
         </main>
       </div>
