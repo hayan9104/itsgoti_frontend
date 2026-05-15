@@ -14,6 +14,16 @@ import {
   Search,
 } from 'lucide-react';
 import { useTeamAuth } from '../TeamAuthContext';
+import { warmTeamCache } from '../teamCache';
+import {
+  teamEmployeesAPI,
+  teamSessionsAPI,
+  teamTasksAPI,
+  teamLeavesAPI,
+  teamSettingsAPI,
+  teamCalendarAPI,
+  teamReportsAPI,
+} from '../teamAPI';
 import { getPalette, baseFont, serifFont, monoFont, ensureFontsLoaded } from '../theme';
 import { Avatar } from '../components/Primitives';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -97,6 +107,25 @@ export default function TeamDashboard() {
     if (user?.mustChangePassword) setShowChangePassword(true);
     else setShowChangePassword(false);
   }, [user]);
+
+  // Warm the team-area cache as soon as the user lands here. Fires during idle time so it
+  // never blocks the dashboard's own render. Slot/availability endpoints are intentionally
+  // NOT prefetched (they must always be fetched fresh to prevent double-booking).
+  useEffect(() => {
+    if (!user) return;
+    warmTeamCache(
+      {
+        employees: teamEmployeesAPI,
+        sessions: teamSessionsAPI,
+        tasks: teamTasksAPI,
+        leaves: teamLeavesAPI,
+        settings: teamSettingsAPI,
+        calendar: teamCalendarAPI,
+        reports: teamReportsAPI,
+      },
+      { isAdmin },
+    );
+  }, [user, isAdmin]);
 
   const onLogout = () => {
     logout();

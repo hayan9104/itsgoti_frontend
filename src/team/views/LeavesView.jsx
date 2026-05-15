@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Check, X as XIcon, Heart, Wallet, Coins, Minus, Pencil, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { teamLeavesAPI, teamSettingsAPI, teamSessionsAPI } from '../teamAPI';
+import { getCached, setCached, invalidate } from '../teamCache';
 import { baseFont, serifFont, monoFont } from '../theme';
 import { Avatar, PageHeader, Card, SolidButton, GhostButton, Modal, FieldLabel, TextInput, Textarea } from '../components/Primitives';
 
@@ -181,8 +182,12 @@ function fmtNum(n) {
 }
 
 export default function LeavesView({ palette, isDark, isAdmin, currentUserId, highlightLeaveId, clearHighlight, openLeave, openLeaveCategory }) {
-  const [leaves, setLeaves] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Seed from cache so the list paints instantly on tab switch.
+  const cachedLeaves = getCached('leaves:list');
+  const cachedAllBalances = getCached('leaves:balances:all');
+  const cachedMyBalance = getCached('leaves:balance:me');
+  const [leaves, setLeaves] = useState(cachedLeaves?.leaves || []);
+  const [loading, setLoading] = useState(!cachedLeaves);
   const [showApply, setShowApply] = useState(false);
   const [form, setForm] = useState({
     startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)),
@@ -198,27 +203,34 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
   const [error, setError] = useState('');
   const [cursor, setCursor] = useState(startOfMonth(new Date()));
 
-  // Balance state
-  const [myBalance, setMyBalance] = useState(null);
-  const [allBalances, setAllBalances] = useState([]);
-  const [settings, setSettings] = useState(null); // company-wide allowance
+  // Balance state — seeded from cache if available.
+  const [myBalance, setMyBalance] = useState(cachedMyBalance?.balance || null);
+  const [allBalances, setAllBalances] = useState(cachedAllBalances?.balances || []);
+  const [settings, setSettings] = useState(cachedAllBalances?.settings || null); // company-wide allowance
   const [editAllowance, setEditAllowance] = useState(false);
   const [draftAllowance, setDraftAllowance] = useState({ sick: 12, paid: 12 });
   const [savingAllowance, setSavingAllowance] = useState(false);
 
   const refresh = async () => {
     const { data } = await teamLeavesAPI.list();
-    if (data?.success) setLeaves(data.leaves || []);
+    if (data?.success) {
+      setLeaves(data.leaves || []);
+      setCached('leaves:list', data);
+    }
 
     if (isAdmin) {
       const { data: bData } = await teamLeavesAPI.allBalances();
       if (bData?.success) {
         setAllBalances(bData.balances || []);
         if (bData.settings) setSettings(bData.settings);
+        setCached('leaves:balances:all', bData);
       }
     } else {
       const { data: bData } = await teamLeavesAPI.myBalance();
-      if (bData?.success) setMyBalance(bData.balance);
+      if (bData?.success) {
+        setMyBalance(bData.balance);
+        setCached('leaves:balance:me', bData);
+      }
     }
     setLoading(false);
   };
@@ -329,8 +341,12 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
     if (data?.success) {
       const replaced = new Set((data.replacedIds || []).map(String));
       setLeaves((prev) => [data.leave, ...prev.filter((l) => !replaced.has(String(l._id)))]);
+      invalidate('leaves:*');
       teamLeavesAPI.myBalance().then(({ data }) => {
-        if (data?.success) setMyBalance(data.balance);
+        if (data?.success) {
+          setMyBalance(data.balance);
+          setCached('leaves:balance:me', data);
+        }
       });
       setShowApply(false);
       setForm({ startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)), endDate: '', type: 'full', durationHours: 2, category: 'paid', reason: '' });
@@ -360,10 +376,14 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
     const { data } = await teamLeavesAPI.decide(leave._id, decision);
     if (data?.success) {
       setLeaves((prev) => prev.map((l) => (l._id === leave._id ? data.leave : l)));
+      invalidate('leaves:*');
       // Approving consumes a quota — refresh admin balances panel
       if (isAdmin) {
         const { data: bData } = await teamLeavesAPI.allBalances();
-        if (bData?.success) setAllBalances(bData.balances || []);
+        if (bData?.success) {
+          setAllBalances(bData.balances || []);
+          setCached('leaves:balances:all', bData);
+        }
       }
     }
   };
@@ -371,7 +391,10 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
   const onCancel = async (leave) => {
     if (!window.confirm('Cancel this leave request?')) return;
     const { data } = await teamLeavesAPI.cancel(leave._id);
-    if (data?.success) setLeaves((prev) => prev.filter((l) => l._id !== leave._id));
+    if (data?.success) {
+      setLeaves((prev) => prev.filter((l) => l._id !== leave._id));
+      invalidate('leaves:*');
+    }
   };
 
   // Open the editor: snapshot current values into the draft.

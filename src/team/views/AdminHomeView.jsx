@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { teamSessionsAPI, teamTasksAPI } from '../teamAPI';
+import { getCached, setCached } from '../teamCache';
 import { baseFont, serifFont, monoFont, statusMeta, priorityMeta, taskStatusMeta, fmtMinutes } from '../theme';
 import { Avatar, StatusPill, PageHeader, Card } from '../components/Primitives';
 import EmployeeDayTooltip from '../components/EmployeeDayTooltip';
@@ -8,10 +9,13 @@ import StatusFilterDropdown from '../components/StatusFilterDropdown';
 const STATUSES = ['working', 'break', 'afk', 'offline'];
 
 export default function AdminHomeView({ palette, isDark, setView, goToDrilldown, openTask }) {
-  const [snapshot, setSnapshot] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState('');
+  // Seed from cache so the dashboard renders instantly the second time around.
+  const cachedSnap = getCached('sessions:today:all');
+  const cachedTasks = getCached('tasks:list');
+  const [snapshot, setSnapshot] = useState(cachedSnap?.snapshot || []);
+  const [tasks, setTasks] = useState(cachedTasks?.tasks || []);
+  const [loading, setLoading] = useState(!cachedSnap || !cachedTasks);
+  const [date, setDate] = useState(cachedSnap?.date || '');
   const [hover, setHover] = useState(null); // { snap, anchor }
   const hoverTimer = useRef(null);
 
@@ -31,8 +35,12 @@ export default function AdminHomeView({ palette, isDark, setView, goToDrilldown,
       if (snapRes.data?.success) {
         setSnapshot(snapRes.data.snapshot || []);
         setDate(snapRes.data.date);
+        setCached('sessions:today:all', snapRes.data);
       }
-      if (tasksRes.data?.success) setTasks(tasksRes.data.tasks || []);
+      if (tasksRes.data?.success) {
+        setTasks(tasksRes.data.tasks || []);
+        setCached('tasks:list', tasksRes.data);
+      }
     } finally {
       setLoading(false);
     }

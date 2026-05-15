@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { teamReportsAPI } from '../teamAPI';
+import { getCached, setCached, prefetch } from '../teamCache';
 import { baseFont, serifFont, monoFont, fmtMinutes, priorityMeta, taskStatusMeta } from '../theme';
 import { Avatar, PageHeader, Card, StatTile, SolidButton } from '../components/Primitives';
 import PeriodPicker from '../components/PeriodPicker';
@@ -31,11 +32,29 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
   };
 
   useEffect(() => {
-    setLoading(true);
+    const key = `reports:employee:${employeeId}:${period}:${date || ''}`;
+    const cached = getCached(key);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     teamReportsAPI.employee(employeeId, period, date).then(({ data }) => {
-      if (data?.success) setData(data);
+      if (data?.success) {
+        setData(data);
+        setCached(key, data);
+      }
       setLoading(false);
     });
+    // Prefetch other common periods in the background so toggling is instant.
+    if (!date) {
+      ['week', 'month', 'lastmonth', 'year'].forEach((p) => {
+        if (p === period) return;
+        const k = `reports:employee:${employeeId}:${p}:`;
+        prefetch(k, () => teamReportsAPI.employee(employeeId, p));
+      });
+    }
   }, [employeeId, period, date]);
 
   if (loading || !data) {
@@ -327,14 +346,34 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
   const [reportOpen, setReportOpen] = useState(false);
 
   const fetchData = async (p, d) => {
-    setLoading(true);
-    const { data } = await teamReportsAPI.overview(p, d);
-    if (data?.success) setData(data);
+    const key = `reports:overview:${p}:${d || ''}`;
+    const cached = getCached(key);
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    const { data: res } = await teamReportsAPI.overview(p, d);
+    if (res?.success) {
+      setData(res);
+      setCached(key, res);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
-    if (!drilldownEmployeeId) fetchData(period, date);
+    if (!drilldownEmployeeId) {
+      fetchData(period, date);
+      // Prefetch other common period overviews so toggling between week/month/year is instant.
+      if (!date) {
+        ['week', 'month', 'lastmonth', 'year', 'today'].forEach((p) => {
+          if (p === period) return;
+          const k = `reports:overview:${p}:`;
+          prefetch(k, () => teamReportsAPI.overview(p));
+        });
+      }
+    }
   }, [period, date, drilldownEmployeeId]);
 
   if (drilldownEmployeeId) {

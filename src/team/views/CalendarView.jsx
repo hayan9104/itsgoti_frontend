@@ -4,6 +4,7 @@ import {
   Trash2, X, CalendarDays, Video, Phone, MapPin, Globe,
 } from 'lucide-react';
 import { teamCalendarAPI } from '../teamAPI';
+import { getCached, setCached, invalidate } from '../teamCache';
 import { baseFont, serifFont, monoFont } from '../theme';
 import { Avatar, PageHeader, SolidButton, GhostButton } from '../components/Primitives';
 import BlockModal from '../components/BlockModal';
@@ -112,19 +113,23 @@ const Toggle = ({ on, onChange, palette }) => (
 
 export default function CalendarView({ palette, isDark, isAdmin, currentUserId, openTask }) {
   const [tab, setTab] = useState('schedule');
-  const [config, setConfig] = useState(null);
-  const [bookings, setBookings] = useState([]);
-  const [blocks, setBlocks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Seed from cache so the calendar paints instantly on tab switch.
+  const cachedCfg = getCached('calendar:config:me');
+  const cachedBookings = getCached('calendar:bookings');
+  const cachedBlocks = getCached('calendar:blocks');
+  const [config, setConfig] = useState(cachedCfg?.config || null);
+  const [bookings, setBookings] = useState(cachedBookings?.bookings || []);
+  const [blocks, setBlocks] = useState(cachedBlocks?.blocks || []);
+  const [loading, setLoading] = useState(!cachedCfg);
   const [weekOffset, setWeekOffset] = useState(0);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showInternalBook, setShowInternalBook] = useState(false);
   const [bookingDetail, setBookingDetail] = useState(null);
   const [blockToDelete, setBlockToDelete] = useState(null); // { block, dateKey }
 
-  // Load config + initial window of bookings & blocks
+  // Load config + initial window of bookings & blocks. Cache results so subsequent visits paint instantly.
   const loadAll = async () => {
-    setLoading(true);
+    if (!config) setLoading(true);
     try {
       const [cfgRes, bRes, blRes] = await Promise.all([
         teamCalendarAPI.getMyConfig(),
@@ -134,6 +139,9 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
       setConfig(cfgRes.data.config);
       setBookings(bRes.data.bookings || []);
       setBlocks(blRes.data.blocks || []);
+      setCached('calendar:config:me', cfgRes.data);
+      setCached('calendar:bookings', bRes.data);
+      setCached('calendar:blocks', blRes.data);
     } catch (err) {
       console.error('[Calendar] load failed:', err?.response?.data?.message || err.message);
     } finally {
@@ -146,6 +154,7 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
   const saveConfigPatch = async (patch) => {
     const res = await teamCalendarAPI.updateMyConfig(patch);
     setConfig(res.data.config);
+    setCached('calendar:config:me', res.data);
     return res.data.config;
   };
 
@@ -273,6 +282,7 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
             } else {
               setBlocks((arr) => arr.map((b) => (b._id === block._id ? res.data.block : b)));
             }
+            invalidate('calendar:blocks');
             setBlockToDelete(null);
           } catch (err) {
             alert(err?.response?.data?.message || 'Could not skip this occurrence.');
@@ -283,6 +293,7 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
           try {
             await teamCalendarAPI.removeBlock(block._id);
             setBlocks((arr) => arr.filter((b) => b._id !== block._id));
+            invalidate('calendar:blocks');
             setBlockToDelete(null);
           } catch (err) {
             alert(err?.response?.data?.message || 'Could not delete the block.');

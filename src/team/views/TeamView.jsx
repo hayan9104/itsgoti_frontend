@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Shield, Copy, Check, KeyRound, Trash2, History as HistoryIcon, Settings2 } from 'lucide-react';
 import { teamEmployeesAPI, teamSessionsAPI } from '../teamAPI';
+import { getCached, setCached, invalidate } from '../teamCache';
 import { baseFont, serifFont, monoFont } from '../theme';
 import { Avatar, StatusPill, PageHeader, Card, SolidButton, GhostButton, Modal, FieldLabel, TextInput, Select } from '../components/Primitives';
 
@@ -10,9 +11,17 @@ const ROLES = [
 ];
 
 export default function TeamView({ palette, isDark, currentUserId, setView, goToDrilldown }) {
-  const [employees, setEmployees] = useState([]);
-  const [snapshot, setSnapshot] = useState({});
-  const [loading, setLoading] = useState(true);
+  const cachedEmployees = getCached('employees:list');
+  const cachedSnap = getCached('sessions:today:all');
+  const snapMap = (() => {
+    if (!cachedSnap?.snapshot) return {};
+    const m = {};
+    for (const s of cachedSnap.snapshot) m[s.employee.id] = s;
+    return m;
+  })();
+  const [employees, setEmployees] = useState(cachedEmployees?.employees || []);
+  const [snapshot, setSnapshot] = useState(snapMap);
+  const [loading, setLoading] = useState(!cachedEmployees || !cachedSnap);
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', jobTitle: 'Designer', role: 'employee' });
   const [submitting, setSubmitting] = useState(false);
@@ -34,11 +43,15 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
 
   const refresh = async () => {
     const [eRes, sRes] = await Promise.all([teamEmployeesAPI.list(), teamSessionsAPI.todayAll()]);
-    if (eRes.data?.success) setEmployees(eRes.data.employees || []);
+    if (eRes.data?.success) {
+      setEmployees(eRes.data.employees || []);
+      setCached('employees:list', eRes.data);
+    }
     if (sRes.data?.success) {
       const map = {};
       for (const s of sRes.data.snapshot || []) map[s.employee.id] = s;
       setSnapshot(map);
+      setCached('sessions:today:all', sRes.data);
     }
     setLoading(false);
   };
@@ -56,6 +69,7 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
     setSubmitting(false);
     if (data?.success) {
       setEmployees((prev) => [...prev, data.employee]);
+      invalidate('employees:list');
       setGeneratedPassword(data.generatedPassword);
       setGeneratedFor(data.employee.email);
       setForm({ name: '', email: '', jobTitle: 'Designer', role: 'employee' });
@@ -116,7 +130,10 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
     if (emp._id === currentUserId) return;
     if (!window.confirm(`Delete ${emp.name}? This cannot be undone.`)) return;
     const { data } = await teamEmployeesAPI.remove(emp._id);
-    if (data?.success) setEmployees((prev) => prev.filter((e) => e._id !== emp._id));
+    if (data?.success) {
+      setEmployees((prev) => prev.filter((e) => e._id !== emp._id));
+      invalidate('employees:list');
+    }
   };
 
   const openEdit = (emp) => {

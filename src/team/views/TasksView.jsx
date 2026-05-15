@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { Plus, Trash2, GripVertical, Timer, Paperclip, X as XIcon, FileText, Image as ImageIcon, Archive, RotateCcw, AlertTriangle } from 'lucide-react';
 import { teamTasksAPI, teamEmployeesAPI } from '../teamAPI';
+import { getCached, setCached, invalidate } from '../teamCache';
 import { useTeamAuth } from '../TeamAuthContext';
 import { baseFont, serifFont, monoFont, fmtClock, priorityMeta, taskStatusMeta, fmtMinutes, parseEstimateInput } from '../theme';
 import { Avatar, PageHeader, Card, SolidButton, GhostButton, Modal, FieldLabel, TextInput, Select, Textarea } from '../components/Primitives';
@@ -16,11 +17,12 @@ const PRIORITIES = ['urgent', 'high', 'medium', 'low'];
 
 export default function TasksView({ palette, isDark, isAdmin, currentUserId, highlightTaskId, clearHighlight, openTask }) {
   const { user } = useTeamAuth();
-  const [tasks, setTasks] = useState([]);
+  // Seed from cache so the list renders instantly on tab switch; a fresh fetch runs in parallel.
+  const [tasks, setTasks] = useState(() => getCached('tasks:list')?.tasks || []);
   const [archivedTasks, setArchivedTasks] = useState([]);
   const [activeTab, setActiveTab] = useState('tasks'); // 'tasks' | 'archive'
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState(() => getCached('employees:list')?.employees || []);
+  const [loading, setLoading] = useState(!getCached('tasks:list'));
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({ title: '', ownerId: '', priority: 'medium', estMinutes: 0, description: '', plannedStartDate: '' });
@@ -154,7 +156,10 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
 
   const fetchTasks = async () => {
     const { data } = await teamTasksAPI.list();
-    if (data?.success) setTasks(data.tasks || []);
+    if (data?.success) {
+      setTasks(data.tasks || []);
+      setCached('tasks:list', data);
+    }
     setLoading(false);
   };
 
@@ -162,7 +167,10 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
     setArchiveLoading(true);
     try {
       const { data } = await teamTasksAPI.list({ archived: 'true' });
-      if (data?.success) setArchivedTasks(data.tasks || []);
+      if (data?.success) {
+        setArchivedTasks(data.tasks || []);
+        setCached('tasks:archived', data);
+      }
     } finally {
       setArchiveLoading(false);
     }
@@ -181,6 +189,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
       teamEmployeesAPI.list().then(({ data }) => {
         if (data?.success) {
           setEmployees(data.employees || []);
+          setCached('employees:list', data);
           if (data.employees?.length && !form.ownerId) {
             setForm((f) => ({ ...f, ownerId: data.employees[0]._id }));
           }
@@ -204,6 +213,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
     const { data } = await teamTasksAPI.update(task._id, { status }).catch((err) => ({ data: err.response?.data }));
     if (data?.success) {
       setTasks((prev) => prev.map((t) => (t._id === task._id ? data.task : t)));
+      invalidate('tasks:list');
     } else {
       // Revert
       fetchTasks();
@@ -250,6 +260,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
       setTasks((prev) => prev.filter((t) => t._id !== task._id));
       // Drop the cached archive list so it refetches the next time the user opens that tab.
       setArchivedTasks([]);
+      invalidate('tasks:*');
     }
   };
 
@@ -259,6 +270,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
       setArchivedTasks((prev) => prev.filter((t) => t._id !== task._id));
       // Invalidate the active tasks cache so it refetches with the restored row.
       setTasks((prev) => [data.task, ...prev]);
+      invalidate('tasks:*');
     }
   };
 
@@ -314,6 +326,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
     setSubmitting(false);
     if (data?.success) {
       setTasks((prev) => [data.task, ...prev]);
+      invalidate('tasks:list');
       setShowNew(false);
       setForm({ title: '', ownerId: employees[0]?._id || '', priority: 'medium', estMinutes: 0, description: '', plannedStartDate: '' });
       setAttachments([]);
