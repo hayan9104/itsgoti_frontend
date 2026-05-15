@@ -775,7 +775,7 @@ function AvailabilityTab({ palette, config, onChange, onBookMeeting }) {
 
   const ruleDefs = [
     { key: 'buffer', label: 'Buffer between calls', opts: [[0, '0 min'], [5, '5 min'], [10, '10 min'], [15, '15 min']] },
-    { key: 'minNotice', label: 'Minimum notice', opts: [[1, '1 hour'], [4, '4 hours'], [12, '12 hours'], [24, '1 day']] },
+    { key: 'minNotice', label: 'Minimum notice', opts: [[0, 'No minimum notice'], [1, '1 hour'], [4, '4 hours'], [12, '12 hours'], [24, '1 day']] },
     { key: 'window', label: 'Booking window', opts: [[7, '1 week'], [14, '2 weeks'], [30, '1 month']] },
     { key: 'dailyLimit', label: 'Daily call limit', opts: [[0, 'No limit'], [2, '2 calls'], [4, '4 calls'], [6, '6 calls']] },
   ];

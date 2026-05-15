@@ -66,6 +66,7 @@ export default function PublicBookingPage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [monthSlots, setMonthSlots] = useState({}); // dateKey -> count
   const [daySlots, setDaySlots] = useState([]);
+  const [dayLimitReached, setDayLimitReached] = useState(false);
   const [daySlotsLoading, setDaySlotsLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', note: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -116,12 +117,16 @@ export default function PublicBookingPage() {
 
   // Load day slots whenever a date is picked
   useEffect(() => {
-    if (!pickedEventType || !pickedDate) { setDaySlots([]); return; }
+    if (!pickedEventType || !pickedDate) { setDaySlots([]); setDayLimitReached(false); return; }
     let cancelled = false;
     setDaySlotsLoading(true);
     publicBookingAPI.getSlots(slug, pickedEventType.id, dateKey(pickedDate))
-      .then((res) => { if (!cancelled) setDaySlots(res.data.slots || []); })
-      .catch(() => { if (!cancelled) setDaySlots([]); })
+      .then((res) => {
+        if (cancelled) return;
+        setDaySlots(res.data.slots || []);
+        setDayLimitReached(!!res.data.limitReached);
+      })
+      .catch(() => { if (!cancelled) { setDaySlots([]); setDayLimitReached(false); } })
       .finally(() => { if (!cancelled) setDaySlotsLoading(false); });
     return () => { cancelled = true; };
   }, [slug, pickedEventType, pickedDate]);
@@ -407,7 +412,11 @@ export default function PublicBookingPage() {
                         </div>
                       ) : daySlots.length === 0 ? (
                         <div style={{ borderRadius: 12, border: `1px dashed ${palette.border}`, padding: '48px 16px', textAlign: 'center' }}>
-                          <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>No open times on this day.</span>
+                          <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
+                            {dayLimitReached
+                              ? `Call limit with ${host.name.split(' ')[0]} is over for today.`
+                              : 'No open times on this day.'}
+                          </span>
                         </div>
                       ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
