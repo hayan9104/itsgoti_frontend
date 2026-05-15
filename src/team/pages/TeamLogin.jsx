@@ -51,7 +51,7 @@ export default function TeamLogin() {
         <img
           src="/Goti%20Logo%20Black.png"
           alt="Goti"
-          style={{ height: 28, width: 'auto', display: 'block' }}
+          style={{ height: 22, width: 'auto', display: 'block', alignSelf: 'flex-start' }}
         />
 
         <div style={{ maxWidth: 380, width: '100%', marginInline: 'auto' }}>
