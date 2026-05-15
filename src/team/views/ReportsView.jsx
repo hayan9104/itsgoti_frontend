@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { teamReportsAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont, fmtMinutes, priorityMeta, taskStatusMeta } from '../theme';
-import { Avatar, PageHeader, Card, StatTile } from '../components/Primitives';
+import { Avatar, PageHeader, Card, StatTile, SolidButton } from '../components/Primitives';
 import PeriodPicker from '../components/PeriodPicker';
 import TimelineLog from '../components/TimelineLog';
 import TaskTooltip from '../components/TaskTooltip';
 import StatusFilterDropdown from '../components/StatusFilterDropdown';
 import HoursByDayChart from '../components/HoursByDayChart';
+import GenerateReportModal from '../components/GenerateReportModal';
 
 function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
   const [period, setPeriod] = useState('month');
@@ -17,6 +18,7 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
   const [hover, setHover] = useState(null);
   const hoverTimer = useRef(null);
   const [statusFilter, setStatusFilter] = useState([]); // empty = all
+  const [reportOpen, setReportOpen] = useState(false);
 
   const showHover = (task, anchor) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -73,7 +75,7 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
         }}
       >
         <Avatar initials={data.employee.avatar} size={56} palette={palette} />
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.08em' }}>
             HISTORY · {date ? new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase() : period.toUpperCase()}
           </div>
@@ -84,7 +86,18 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
             {data.employee.jobTitle} · joined {new Date(data.employee.joinedAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
           </div>
         </div>
+        <SolidButton onClick={() => setReportOpen(true)} palette={palette} icon={FileText}>
+          Generate report
+        </SolidButton>
       </div>
+
+      <GenerateReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        palette={palette}
+        showPeoplePicker={false}
+        fixedEmployeeIds={[employeeId]}
+      />
 
       <PeriodPicker
         period={period}
@@ -311,6 +324,7 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
   const [date, setDate] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const fetchData = async (p, d) => {
     setLoading(true);
@@ -354,6 +368,18 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
         }
         title="Reports"
         palette={palette}
+        right={
+          <SolidButton onClick={() => setReportOpen(true)} palette={palette} icon={FileText}>
+            Generate report
+          </SolidButton>
+        }
+      />
+
+      <GenerateReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        palette={palette}
+        showPeoplePicker={true}
       />
 
       <PeriodPicker

@@ -103,6 +103,28 @@ export const teamNotificationsAPI = {
   markAllSeen: () => teamAPI.post('/notifications/seen-all'),
 };
 
+export const teamCalendarAPI = {
+  // Per-employee configuration
+  getMyConfig: () => teamAPI.get('/calendar/config/me'),
+  updateMyConfig: (payload) => teamAPI.patch('/calendar/config/me', payload),
+  getAllConfigs: () => teamAPI.get('/calendar/config/all'),
+
+  // Event types (max 3)
+  createEventType: (payload) => teamAPI.post('/calendar/event-types', payload),
+  updateEventType: (id, payload) => teamAPI.patch(`/calendar/event-types/${id}`, payload),
+  removeEventType: (id) => teamAPI.delete(`/calendar/event-types/${id}`),
+
+  // Personal blocks
+  listBlocks: (params = {}) => teamAPI.get('/calendar/blocks', { params }),
+  createBlock: (payload) => teamAPI.post('/calendar/blocks', payload),
+  removeBlock: (id) => teamAPI.delete(`/calendar/blocks/${id}`),
+
+  // Bookings
+  listBookings: (params = {}) => teamAPI.get('/calendar/bookings', { params }),
+  cancelBooking: (id) => teamAPI.post(`/calendar/bookings/${id}/cancel`),
+  updateBooking: (id, payload) => teamAPI.patch(`/calendar/bookings/${id}`, payload),
+};
+
 export const teamReportsAPI = {
   overview: (period = 'week', date) => {
     const q = new URLSearchParams({ period });

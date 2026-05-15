@@ -1,0 +1,975 @@
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ChevronLeft, ChevronRight, Plus, Copy, Check, ExternalLink, Link2,
+  Trash2, X, CalendarDays, Video, Phone, MapPin, Globe,
+} from 'lucide-react';
+import { teamCalendarAPI } from '../teamAPI';
+import { baseFont, serifFont, monoFont } from '../theme';
+import { Avatar, PageHeader, SolidButton } from '../components/Primitives';
+import BlockModal from '../components/BlockModal';
+import BookingDetailModal from '../components/BookingDetailModal';
+
+// ---------- shared constants & helpers ----------
+
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const GRID_START = 8;
+const GRID_END = 21;
+const HOUR_H = 50;
+const GUTTER = 54;
+
+const TIME_OPTIONS = (() => {
+  const a = [];
+  for (let m = 360; m <= 1320; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    a.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+  }
+  return a;
+})();
+
+function toMin(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+function fromMin(min) {
+  const m = ((min % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+function fmt12(hhmm) {
+  let [h, m] = hhmm.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, '0')} ${ap}`;
+}
+function addMinStr(hhmm, mins) {
+  return fromMin(((toMin(hhmm) + mins) % 1440 + 1440) % 1440);
+}
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function weekDates(offset) {
+  const base = new Date();
+  const dow = (base.getDay() + 6) % 7;
+  const monday = new Date(base);
+  monday.setDate(base.getDate() - dow + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+function locationIcon(loc) {
+  return loc === 'Google Meet' ? Video : loc === 'Phone call' ? Phone : loc === 'In person' ? MapPin : Globe;
+}
+
+const Toggle = ({ on, onChange, palette }) => (
+  <button
+    type="button"
+    onClick={() => onChange(!on)}
+    style={{
+      width: 34, height: 20, borderRadius: 999,
+      backgroundColor: on ? palette.accent : palette.border,
+      position: 'relative', transition: 'background-color .15s', flexShrink: 0,
+      border: 'none', cursor: 'pointer', padding: 0,
+    }}
+  >
+    <span style={{
+      position: 'absolute', top: 2, left: on ? 16 : 2,
+      width: 16, height: 16, borderRadius: 999,
+      backgroundColor: '#fff', transition: 'left .15s',
+      boxShadow: '0 1px 2px rgba(0,0,0,.25)',
+    }} />
+  </button>
+);
+
+// ---------- main view ----------
+
+export default function CalendarView({ palette, isDark, isAdmin, currentUserId, openTask }) {
+  const [tab, setTab] = useState('schedule');
+  const [config, setConfig] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [blocks, setBlocks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [bookingDetail, setBookingDetail] = useState(null);
+
+  // Load config + initial window of bookings & blocks
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [cfgRes, bRes, blRes] = await Promise.all([
+        teamCalendarAPI.getMyConfig(),
+        teamCalendarAPI.listBookings(),
+        teamCalendarAPI.listBlocks(),
+      ]);
+      setConfig(cfgRes.data.config);
+      setBookings(bRes.data.bookings || []);
+      setBlocks(blRes.data.blocks || []);
+    } catch (err) {
+      console.error('[Calendar] load failed:', err?.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadAll(); }, []);
+
+  if (loading || !config) {
+    return (
+      <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, padding: 24 }}>
+        Loading calendar…
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: 'schedule', label: 'Schedule' },
+    { id: 'availability', label: 'Availability' },
+    { id: 'bookingLink', label: 'Booking Link' },
+  ];
+  if (isAdmin) tabs.push({ id: 'teamCalls', label: 'Team Calls' });
+  const active = tabs.find((t) => t.id === tab) ? tab : 'schedule';
+
+  return (
+    <div>
+      <div
+        style={{
+          display: 'inline-flex',
+          borderRadius: 8,
+          border: `1px solid ${palette.border}`,
+          backgroundColor: palette.surface,
+          padding: 3,
+          marginBottom: 32,
+        }}
+      >
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: 6,
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: active === t.id ? palette.accentBg : 'transparent',
+              color: active === t.id ? palette.accent : palette.textDim,
+              fontFamily: baseFont,
+              fontSize: 12.5,
+              fontWeight: 500,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {active === 'schedule' && (
+        <ScheduleTab
+          palette={palette}
+          config={config}
+          bookings={bookings}
+          blocks={blocks}
+          weekOffset={weekOffset}
+          setWeekOffset={setWeekOffset}
+          onAddBlock={() => setShowBlockModal(true)}
+          onOpenBooking={(b) => setBookingDetail(b)}
+          switchToBookingLink={() => setTab('bookingLink')}
+        />
+      )}
+      {active === 'availability' && (
+        <AvailabilityTab
+          palette={palette}
+          config={config}
+          onChange={async (patch) => {
+            try {
+              const res = await teamCalendarAPI.updateMyConfig(patch);
+              setConfig(res.data.config);
+            } catch (err) {
+              console.error('[Calendar] config save failed:', err?.response?.data?.message || err.message);
+            }
+          }}
+        />
+      )}
+      {active === 'bookingLink' && (
+        <BookingLinkTab
+          palette={palette}
+          config={config}
+          reload={loadAll}
+        />
+      )}
+      {active === 'teamCalls' && isAdmin && (
+        <TeamCallsTab palette={palette} openTask={openTask} />
+      )}
+
+      <BlockModal
+        open={showBlockModal}
+        palette={palette}
+        onClose={() => setShowBlockModal(false)}
+        onCreated={(b) => setBlocks((arr) => [...arr, b])}
+      />
+
+      <BookingDetailModal
+        booking={bookingDetail}
+        palette={palette}
+        onClose={() => setBookingDetail(null)}
+        onCancelled={(updated) => {
+          setBookings((arr) => arr.map((b) => (b._id === updated._id ? updated : b)));
+          setBookingDetail(null);
+        }}
+        openTask={openTask}
+      />
+    </div>
+  );
+}
+
+// ====================================================================
+// SCHEDULE TAB
+// ====================================================================
+
+function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOffset, onAddBlock, onOpenBooking, switchToBookingLink }) {
+  const [view, setView] = useState('week');
+  const [dayIdx, setDayIdx] = useState((new Date().getDay() + 6) % 7);
+
+  const week = useMemo(() => weekDates(weekOffset), [weekOffset]);
+  const todayKey = dateKey(new Date());
+  const weekKeys = week.map(dateKey);
+  const weekBookings = bookings.filter((b) => weekKeys.includes(b.dateKey) && b.status === 'confirmed');
+  const weekBlocks = blocks.filter((b) => weekKeys.includes(b.dateKey));
+  const rangeLabel = `${week[0].getDate()} ${MONTH_LABELS[week[0].getMonth()]} – ${week[6].getDate()} ${MONTH_LABELS[week[6].getMonth()]} ${week[6].getFullYear()}`;
+
+  const dayDate = week[dayIdx] || week[0];
+  const dayKey = dateKey(dayDate);
+  const dayBookings = bookings.filter((b) => b.dateKey === dayKey && b.status === 'confirmed').sort((a, b) => toMin(a.start) - toMin(b.start));
+  const dayBlocks = blocks.filter((b) => b.dateKey === dayKey);
+  const dayTotalMin = dayBookings.reduce((a, b) => a + b.duration, 0);
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nextCall = dayBookings.find((b) => toMin(b.start) > nowMin);
+
+  const today = new Date();
+  const kicker = today.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+
+  return (
+    <div>
+      <PageHeader
+        kicker={kicker}
+        title="Your"
+        accentWord="calendar"
+        palette={palette}
+        right={<SolidButton onClick={onAddBlock} icon={Plus} palette={palette}>Add block</SolidButton>}
+      />
+
+      {/* View toggle + week nav */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, padding: 3 }}>
+          {[{ id: 'day', label: 'Day' }, { id: 'week', label: 'Week' }].map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => setView(v.id)}
+              style={{
+                padding: '6px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                backgroundColor: view === v.id ? palette.accentBg : 'transparent',
+                color: view === v.id ? palette.accent : palette.textDim,
+                fontFamily: baseFont, fontSize: 12.5, fontWeight: 500,
+              }}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontFamily: monoFont, fontSize: 12, color: palette.textDim }}>
+            {view === 'week' ? rangeLabel : dayDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button
+              type="button"
+              onClick={() => view === 'week' ? setWeekOffset(weekOffset - 1) : setDayIdx((dayIdx + 6) % 7)}
+              style={{ padding: 6, border: `1px solid ${palette.border}`, borderRadius: 6, background: 'transparent', color: palette.textDim, cursor: 'pointer' }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setWeekOffset(0); setDayIdx((new Date().getDay() + 6) % 7); }}
+              style={{ padding: '6px 12px', border: 'none', background: 'transparent', color: palette.textDim, fontFamily: baseFont, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => view === 'week' ? setWeekOffset(weekOffset + 1) : setDayIdx((dayIdx + 1) % 7)}
+              style={{ padding: 6, border: `1px solid ${palette.border}`, borderRadius: 6, background: 'transparent', color: palette.textDim, cursor: 'pointer' }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty state for week */}
+      {view === 'week' && weekBookings.length === 0 && weekBlocks.length === 0 ? (
+        <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, padding: '72px 24px', textAlign: 'center' }}>
+          <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.text }}>Nothing booked this week.</div>
+          <button
+            type="button"
+            onClick={switchToBookingLink}
+            style={{ fontFamily: baseFont, fontSize: 13, color: palette.accent, fontWeight: 500, marginTop: 10, border: 'none', background: 'none', cursor: 'pointer' }}
+          >
+            Share your link to start taking calls →
+          </button>
+        </div>
+      ) : view === 'week' ? (
+        <WeekGrid
+          palette={palette}
+          week={week}
+          todayKey={todayKey}
+          bookings={weekBookings}
+          blocks={weekBlocks}
+          onOpenBooking={onOpenBooking}
+        />
+      ) : (
+        <DayView
+          palette={palette}
+          week={week}
+          dayIdx={dayIdx}
+          setDayIdx={setDayIdx}
+          dayDate={dayDate}
+          todayKey={todayKey}
+          dayBookings={dayBookings}
+          dayBlocks={dayBlocks}
+          dayTotalMin={dayTotalMin}
+          nextCall={nextCall}
+          onOpenBooking={onOpenBooking}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- week/day grid pieces ----------
+
+function HourLines({ palette }) {
+  return (
+    <>
+      {Array.from({ length: GRID_END - GRID_START }).map((_, i) => (
+        <div key={i} style={{ height: HOUR_H, borderTop: `1px solid ${palette.border}` }} />
+      ))}
+    </>
+  );
+}
+function NowLine({ palette }) {
+  const now = new Date();
+  const nm = now.getHours() * 60 + now.getMinutes();
+  if (nm < GRID_START * 60 || nm > GRID_END * 60) return null;
+  const top = ((nm - GRID_START * 60) / 60) * HOUR_H;
+  return (
+    <div style={{ position: 'absolute', top, left: 0, right: 0, height: 1, backgroundColor: palette.accent, zIndex: 5 }}>
+      <span style={{ position: 'absolute', left: -3, top: -3, width: 7, height: 7, borderRadius: 4, backgroundColor: palette.accent }} />
+    </div>
+  );
+}
+function GridBooking({ b, big, palette, onClick }) {
+  const top = ((toMin(b.start) - GRID_START * 60) / 60) * HOUR_H;
+  const height = Math.max((b.duration / 60) * HOUR_H - 3, 22);
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'absolute', top, left: big ? 6 : 3, right: big ? 6 : 3, height,
+        backgroundColor: palette.accentBg, borderLeft: `3px solid ${palette.accent}`,
+        borderRadius: 6, padding: big ? '8px 10px' : '4px 7px', cursor: 'pointer', overflow: 'hidden',
+      }}
+    >
+      <div style={{ fontFamily: baseFont, fontSize: big ? 13 : 11, fontWeight: 500, color: palette.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {b.clientName}
+      </div>
+      <div style={{ fontFamily: monoFont, fontSize: big ? 11 : 9.5, color: palette.accent, marginTop: 1 }}>
+        {fmt12(b.start)}{big && ` – ${fmt12(addMinStr(b.start, b.duration))}`}
+      </div>
+      {big && <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textDim, marginTop: 3 }}>{b.eventTypeName}</div>}
+    </div>
+  );
+}
+function GridBlock({ blk, big, palette }) {
+  const top = ((toMin(blk.start) - GRID_START * 60) / 60) * HOUR_H;
+  const height = Math.max(((toMin(blk.end) - toMin(blk.start)) / 60) * HOUR_H - 3, 20);
+  return (
+    <div style={{
+      position: 'absolute', top, left: big ? 6 : 3, right: big ? 6 : 3, height,
+      backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`,
+      borderRadius: 6, padding: big ? '6px 10px' : '3px 7px', overflow: 'hidden',
+    }}>
+      <div style={{ fontFamily: baseFont, fontSize: big ? 12 : 10.5, fontWeight: 500, color: palette.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {blk.title}
+      </div>
+    </div>
+  );
+}
+
+function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking }) {
+  return (
+    <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${palette.border}` }}>
+        <div style={{ width: GUTTER, flexShrink: 0 }} />
+        {week.map((d, i) => {
+          const isToday = dateKey(d) === todayKey;
+          return (
+            <div key={i} style={{ flex: 1, textAlign: 'center', padding: '12px 0', borderLeft: `1px solid ${palette.border}` }}>
+              <div style={{ fontFamily: monoFont, fontSize: 10, color: palette.textMute, letterSpacing: '0.06em' }}>
+                {WEEKDAY_LABELS[i].toUpperCase()}
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+                <span style={{ fontFamily: serifFont, fontSize: 18, color: isToday ? palette.accent : palette.text }}>{d.getDate()}</span>
+                {isToday && <span style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: palette.accent }} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', position: 'relative' }}>
+        <div style={{ width: GUTTER, flexShrink: 0 }}>
+          {Array.from({ length: GRID_END - GRID_START }).map((_, i) => (
+            <div key={i} style={{ height: HOUR_H, position: 'relative' }}>
+              <span style={{ position: 'absolute', top: -7, right: 8, fontFamily: monoFont, fontSize: 9.5, color: palette.textMute }}>
+                {fmt12(fromMin((GRID_START + i) * 60))}
+              </span>
+            </div>
+          ))}
+        </div>
+        {week.map((d, i) => {
+          const k = dateKey(d);
+          const isToday = k === todayKey;
+          const dayBookings = bookings.filter((b) => b.dateKey === k);
+          const dayBlocks = blocks.filter((b) => b.dateKey === k);
+          return (
+            <div key={i} style={{ flex: 1, position: 'relative', borderLeft: `1px solid ${palette.border}` }}>
+              <HourLines palette={palette} />
+              {isToday && <NowLine palette={palette} />}
+              {dayBlocks.map((blk) => <GridBlock key={blk._id} blk={blk} palette={palette} />)}
+              {dayBookings.map((b) => (
+                <GridBooking key={b._id} b={b} palette={palette} onClick={() => onOpenBooking(b)} />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DayView({ palette, week, dayIdx, setDayIdx, dayDate, todayKey, dayBookings, dayBlocks, dayTotalMin, nextCall, onOpenBooking }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {week.map((d, i) => {
+          const sel = i === dayIdx;
+          const isToday = dateKey(d) === todayKey;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setDayIdx(i)}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
+                backgroundColor: sel ? palette.accentBg : palette.surface,
+                border: `1px solid ${sel ? palette.accent : palette.border}`,
+              }}
+            >
+              <div style={{ fontFamily: monoFont, fontSize: 9.5, color: sel ? palette.accent : palette.textMute, letterSpacing: '0.06em' }}>
+                {WEEKDAY_LABELS[i].toUpperCase()}
+              </div>
+              <div style={{ fontFamily: serifFont, fontSize: 17, color: sel ? palette.accent : (isToday ? palette.accent : palette.text), marginTop: 1 }}>{d.getDate()}</div>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textDim, letterSpacing: '0.04em', marginBottom: 14 }}>
+        {dayBookings.length} CALL{dayBookings.length !== 1 ? 'S' : ''} · {Math.floor(dayTotalMin / 60)}H {dayTotalMin % 60}M TOTAL
+        {nextCall && ` · NEXT AT ${fmt12(nextCall.start).toUpperCase()}`}
+      </div>
+      <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', position: 'relative' }}>
+          <div style={{ width: GUTTER, flexShrink: 0 }}>
+            {Array.from({ length: GRID_END - GRID_START }).map((_, i) => (
+              <div key={i} style={{ height: HOUR_H, position: 'relative' }}>
+                <span style={{ position: 'absolute', top: -7, right: 8, fontFamily: monoFont, fontSize: 9.5, color: palette.textMute }}>
+                  {fmt12(fromMin((GRID_START + i) * 60))}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ flex: 1, position: 'relative', borderLeft: `1px solid ${palette.border}` }}>
+            <HourLines palette={palette} />
+            {dateKey(dayDate) === todayKey && <NowLine palette={palette} />}
+            {dayBlocks.map((blk) => <GridBlock key={blk._id} blk={blk} big palette={palette} />)}
+            {dayBookings.map((b) => (
+              <GridBooking key={b._id} b={b} big palette={palette} onClick={() => onOpenBooking(b)} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ====================================================================
+// AVAILABILITY TAB
+// ====================================================================
+
+function AvailabilityTab({ palette, config, onChange }) {
+  // Local draft state so we can debounce / batch saves while editing.
+  const [draft, setDraft] = useState(config);
+  useEffect(() => { setDraft(config); }, [config]);
+
+  const setDay = (wd, patch) => {
+    const next = draft.availability.map((a) => a.weekday === wd ? { ...a, ...patch } : a);
+    setDraft({ ...draft, availability: next });
+    onChange({ availability: next });
+  };
+  const setSlot = (wd, idx, which, val) => {
+    const a = draft.availability.find((x) => x.weekday === wd);
+    const slots = a.slots.map((s, i) => i === idx
+      ? (which === 0 ? { start: val, end: s.end } : { start: s.start, end: val })
+      : s);
+    setDay(wd, { slots });
+  };
+  const addSlot = (wd) => {
+    const a = draft.availability.find((x) => x.weekday === wd);
+    if (a.slots.length >= 2) return;
+    setDay(wd, { slots: [...a.slots, { start: '14:00', end: '17:00' }] });
+  };
+  const removeSlot = (wd, idx) => {
+    const a = draft.availability.find((x) => x.weekday === wd);
+    setDay(wd, { slots: a.slots.filter((_, i) => i !== idx) });
+  };
+  const setRule = (key, val) => {
+    const rules = { ...draft.rules, [key]: val };
+    setDraft({ ...draft, rules });
+    onChange({ rules });
+  };
+
+  const ruleDefs = [
+    { key: 'buffer', label: 'Buffer between calls', opts: [[0, '0 min'], [5, '5 min'], [10, '10 min'], [15, '15 min']] },
+    { key: 'minNotice', label: 'Minimum notice', opts: [[1, '1 hour'], [4, '4 hours'], [12, '12 hours'], [24, '1 day']] },
+    { key: 'window', label: 'Booking window', opts: [[7, '1 week'], [14, '2 weeks'], [30, '1 month']] },
+    { key: 'dailyLimit', label: 'Daily call limit', opts: [[0, 'No limit'], [2, '2 calls'], [4, '4 calls'], [6, '6 calls']] },
+  ];
+
+  const selectStyle = {
+    backgroundColor: palette.surfaceAlt, color: palette.text, fontFamily: monoFont,
+    fontSize: 12, border: `1px solid ${palette.border}`, borderRadius: 6, padding: '5px 8px', outline: 'none',
+  };
+
+  return (
+    <div>
+      <PageHeader kicker="WHEN YOU CAN BE BOOKED" title="Your" accentWord="availability" palette={palette} />
+
+      <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Weekly hours</h3>
+      <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden', marginBottom: 32 }}>
+        {draft.availability.map((a, i) => (
+          <div key={a.weekday} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '14px 20px', borderBottom: i < 6 ? `1px solid ${palette.border}` : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: 150, flexShrink: 0, paddingTop: 4 }}>
+              <Toggle on={a.enabled} onChange={(v) => setDay(a.weekday, { enabled: v })} palette={palette} />
+              <span style={{ fontFamily: baseFont, fontSize: 13.5, color: a.enabled ? palette.text : palette.textMute, fontWeight: 500 }}>
+                {WEEKDAY_FULL[a.weekday]}
+              </span>
+            </div>
+            {!a.enabled ? (
+              <span style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textMute, paddingTop: 5 }}>— unavailable —</span>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {a.slots.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => addSlot(a.weekday)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: baseFont, fontSize: 12, color: palette.accent, fontWeight: 500, border: 'none', background: 'none', cursor: 'pointer', alignSelf: 'flex-start' }}
+                  >
+                    <Plus size={12} /> Add a time window
+                  </button>
+                )}
+                {a.slots.map((s, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <select value={s.start} onChange={(e) => setSlot(a.weekday, idx, 0, e.target.value)} style={selectStyle}>
+                      {TIME_OPTIONS.map((t) => <option key={t} value={t}>{fmt12(t)}</option>)}
+                    </select>
+                    <span style={{ color: palette.textMute, fontSize: 12 }}>–</span>
+                    <select value={s.end} onChange={(e) => setSlot(a.weekday, idx, 1, e.target.value)} style={selectStyle}>
+                      {TIME_OPTIONS.map((t) => <option key={t} value={t}>{fmt12(t)}</option>)}
+                    </select>
+                    {a.slots.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeSlot(a.weekday, idx)}
+                        style={{ color: palette.textMute, padding: 2, border: 'none', background: 'none', cursor: 'pointer' }}
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
+                    {idx === a.slots.length - 1 && a.slots.length < 2 && (
+                      <button
+                        type="button"
+                        onClick={() => addSlot(a.weekday)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: baseFont, fontSize: 12, color: palette.accent, fontWeight: 500, marginLeft: 4, border: 'none', background: 'none', cursor: 'pointer' }}
+                      >
+                        <Plus size={12} /> add slot
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Booking rules</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, backgroundColor: palette.border, border: `1px solid ${palette.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 32 }}>
+        {ruleDefs.map((r) => (
+          <div key={r.key} style={{ padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: palette.surface }}>
+            <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, fontWeight: 500 }}>{r.label}</span>
+            <select value={draft.rules[r.key]} onChange={(e) => setRule(r.key, Number(e.target.value))} style={selectStyle}>
+              {r.opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CalendarDays size={17} color={palette.accent} />
+          </div>
+          <div>
+            <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>Google Calendar</div>
+            <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim, marginTop: 2 }}>
+              {draft.googleConnected
+                ? 'Connected — bookings sync both ways, busy events block your slots.'
+                : 'Connect to push bookings and block out busy times automatically.'}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange({ googleConnected: !draft.googleConnected })}
+          style={{
+            padding: '8px 14px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+            backgroundColor: draft.googleConnected ? palette.surfaceAlt : palette.accent,
+            color: draft.googleConnected ? palette.textDim : palette.accentText,
+            border: draft.googleConnected ? `1px solid ${palette.border}` : 'none',
+            fontFamily: baseFont, fontSize: 12.5, fontWeight: 500,
+          }}
+        >
+          {draft.googleConnected ? 'Disconnect' : 'Connect Google Calendar'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ====================================================================
+// BOOKING LINK TAB
+// ====================================================================
+
+function BookingLinkTab({ palette, config, reload }) {
+  const [copied, setCopied] = useState(false);
+  const [working, setWorking] = useState(false);
+  const link = `${window.location.host}/meet/${config.slug}`;
+  const publicUrl = `${window.location.origin}/meet/${config.slug}`;
+
+  const copy = () => {
+    navigator.clipboard?.writeText(publicUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const updateET = async (id, patch) => {
+    setWorking(true);
+    try {
+      await teamCalendarAPI.updateEventType(id, patch);
+      await reload();
+    } finally { setWorking(false); }
+  };
+  const addET = async () => {
+    if (config.eventTypes.length >= 3) return;
+    setWorking(true);
+    try {
+      await teamCalendarAPI.createEventType({ name: 'New call type', duration: 30, description: '', location: 'Google Meet', active: true });
+      await reload();
+    } finally { setWorking(false); }
+  };
+  const deleteET = async (id) => {
+    if (!window.confirm('Delete this event type? Existing bookings keep their original details.')) return;
+    setWorking(true);
+    try {
+      await teamCalendarAPI.removeEventType(id);
+      await reload();
+    } finally { setWorking(false); }
+  };
+
+  const selectStyle = {
+    backgroundColor: palette.surfaceAlt, color: palette.text, fontFamily: baseFont,
+    fontSize: 12, border: `1px solid ${palette.border}`, borderRadius: 6, padding: '5px 8px', outline: 'none',
+  };
+
+  return (
+    <div>
+      <PageHeader kicker="ONE LINK · ZERO BACK-AND-FORTH" title="Your booking" accentWord="link" palette={palette} />
+
+      <div style={{ padding: 18, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Link2 size={16} color={palette.textDim} style={{ flexShrink: 0 }} />
+        <span style={{ fontFamily: monoFont, fontSize: 14, color: palette.text, flex: 1, minWidth: 200 }}>{link}</span>
+        <button
+          type="button"
+          onClick={copy}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+            backgroundColor: copied ? palette.accentBg : palette.surfaceAlt,
+            color: copied ? palette.accent : palette.text,
+            border: `1px solid ${copied ? palette.accent : palette.border}`,
+            fontFamily: baseFont, fontSize: 12, fontWeight: 500,
+          }}
+        >
+          {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+        </button>
+        <a
+          href={publicUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8,
+            backgroundColor: palette.accent, color: palette.accentText,
+            fontFamily: baseFont, fontSize: 12, fontWeight: 500, textDecoration: 'none',
+          }}
+        >
+          <ExternalLink size={12} /> Preview booking page
+        </a>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+        <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, margin: 0 }}>Event types</h3>
+        <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>{config.eventTypes.length} / 3</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
+        {config.eventTypes.map((et) => {
+          const LIcon = locationIcon(et.location);
+          return (
+            <div key={et.id} style={{ padding: 16, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, opacity: et.active ? 1 : 0.6 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: palette.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <LIcon size={15} color={palette.accent} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <input
+                    value={et.name}
+                    onChange={(e) => updateET(et.id, { name: e.target.value })}
+                    style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: baseFont, fontSize: 14, fontWeight: 500, color: palette.text, marginBottom: 4 }}
+                  />
+                  <input
+                    value={et.description}
+                    onChange={(e) => updateET(et.id, { description: e.target.value })}
+                    placeholder="Add a one-line description…"
+                    style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: baseFont, fontSize: 12, color: palette.textDim }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                    <select value={et.duration} onChange={(e) => updateET(et.id, { duration: Number(e.target.value) })} style={selectStyle}>
+                      {[15, 30, 45, 60].map((d) => <option key={d} value={d}>{d} min</option>)}
+                    </select>
+                    <select value={et.location} onChange={(e) => updateET(et.id, { location: e.target.value })} style={selectStyle}>
+                      {['Google Meet', 'Phone call', 'In person', 'Custom link'].map((l) => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, flexShrink: 0 }}>
+                  <Toggle on={et.active} onChange={(v) => updateET(et.id, { active: v })} palette={palette} />
+                  <button
+                    type="button"
+                    onClick={() => deleteET(et.id)}
+                    style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={addET}
+        disabled={config.eventTypes.length >= 3 || working}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8,
+          backgroundColor: palette.surfaceAlt,
+          color: config.eventTypes.length >= 3 ? palette.textMute : palette.text,
+          border: `1px solid ${palette.border}`,
+          fontFamily: baseFont, fontSize: 13, fontWeight: 500,
+          cursor: config.eventTypes.length >= 3 ? 'not-allowed' : 'pointer',
+          opacity: config.eventTypes.length >= 3 ? 0.6 : 1,
+        }}
+      >
+        <Plus size={14} /> New event type
+      </button>
+      {config.eventTypes.length >= 3 && (
+        <span style={{ fontFamily: baseFont, fontSize: 12, color: palette.textMute, marginLeft: 12 }}>
+          3 is the max — keep it simple.
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ====================================================================
+// TEAM CALLS TAB (admin)
+// ====================================================================
+
+function TeamCallsTab({ palette, openTask }) {
+  const [bookings, setBookings] = useState([]);
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const week = weekDates(0);
+        const from = dateKey(week[0]);
+        const to = dateKey(week[6]);
+        const [bRes, cRes] = await Promise.all([
+          teamCalendarAPI.listBookings({ all: true, from, to, status: 'confirmed' }),
+          teamCalendarAPI.getAllConfigs(),
+        ]);
+        if (cancelled) return;
+        setBookings(bRes.data.bookings || []);
+        setConfigs(cRes.data.configs || []);
+      } catch (err) {
+        console.error('[Calendar] team calls load failed:', err?.response?.data?.message || err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (loading) {
+    return <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim }}>Loading team calls…</div>;
+  }
+
+  const week = weekDates(0);
+  const weekKeys = week.map(dateKey);
+  const totalMin = bookings.reduce((a, b) => a + b.duration, 0);
+  const byDay = weekKeys.map((k) => bookings.filter((b) => b.dateKey === k));
+  const busiestIdx = byDay.reduce((best, arr, i) => arr.length > byDay[best].length ? i : best, 0);
+  const byHost = {};
+  bookings.forEach((b) => { const id = b.hostId; byHost[id] = (byHost[id] || 0) + 1; });
+  const topHostId = Object.keys(byHost).sort((a, b) => byHost[b] - byHost[a])[0];
+  const topHost = configs.find((c) => String(c.employeeId) === String(topHostId));
+  const upcoming = [...bookings].sort((a, b) => (a.dateKey + a.start).localeCompare(b.dateKey + b.start));
+
+  const stats = [
+    { label: 'Calls this week', value: bookings.length },
+    { label: 'Total call hours', value: `${(totalMin / 60).toFixed(1)}h` },
+    { label: 'Busiest day', value: bookings.length ? WEEKDAY_LABELS[busiestIdx] : '—' },
+    { label: 'Most calls', value: topHost ? topHost.employee.name.split(' ')[0] : '—' },
+  ];
+
+  return (
+    <div>
+      <PageHeader kicker="READ-ONLY · TRANSPARENCY NOT SURVEILLANCE" title="Team" accentWord="calls" palette={palette} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, backgroundColor: palette.border, border: `1px solid ${palette.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 32 }}>
+        {stats.map((s) => (
+          <div key={s.label} style={{ padding: 20, backgroundColor: palette.surface }}>
+            <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim, fontWeight: 500, marginBottom: 10 }}>{s.label}</div>
+            <div style={{ fontFamily: serifFont, fontSize: 32, fontWeight: 300, color: palette.text, lineHeight: 1 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Call load, this week</h3>
+      <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden', marginBottom: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '180px repeat(7, 1fr)', padding: '12px 20px', borderBottom: `1px solid ${palette.border}`, backgroundColor: palette.surfaceAlt }}>
+          <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}>EMPLOYEE</div>
+          {week.map((d, i) => (
+            <div key={i} style={{ textAlign: 'center', fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.04em', fontWeight: 500 }}>
+              {WEEKDAY_LABELS[i].toUpperCase()} {d.getDate()}
+            </div>
+          ))}
+        </div>
+        {configs.length === 0 ? (
+          <div style={{ padding: 20, textAlign: 'center', fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
+            No team members have set up their calendars yet.
+          </div>
+        ) : configs.map((c, ri) => (
+          <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '180px repeat(7, 1fr)', padding: '14px 20px', alignItems: 'center', borderBottom: ri < configs.length - 1 ? `1px solid ${palette.border}` : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar initials={c.employee.avatar} size={28} palette={palette} />
+              <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{c.employee.name}</span>
+            </div>
+            {weekKeys.map((k, ci) => {
+              const dayCalls = bookings.filter((b) => String(b.hostId) === String(c.employeeId) && b.dateKey === k);
+              const mins = dayCalls.reduce((a, b) => a + b.duration, 0);
+              return (
+                <div key={ci} style={{ textAlign: 'center' }}>
+                  {dayCalls.length ? (
+                    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: palette.accentBg, padding: '5px 8px', minWidth: 44 }}>
+                      <span style={{ fontFamily: baseFont, fontSize: 12, fontWeight: 500, color: palette.accent }}>{dayCalls.length}</span>
+                      <span style={{ fontFamily: monoFont, fontSize: 9, color: palette.accent }}>{mins}m</span>
+                    </div>
+                  ) : (
+                    <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>·</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Upcoming team calls</h3>
+      <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden' }}>
+        {upcoming.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
+            No calls booked this week.
+          </div>
+        ) : upcoming.map((b, i) => {
+          const dObj = new Date(`${b.dateKey}T00:00:00`);
+          const hostName = b.host?.name || 'Someone';
+          return (
+            <div key={b._id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', borderBottom: i < upcoming.length - 1 ? `1px solid ${palette.border}` : 'none' }}>
+              <Avatar initials={b.host?.avatar || '?'} size={30} palette={palette} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>
+                  {hostName} <span style={{ color: palette.textMute, fontWeight: 400 }}>· with {b.clientName}</span>
+                </div>
+                <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim, marginTop: 2 }}>
+                  {b.eventTypeName} · {b.duration}m
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: monoFont, fontSize: 12.5, color: palette.text }}>{fmt12(b.start)}</div>
+                <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>
+                  {WEEKDAY_LABELS[(dObj.getDay() + 6) % 7]} {dObj.getDate()} {MONTH_LABELS[dObj.getMonth()]}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Re-export helpers used by modal components
+export { dateKey, fmt12, addMinStr, toMin, fromMin, TIME_OPTIONS, locationIcon, WEEKDAY_FULL, MONTH_LABELS };

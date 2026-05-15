@@ -36,6 +36,8 @@ const GotiVideosStandalone = lazy(() => import('./gotivideos/pages/GotiVideosSta
 // Team Dashboard - internal employee management
 const TeamLogin = lazy(() => import('./team/pages/TeamLogin'));
 const TeamDashboard = lazy(() => import('./team/pages/TeamDashboard'));
+const TeamReportPrint = lazy(() => import('./team/pages/TeamReportPrint'));
+const PublicBookingPage = lazy(() => import('./team/pages/PublicBookingPage'));
 import { TeamAuthProvider } from './team/TeamAuthContext';
 import TeamProtectedRoute from './team/TeamProtectedRoute';
 
@@ -461,6 +463,26 @@ function App() {
                   <TeamProtectedRoute>
                     <TeamDashboard />
                   </TeamProtectedRoute>
+                </Suspense>
+              }
+            />
+            <Route
+              path="/team/print/report"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <TeamProtectedRoute>
+                    <TeamReportPrint />
+                  </TeamProtectedRoute>
+                </Suspense>
+              }
+            />
+
+            {/* Public booking page — customer-facing, no auth */}
+            <Route
+              path="/meet/:slug"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PublicBookingPage />
                 </Suspense>
               }
             />

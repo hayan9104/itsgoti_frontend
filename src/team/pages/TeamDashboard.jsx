@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   CheckSquare,
   CalendarDays,
+  CalendarClock,
   BarChart3,
   Users2,
   History as HistoryIcon,
@@ -30,6 +31,7 @@ import TaskDetailView from '../views/TaskDetailView';
 import TeamSettingsView from '../views/TeamSettingsView';
 import LeaveDetailView from '../views/LeaveDetailView';
 import LeaveCategoryDetailView from '../views/LeaveCategoryDetailView';
+import CalendarView from '../views/CalendarView';
 
 function SidebarItem({ icon: Icon, label, id, active, onClick, palette, badge }) {
   return (
@@ -213,6 +215,14 @@ export default function TeamDashboard() {
               />
             )}
             <SidebarItem
+              icon={CalendarClock}
+              label="Calendar"
+              id="calendar"
+              active={view === 'calendar'}
+              onClick={() => switchView('calendar')}
+              palette={palette}
+            />
+            <SidebarItem
               icon={CalendarDays}
               label="Leaves"
               id="leaves"
@@ -377,6 +387,15 @@ export default function TeamDashboard() {
                 currentUserId={user.id}
                 setView={switchView}
                 goToDrilldown={goToDrilldown}
+              />
+            )}
+            {view === 'calendar' && (
+              <CalendarView
+                palette={palette}
+                isDark={isDark}
+                isAdmin={isAdmin}
+                currentUserId={user.id}
+                openTask={openTask}
               />
             )}
             {view === 'leaves' && (
