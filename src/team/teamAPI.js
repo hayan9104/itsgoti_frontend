@@ -83,6 +83,7 @@ export const teamLeavesAPI = {
   myBalance: () => teamAPI.get('/leaves/balance/me'),
   employeeBalance: (employeeId) => teamAPI.get(`/leaves/balance/${employeeId}`),
   allBalances: () => teamAPI.get('/leaves/balances/all'),
+  balanceDetail: (employeeId, year) => teamAPI.get(`/leaves/balance-detail/${employeeId}${year ? `?year=${year}` : ''}`),
   uploadFiles: (files) => {
     const fd = new FormData();
     for (const f of files) fd.append('files', f);

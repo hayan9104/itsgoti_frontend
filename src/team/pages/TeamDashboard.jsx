@@ -29,6 +29,7 @@ import HistoryView from '../views/HistoryView';
 import TaskDetailView from '../views/TaskDetailView';
 import TeamSettingsView from '../views/TeamSettingsView';
 import LeaveDetailView from '../views/LeaveDetailView';
+import LeaveCategoryDetailView from '../views/LeaveCategoryDetailView';
 
 function SidebarItem({ icon: Icon, label, id, active, onClick, palette, badge }) {
   return (
@@ -75,6 +76,7 @@ export default function TeamDashboard() {
   const [drilldownEmployeeId, setDrilldownEmployeeId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [selectedLeaveId, setSelectedLeaveId] = useState(null);
+  const [leaveCategoryCtx, setLeaveCategoryCtx] = useState(null); // { employeeId, category }
   const [highlightTaskId, setHighlightTaskId] = useState(null);
   const [highlightLeaveId, setHighlightLeaveId] = useState(null);
   const [previousView, setPreviousView] = useState(null);
@@ -104,6 +106,7 @@ export default function TeamDashboard() {
     setDrilldownEmployeeId(null);
     setSelectedTaskId(null);
     setSelectedLeaveId(null);
+    setLeaveCategoryCtx(null);
     setPreviousView(null);
   };
 
@@ -132,6 +135,17 @@ export default function TeamDashboard() {
   };
   const closeLeave = () => {
     setSelectedLeaveId(null);
+    setView(previousView || 'leaves');
+    setPreviousView(null);
+  };
+
+  const openLeaveCategory = (employeeId, category) => {
+    setPreviousView(view);
+    setLeaveCategoryCtx({ employeeId, category });
+    setView('leave-category-detail');
+  };
+  const closeLeaveCategory = () => {
+    setLeaveCategoryCtx(null);
     setView(previousView || 'leaves');
     setPreviousView(null);
   };
@@ -370,13 +384,25 @@ export default function TeamDashboard() {
                 palette={palette}
                 isDark={isDark}
                 isAdmin={isAdmin}
+                currentUserId={user.id}
                 highlightLeaveId={highlightLeaveId}
                 clearHighlight={() => setHighlightLeaveId(null)}
                 openLeave={openLeave}
+                openLeaveCategory={openLeaveCategory}
               />
             )}
             {view === 'leave-detail' && selectedLeaveId && (
               <LeaveDetailView palette={palette} isDark={isDark} leaveId={selectedLeaveId} onBack={closeLeave} />
+            )}
+            {view === 'leave-category-detail' && leaveCategoryCtx && (
+              <LeaveCategoryDetailView
+                palette={palette}
+                isDark={isDark}
+                employeeId={leaveCategoryCtx.employeeId}
+                category={leaveCategoryCtx.category}
+                onBack={closeLeaveCategory}
+                openLeave={openLeave}
+              />
             )}
             {view === 'reports' && isAdmin && (
               <ReportsView

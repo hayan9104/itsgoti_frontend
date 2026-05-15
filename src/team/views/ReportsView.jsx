@@ -7,6 +7,7 @@ import PeriodPicker from '../components/PeriodPicker';
 import TimelineLog from '../components/TimelineLog';
 import TaskTooltip from '../components/TaskTooltip';
 import StatusFilterDropdown from '../components/StatusFilterDropdown';
+import HoursByDayChart from '../components/HoursByDayChart';
 
 function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
   const [period, setPeriod] = useState('month');
@@ -112,6 +113,11 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
         <StatTile palette={palette} label="Total break" value={`${data.summary.totalBreakHours ?? 0}h`} />
         <StatTile palette={palette} label="Avg / day" value={`${data.summary.avgHoursPerDay}h`} />
       </div>
+
+      {/* Per-employee Hours by day chart — same component as the admin overview */}
+      {(data.series || []).length > 0 && (
+        <HoursByDayChart palette={palette} series={data.series} accent={palette.accent} title={`Hours by day · ${data.employee.name}`} />
+      )}
 
       {/* Day timeline — only when viewing a single day */}
       {(period === 'today' || period === 'day') && data.days.length > 0 && (
@@ -338,8 +344,6 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
     );
   }
 
-  const maxH = Math.max(8, ...data.series.map((s) => s.hours));
-
   return (
     <div>
       <PageHeader
@@ -384,42 +388,7 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
         <StatTile palette={palette} label="Tasks completed" value={data.summary.completedTasks} sub={data.summary.estAccuracy != null ? `${Math.round(data.summary.estAccuracy)}% of estimate` : ''} />
       </div>
 
-      <Card palette={palette} padding={24} style={{ marginBottom: 28 }}>
-        <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, margin: 0, marginBottom: 20 }}>
-          Hours by day
-        </h3>
-        {data.series.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>No sessions yet.</div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 18, height: 200 }}>
-            {data.series.map((d) => (
-              <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>{d.hours}h</div>
-                <div
-                  style={{
-                    width: '100%',
-                    position: 'relative',
-                    height: `${(d.hours / maxH) * 160}px`,
-                    backgroundColor: palette.accent,
-                    borderRadius: '4px 4px 0 0',
-                    minHeight: 2,
-                  }}
-                >
-                </div>
-                <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim }}>
-                  {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short' })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18, paddingTop: 16, marginTop: 16, borderTop: `1px solid ${palette.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: palette.accent }} />
-            <span style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim }}>Active hours</span>
-          </div>
-        </div>
-      </Card>
+      <HoursByDayChart palette={palette} series={data.series} accent={palette.accent} />
 
       <Card palette={palette} padding={24}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
