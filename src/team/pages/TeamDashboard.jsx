@@ -6,12 +6,12 @@ import {
   CalendarDays,
   CalendarClock,
   BarChart3,
+  MonitorPlay,
   Users2,
   History as HistoryIcon,
   Sun,
   Moon,
   LogOut,
-  Search,
 } from 'lucide-react';
 import { useTeamAuth } from '../TeamAuthContext';
 import { warmTeamCache } from '../teamCache';
@@ -24,6 +24,9 @@ import {
   teamCalendarAPI,
   teamReportsAPI,
 } from '../teamAPI';
+import { teamRecordingsAPI } from '../teamRecordingAPI';
+import { RecorderProvider } from '../recording/RecorderContext';
+import RecordingOverlays from '../recording/RecordingOverlays';
 import { getPalette, baseFont, serifFont, monoFont, ensureFontsLoaded } from '../theme';
 import { Avatar } from '../components/Primitives';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -36,6 +39,8 @@ import TasksView from '../views/TasksView';
 import TeamView from '../views/TeamView';
 import LeavesView from '../views/LeavesView';
 import ReportsView from '../views/ReportsView';
+import RecordingsView from '../views/RecordingsView';
+import RecordingWatchView from '../views/RecordingWatchView';
 import HistoryView from '../views/HistoryView';
 import TaskDetailView from '../views/TaskDetailView';
 import TeamSettingsView from '../views/TeamSettingsView';
@@ -87,6 +92,7 @@ export default function TeamDashboard() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('team_theme') === 'dark');
   const [drilldownEmployeeId, setDrilldownEmployeeId] = useState(null);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [watchingRecordingId, setWatchingRecordingId] = useState(null);
   const [selectedLeaveId, setSelectedLeaveId] = useState(null);
   const [leaveCategoryCtx, setLeaveCategoryCtx] = useState(null); // { employeeId, category }
   const [highlightTaskId, setHighlightTaskId] = useState(null);
@@ -122,6 +128,7 @@ export default function TeamDashboard() {
         settings: teamSettingsAPI,
         calendar: teamCalendarAPI,
         reports: teamReportsAPI,
+        recordings: teamRecordingsAPI,
       },
       { isAdmin },
     );
@@ -137,7 +144,19 @@ export default function TeamDashboard() {
     setDrilldownEmployeeId(null);
     setSelectedTaskId(null);
     setSelectedLeaveId(null);
+    setWatchingRecordingId(null);
     setLeaveCategoryCtx(null);
+    setPreviousView(null);
+  };
+
+  const openRecording = (recordingId) => {
+    setPreviousView(view);
+    setWatchingRecordingId(recordingId);
+    setView('recording-watch');
+  };
+  const closeRecording = () => {
+    setWatchingRecordingId(null);
+    setView(previousView || 'recordings');
     setPreviousView(null);
   };
 
@@ -184,6 +203,7 @@ export default function TeamDashboard() {
   if (!user) return null;
 
   return (
+    <RecorderProvider>
     <div style={{ minHeight: '100vh', backgroundColor: palette.bg, color: palette.text, fontFamily: baseFont, WebkitFontSmoothing: 'antialiased' }}>
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         {/* Sidebar */}
@@ -256,6 +276,14 @@ export default function TeamDashboard() {
               id="calendar"
               active={view === 'calendar'}
               onClick={() => switchView('calendar')}
+              palette={palette}
+            />
+            <SidebarItem
+              icon={MonitorPlay}
+              label="Recordings"
+              id="recordings"
+              active={view === 'recordings' || view === 'recording-watch'}
+              onClick={() => switchView('recordings')}
               palette={palette}
             />
             <SidebarItem
@@ -364,23 +392,6 @@ export default function TeamDashboard() {
               backgroundColor: palette.surface,
             }}
           >
-            <div style={{ position: 'relative' }}>
-              <Search size={14} style={{ position: 'absolute', left: 12, top: 11, color: palette.textMute }} />
-              <input
-                placeholder={isAdmin ? 'Search team, tasks…' : 'Search your tasks…'}
-                style={{
-                  padding: '8px 12px 8px 34px',
-                  borderRadius: 8,
-                  backgroundColor: palette.surfaceAlt,
-                  border: `1px solid ${palette.border}`,
-                  color: palette.text,
-                  fontFamily: baseFont,
-                  fontSize: 12.5,
-                  width: 240,
-                  outline: 'none',
-                }}
-              />
-            </div>
             {!isAdmin && <JoinEndButton palette={palette} />}
             <NotificationsBell
               palette={palette}
@@ -414,7 +425,7 @@ export default function TeamDashboard() {
               />
             )}
             {view === 'task-detail' && selectedTaskId && (
-              <TaskDetailView palette={palette} isDark={isDark} taskId={selectedTaskId} onBack={closeTask} />
+              <TaskDetailView palette={palette} isDark={isDark} taskId={selectedTaskId} onBack={closeTask} openRecording={openRecording} />
             )}
             {view === 'team' && isAdmin && (
               <TeamView
@@ -468,6 +479,25 @@ export default function TeamDashboard() {
                 openTask={openTask}
               />
             )}
+            {view === 'recordings' && (
+              <RecordingsView
+                palette={palette}
+                isDark={isDark}
+                isAdmin={isAdmin}
+                currentUserId={user.id}
+                onOpenRec={openRecording}
+              />
+            )}
+            {view === 'recording-watch' && watchingRecordingId && (
+              <RecordingWatchView
+                palette={palette}
+                isDark={isDark}
+                isAdmin={isAdmin}
+                currentUserId={user.id}
+                recordingId={watchingRecordingId}
+                onBack={closeRecording}
+              />
+            )}
             {view === 'history' && !isAdmin && <HistoryView palette={palette} isDark={isDark} currentUserId={user.id} />}
             {view === 'settings' && <TeamSettingsView palette={palette} isDark={isDark} />}
           </div>
@@ -482,6 +512,8 @@ export default function TeamDashboard() {
           await refresh();
         }}
       />
+      <RecordingOverlays />
     </div>
+    </RecorderProvider>
   );
 }

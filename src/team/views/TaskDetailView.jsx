@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, Paperclip, FileText, ExternalLink, Timer, Calendar, User } from 'lucide-react';
+import { ChevronLeft, Paperclip, FileText, ExternalLink, Timer, Calendar, User, MonitorPlay, Play } from 'lucide-react';
 import { teamTasksAPI } from '../teamAPI';
+import { teamRecordingsAPI } from '../teamRecordingAPI';
+import { getCached, setCached } from '../teamCache';
 import { baseFont, serifFont, monoFont, priorityMeta, taskStatusMeta, fmtMinutes, fmtClock } from '../theme';
 import { Avatar, Card } from '../components/Primitives';
+import { recFmtDur, recRelTime, recThumbStyle, thumbSeedFor } from '../recording/recHelpers';
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -21,11 +24,25 @@ function fmtBytes(n) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export default function TaskDetailView({ palette, isDark, taskId, onBack }) {
+export default function TaskDetailView({ palette, isDark, taskId, onBack, openRecording }) {
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [, setTick] = useState(0); // forces live timer
+
+  // Recordings linked to this task — seeded from cache so the section paints instantly.
+  const recCacheKey = `recordings:byTask:${taskId}`;
+  const [recordings, setRecordings] = useState(() => getCached(recCacheKey)?.recordings || []);
+
+  useEffect(() => {
+    let cancelled = false;
+    teamRecordingsAPI.listByTask(taskId).then(({ data }) => {
+      if (cancelled || !data?.success) return;
+      setRecordings(data.recordings || []);
+      setCached(recCacheKey, data);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [taskId, recCacheKey]);
 
   const fetchTask = async () => {
     setLoading(true);
@@ -265,6 +282,60 @@ export default function TaskDetailView({ palette, isDark, taskId, onBack }) {
                     </div>
                   </div>
                 </a>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Recordings linked to this task */}
+      {recordings.length > 0 && (
+        <Card palette={palette} padding={20} style={{ marginTop: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <MonitorPlay size={14} color={palette.textDim} />
+              <span style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em' }}>
+                RECORDINGS · {recordings.length}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            {recordings.map((rec) => {
+              const seed = thumbSeedFor(rec.shareId || rec.id);
+              return (
+                <button
+                  key={rec.id}
+                  type="button"
+                  onClick={() => openRecording?.(rec.id)}
+                  style={{
+                    textAlign: 'left', cursor: 'pointer', padding: 0,
+                    border: `1px solid ${palette.border}`, borderRadius: 10,
+                    backgroundColor: palette.surface, overflow: 'hidden',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = palette.accent)}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = palette.border)}
+                >
+                  <div style={{
+                    height: 96, position: 'relative',
+                    background: recThumbStyle(seed),
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+                      <Play size={13} color="#fff" style={{ marginLeft: 2 }} fill="#fff" />
+                    </div>
+                    <span style={{ position: 'absolute', bottom: 6, right: 6, fontFamily: monoFont, fontSize: 10, color: '#fff', backgroundColor: 'rgba(0,0,0,0.55)', padding: '1px 5px', borderRadius: 4 }}>
+                      {recFmtDur(rec.durationSec)}
+                    </span>
+                  </div>
+                  <div style={{ padding: '10px 12px' }}>
+                    <div style={{ fontFamily: baseFont, fontSize: 13, fontWeight: 500, color: palette.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {rec.title}
+                    </div>
+                    <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 2 }}>
+                      {rec.ownerName} · {recRelTime(rec.createdAt)}
+                    </div>
+                  </div>
+                </button>
               );
             })}
           </div>

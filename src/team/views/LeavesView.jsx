@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Check, X as XIcon, Heart, Wallet, Coins, Minus, Pencil, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Check, X as XIcon, Heart, Wallet, Coins, Minus, Pencil, Paperclip, FileText, Image as ImageIcon, Users2, ChevronDown } from 'lucide-react';
 import { teamLeavesAPI, teamSettingsAPI, teamSessionsAPI } from '../teamAPI';
 import { getCached, setCached, invalidate } from '../teamCache';
 import { baseFont, serifFont, monoFont } from '../theme';
@@ -207,6 +207,40 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
   const [myBalance, setMyBalance] = useState(cachedMyBalance?.balance || null);
   const [allBalances, setAllBalances] = useState(cachedAllBalances?.balances || []);
   const [settings, setSettings] = useState(cachedAllBalances?.settings || null); // company-wide allowance
+
+  // Admin filter bar: search by name/email + multi-select employee filter.
+  const [search, setSearch] = useState('');
+  const [empFilter, setEmpFilter] = useState([]); // selected employeeIds; empty = all
+  const [empMenuOpen, setEmpMenuOpen] = useState(false);
+  const empMenuRef = useRef(null);
+  useEffect(() => {
+    if (!empMenuOpen) return;
+    const onClick = (e) => { if (empMenuRef.current && !empMenuRef.current.contains(e.target)) setEmpMenuOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setEmpMenuOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [empMenuOpen]);
+
+  const filteredBalances = useMemo(() => {
+    let list = allBalances;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((row) =>
+        (row.employee?.name || '').toLowerCase().includes(q) ||
+        (row.employee?.email || '').toLowerCase().includes(q)
+      );
+    }
+    if (empFilter.length > 0) {
+      const allow = new Set(empFilter.map(String));
+      list = list.filter((row) => allow.has(String(row.employee?.id)));
+    }
+    return list;
+  }, [allBalances, search, empFilter]);
+  const toggleEmp = (id) => setEmpFilter((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
   const [editAllowance, setEditAllowance] = useState(false);
   const [draftAllowance, setDraftAllowance] = useState({ sick: 12, paid: 12 });
   const [savingAllowance, setSavingAllowance] = useState(false);
@@ -689,6 +723,112 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
         </Card>
       )}
 
+      {/* Admin: filter bar — name/email search + employee multi-select */}
+      {isAdmin && allBalances.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div ref={empMenuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setEmpMenuOpen((o) => !o)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+                color: palette.text, fontFamily: baseFont, fontSize: 12.5,
+              }}
+            >
+              <Users2 size={13} strokeWidth={1.75} color={palette.textDim} />
+              {empFilter.length === 0
+                ? 'All employees'
+                : empFilter.length === 1
+                  ? allBalances.find((r) => String(r.employee?.id) === String(empFilter[0]))?.employee?.name || '1 employee'
+                  : `${empFilter.length} employees`}
+              <ChevronDown size={12} color={palette.textMute} />
+            </button>
+            {empMenuOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, marginTop: 6, minWidth: 240, maxHeight: 280, overflowY: 'auto', zIndex: 30,
+                backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+                borderRadius: 10, padding: '6px 0', boxShadow: '0 8px 26px rgba(0,0,0,0.16)',
+              }}>
+                {allBalances.map((row) => {
+                  const id = String(row.employee?.id);
+                  const on = empFilter.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleEmp(id)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 14px', border: 'none', cursor: 'pointer',
+                        backgroundColor: 'transparent', textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <span style={{
+                        width: 14, height: 14, borderRadius: 3,
+                        border: `1.5px solid ${on ? palette.accent : palette.border}`,
+                        backgroundColor: on ? palette.accent : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        {on && <Check size={10} color={palette.accentText} />}
+                      </span>
+                      <Avatar initials={row.employee?.avatar} size={20} palette={palette} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.text, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {row.employee?.name}
+                        </div>
+                        <div style={{ fontFamily: baseFont, fontSize: 10.5, color: palette.textMute }}>{row.employee?.jobTitle}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {empFilter.length > 0 && (
+                  <>
+                    <div style={{ height: 1, backgroundColor: palette.border, margin: '4px 0' }} />
+                    <button
+                      type="button"
+                      onClick={() => setEmpFilter([])}
+                      style={{
+                        width: '100%', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer',
+                        textAlign: 'left', fontFamily: baseFont, fontSize: 12, color: palette.textDim,
+                      }}
+                    >Clear all</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ position: 'relative', marginLeft: 'auto' }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              style={{
+                padding: '7px 32px 7px 12px', borderRadius: 8, outline: 'none',
+                backgroundColor: palette.surfaceAlt, color: palette.text,
+                fontFamily: baseFont, fontSize: 12.5, border: `1px solid ${palette.border}`,
+                width: 260,
+              }}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 2,
+                }}
+                title="Clear"
+              ><XIcon size={12} /></button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Admin: per-employee usage (admins not listed) */}
       {isAdmin && allBalances.length > 0 && (
         <Card palette={palette} padding={0} style={{ marginBottom: 28 }}>
@@ -718,7 +858,12 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
               </div>
             ))}
           </div>
-          {allBalances.map((row, i) => {
+          {filteredBalances.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
+              No employees match your filters.
+            </div>
+          ) : null}
+          {filteredBalances.map((row, i) => {
             const sick = row.balance.sick;
             const paid = row.balance.paid;
             const unpaid = row.balance.unpaid || { used: 0 };

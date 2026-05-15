@@ -32,6 +32,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
   const [statusFilter, setStatusFilter] = useState([]); // empty = all
   const [memberFilter, setMemberFilter] = useState([]); // empty = all
   const [dateFilter, setDateFilter] = useState({}); // { [field]: { from, to } }
+  const [nameSearch, setNameSearch] = useState('');
 
   const DATE_OPTIONS = [
     { id: 'createdAt', label: 'Assigned date' },
@@ -58,18 +59,24 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
         if (!val || val > toMs) return false;
       }
     }
+    if (nameSearch.trim()) {
+      const q = nameSearch.trim().toLowerCase();
+      if (!(t.title || '').toLowerCase().includes(q)) return false;
+    }
     return true;
   };
 
   const filtersActive =
     statusFilter.length > 0 ||
     (isAdmin && memberFilter.length > 0) ||
-    Object.keys(dateFilter).length > 0;
+    Object.keys(dateFilter).length > 0 ||
+    nameSearch.trim().length > 0;
 
   const clearAllFilters = () => {
     setStatusFilter([]);
     setMemberFilter([]);
     setDateFilter({});
+    setNameSearch('');
   };
 
   const statusCounts = tasks.reduce((acc, t) => {
@@ -406,6 +413,42 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
             value={dateFilter}
             onChange={setDateFilter}
           />
+          {/* Title search — filters the task lists by name. */}
+          <div style={{ position: 'relative', marginLeft: 'auto' }}>
+            <XIcon
+              size={0}
+              style={{ display: 'none' }}
+            />
+            <input
+              value={nameSearch}
+              onChange={(e) => setNameSearch(e.target.value)}
+              placeholder="Search task by name…"
+              style={{
+                padding: '7px 32px 7px 12px',
+                borderRadius: 8,
+                outline: 'none',
+                backgroundColor: palette.surfaceAlt,
+                color: palette.text,
+                fontFamily: baseFont,
+                fontSize: 12.5,
+                border: `1px solid ${palette.border}`,
+                width: 220,
+              }}
+            />
+            {nameSearch && (
+              <button
+                type="button"
+                onClick={() => setNameSearch('')}
+                style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 2,
+                }}
+                title="Clear"
+              >
+                <XIcon size={12} />
+              </button>
+            )}
+          </div>
           {filtersActive && (
             <button
               type="button"

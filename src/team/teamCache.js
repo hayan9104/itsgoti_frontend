@@ -108,6 +108,12 @@ export function warmTeamCache(apis, { isAdmin = false } = {}) {
     prefetch('calendar:blocks', () => apis.calendar.listBlocks());
     prefetch('reports:me:weekly', () => apis.reports.myWeekly());
 
+    // Recordings — prefetch own + shared lists so the library tab opens instantly.
+    if (apis.recordings) {
+      prefetch('recordings:mine', () => apis.recordings.list('mine'));
+      prefetch('recordings:shared', () => apis.recordings.list('shared'));
+    }
+
     if (isAdmin) {
       prefetch('employees:list', () => apis.employees.list());
       // Reports view builds its key as `reports:overview:${period}:${date || ''}` — keep these in sync.
@@ -119,6 +125,7 @@ export function warmTeamCache(apis, { isAdmin = false } = {}) {
       prefetch('leaves:balances:all', () => apis.leaves.allBalances());
       prefetch('calendar:config:all', () => apis.calendar.getAllConfigs());
       prefetch('calendar:hosts', () => apis.calendar.internalHosts());
+      if (apis.recordings) prefetch('recordings:team', () => apis.recordings.list('team'));
     }
   });
 }

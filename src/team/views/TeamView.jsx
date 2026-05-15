@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Shield, Copy, Check, KeyRound, Trash2, History as HistoryIcon, Settings2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Plus, Shield, Copy, Check, KeyRound, Trash2, History as HistoryIcon, Settings2, ChevronDown, X as XIcon } from 'lucide-react';
 import { teamEmployeesAPI, teamSessionsAPI } from '../teamAPI';
 import { getCached, setCached, invalidate } from '../teamCache';
 import { baseFont, serifFont, monoFont } from '../theme';
@@ -40,6 +40,50 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
   const [resetPwdConfirm, setResetPwdConfirm] = useState('');
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const [resetError, setResetError] = useState('');
+
+  // Search + role filter
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState([]); // selected jobTitles; empty = all
+  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const roleMenuRef = useRef(null);
+  useEffect(() => {
+    if (!roleMenuOpen) return;
+    const onClick = (e) => { if (roleMenuRef.current && !roleMenuRef.current.contains(e.target)) setRoleMenuOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setRoleMenuOpen(false); };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [roleMenuOpen]);
+
+  const uniqueRoles = useMemo(() => {
+    const set = new Set();
+    employees.forEach((e) => { if (e.jobTitle) set.add(e.jobTitle); });
+    return Array.from(set).sort();
+  }, [employees]);
+  const roleCounts = useMemo(() => employees.reduce((a, e) => {
+    if (e.jobTitle) a[e.jobTitle] = (a[e.jobTitle] || 0) + 1;
+    return a;
+  }, {}), [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    let list = employees;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((e) =>
+        (e.name || '').toLowerCase().includes(q) ||
+        (e.email || '').toLowerCase().includes(q)
+      );
+    }
+    if (roleFilter.length > 0) {
+      const allow = new Set(roleFilter);
+      list = list.filter((e) => allow.has(e.jobTitle));
+    }
+    return list;
+  }, [employees, search, roleFilter]);
+  const toggleRole = (r) => setRoleFilter((cur) => cur.includes(r) ? cur.filter((x) => x !== r) : [...cur, r]);
 
   const refresh = async () => {
     const [eRes, sRes] = await Promise.all([teamEmployeesAPI.list(), teamSessionsAPI.todayAll()]);
@@ -195,6 +239,107 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
         }
       />
 
+      {/* Filter bar — role multi-select + name/email search */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div ref={roleMenuRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setRoleMenuOpen((o) => !o)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+              color: palette.text, fontFamily: baseFont, fontSize: 12.5,
+            }}
+          >
+            <Shield size={13} strokeWidth={1.75} color={palette.textDim} />
+            {roleFilter.length === 0
+              ? 'All roles'
+              : roleFilter.length === 1
+                ? roleFilter[0]
+                : `${roleFilter.length} roles`}
+            <ChevronDown size={12} color={palette.textMute} />
+          </button>
+          {roleMenuOpen && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, marginTop: 6, minWidth: 220, zIndex: 30,
+              backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+              borderRadius: 10, padding: '6px 0', boxShadow: '0 8px 26px rgba(0,0,0,0.16)',
+            }}>
+              {uniqueRoles.length === 0 && (
+                <div style={{ padding: '10px 14px', fontFamily: baseFont, fontSize: 12, color: palette.textMute }}>No roles yet</div>
+              )}
+              {uniqueRoles.map((r) => {
+                const on = roleFilter.includes(r);
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => toggleRole(r)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '8px 14px', border: 'none', cursor: 'pointer',
+                      backgroundColor: 'transparent', textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <span style={{
+                      width: 14, height: 14, borderRadius: 3,
+                      border: `1.5px solid ${on ? palette.accent : palette.border}`,
+                      backgroundColor: on ? palette.accent : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
+                      {on && <Check size={10} color={palette.accentText} />}
+                    </span>
+                    <span style={{ flex: 1, fontFamily: baseFont, fontSize: 13, color: palette.text }}>{r}</span>
+                    <span style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute }}>{roleCounts[r] || 0}</span>
+                  </button>
+                );
+              })}
+              {roleFilter.length > 0 && (
+                <>
+                  <div style={{ height: 1, backgroundColor: palette.border, margin: '4px 0' }} />
+                  <button
+                    type="button"
+                    onClick={() => setRoleFilter([])}
+                    style={{
+                      width: '100%', padding: '8px 14px', border: 'none', background: 'none', cursor: 'pointer',
+                      textAlign: 'left', fontFamily: baseFont, fontSize: 12, color: palette.textDim,
+                    }}
+                  >Clear all</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or email…"
+            style={{
+              padding: '7px 32px 7px 12px', borderRadius: 8, outline: 'none',
+              backgroundColor: palette.surfaceAlt, color: palette.text,
+              fontFamily: baseFont, fontSize: 12.5, border: `1px solid ${palette.border}`,
+              width: 260,
+            }}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 2,
+              }}
+              title="Clear"
+            ><XIcon size={12} /></button>
+          )}
+        </div>
+      </div>
+
       <Card palette={palette} padding={0}>
         <div
           style={{
@@ -229,8 +374,12 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
           <div style={{ padding: 32, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
             No employees yet. Add the first one with the button above.
           </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
+            No employees match your filters.
+          </div>
         ) : (
-          employees.map((emp, i) => (
+          filteredEmployees.map((emp, i) => (
             <div
               key={emp._id}
               onClick={() => goToDrilldown(emp._id)}

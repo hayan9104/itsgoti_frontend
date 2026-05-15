@@ -38,6 +38,7 @@ const TeamLogin = lazy(() => import('./team/pages/TeamLogin'));
 const TeamDashboard = lazy(() => import('./team/pages/TeamDashboard'));
 const TeamReportPrint = lazy(() => import('./team/pages/TeamReportPrint'));
 const PublicBookingPage = lazy(() => import('./team/pages/PublicBookingPage'));
+const PublicRecordingPage = lazy(() => import('./team/pages/PublicRecordingPage'));
 import { TeamAuthProvider } from './team/TeamAuthContext';
 import TeamProtectedRoute from './team/TeamProtectedRoute';
 
@@ -483,6 +484,16 @@ function App() {
               element={
                 <Suspense fallback={<PageLoader />}>
                   <PublicBookingPage />
+                </Suspense>
+              }
+            />
+
+            {/* Public recording share page — anyone with link, no auth */}
+            <Route
+              path="/v/:shareId"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PublicRecordingPage />
                 </Suspense>
               }
             />
