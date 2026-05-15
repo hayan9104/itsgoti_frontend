@@ -23,27 +23,36 @@ const todayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+const emptyForm = () => ({ title: '', date: todayKey(), endDate: '', start: '12:00', end: '13:00', repeat: 'NONE' });
+
 export default function BlockModal({ open, onClose, palette, onCreated }) {
-  const [form, setForm] = useState({ title: '', date: todayKey(), start: '12:00', end: '13:00', repeat: 'NONE' });
+  const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   if (!open) return null;
 
+  const isRecurring = form.repeat !== 'NONE';
+
   const close = () => {
-    setForm({ title: '', date: todayKey(), start: '12:00', end: '13:00', repeat: 'NONE' });
+    setForm(emptyForm());
     setError(null);
     onClose();
   };
 
   const submit = async () => {
     if (!form.title.trim() || !form.date) return;
+    if (isRecurring && form.endDate && form.endDate < form.date) {
+      setError('End date must be on or after the start date.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const res = await teamCalendarAPI.createBlock({
         title: form.title.trim(),
         dateKey: form.date,
+        endDate: isRecurring && form.endDate ? form.endDate : null,
         start: form.start,
         end: form.end,
         repeat: form.repeat,
@@ -104,7 +113,7 @@ export default function BlockModal({ open, onClose, palette, onCreated }) {
             />
           </div>
           <div>
-            <label style={labelStyle(palette)}>Date</label>
+            <label style={labelStyle(palette)}>{isRecurring ? 'Start date' : 'Date'}</label>
             <input
               type="date"
               value={form.date}
@@ -147,6 +156,27 @@ export default function BlockModal({ open, onClose, palette, onCreated }) {
               ))}
             </div>
           </div>
+          {isRecurring && (
+            <div>
+              <label style={labelStyle(palette)}>
+                End date <span style={{ color: palette.textMute, fontWeight: 400 }}>· optional</span>
+              </label>
+              <input
+                type="date"
+                value={form.endDate}
+                min={form.date || undefined}
+                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                style={inputStyle}
+              />
+              <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, marginTop: 6 }}>
+                {form.endDate
+                  ? form.repeat === 'WEEKDAYS'
+                    ? `Blocks every weekday from ${form.date} through ${form.endDate}.`
+                    : `Blocks every ${new Date(`${form.date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'long' })} from ${form.date} through ${form.endDate}.`
+                  : 'Leave empty to repeat forever.'}
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (

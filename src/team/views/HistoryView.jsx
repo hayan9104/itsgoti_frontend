@@ -1,43 +1,52 @@
-import { useEffect, useState } from 'react';
-import { Check, Clock, Coffee, Circle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
 import { teamReportsAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont, fmtMinutes } from '../theme';
 import { PageHeader, Card, StatTile } from '../components/Primitives';
-import PeriodPicker from '../components/PeriodPicker';
 
-function fmtTime(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
-}
+const PERIODS = [
+  { id: 'week', label: 'This week' },
+  { id: 'month', label: 'This month' },
+  { id: 'lastmonth', label: 'Last month' },
+];
 
-function intervalsLine(intervals = []) {
-  if (!intervals.length) return '';
-  return intervals
-    .map((i) => `${fmtTime(i.startedAt)}–${i.endedAt ? fmtTime(i.endedAt) : 'now'}`)
-    .join(' · ');
-}
-
-export default function HistoryView({ palette, isDark, currentUserId }) {
+export default function HistoryView({ palette, currentUserId }) {
   const [period, setPeriod] = useState('month');
-  const [date, setDate] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    teamReportsAPI.employee(currentUserId, period, date).then(({ data }) => {
+    teamReportsAPI.employee(currentUserId, period, null).then(({ data }) => {
       if (data?.success) setData(data);
       setLoading(false);
     });
-  }, [currentUserId, period, date]);
+  }, [currentUserId, period]);
 
-  const kicker = date
-    ? `YOUR ACTIVITY · ${new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}`
-    : `YOUR ACTIVITY · ${period.toUpperCase()}`;
+  const kicker = `YOUR ACTIVITY · ${
+    period === 'week' ? 'THIS WEEK' : period === 'month' ? 'THIS MONTH' : 'LAST MONTH'
+  }`;
 
-  // Column widths — keep proportions in one place.
-  // DATE | START | AFK | END | HOURS | DSM
-  const cols = '1.3fr 90px 1.6fr 90px 80px 120px';
+  const completedTasks = useMemo(
+    () => (data?.tasks || []).filter((t) => t.status === 'completed' && t.completedAt),
+    [data]
+  );
+
+  const tasksPerDay = useMemo(() => {
+    const map = {};
+    completedTasks.forEach((t) => {
+      const k = new Date(t.completedAt).toLocaleDateString('en-CA');
+      map[k] = (map[k] || 0) + 1;
+    });
+    return map;
+  }, [completedTasks]);
+
+  const lateStarts = useMemo(
+    () => (data?.days || []).filter((d) => d.dsm?.status === 'late').length,
+    [data]
+  );
+
+  const cols = '1.4fr 100px 1.6fr 90px 130px';
 
   const renderDsm = (dsm) => {
     if (!dsm) return <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute }}>—</span>;
@@ -60,15 +69,40 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
     <div>
       <PageHeader kicker={kicker} title="My" accentWord="history" palette={palette} />
 
-      <PeriodPicker
-        period={period}
-        date={date}
-        onChange={({ period: p, date: d }) => {
-          setPeriod(p);
-          setDate(d);
+      <div
+        style={{
+          display: 'inline-flex',
+          border: `1px solid ${palette.border}`,
+          backgroundColor: palette.surface,
+          padding: 3,
+          borderRadius: 8,
+          marginBottom: 32,
         }}
-        palette={palette}
-      />
+      >
+        {PERIODS.map((p) => {
+          const on = period === p.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setPeriod(p.id)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: 6,
+                backgroundColor: on ? palette.accentBg : 'transparent',
+                color: on ? palette.accent : palette.textDim,
+                fontFamily: baseFont,
+                fontSize: 12.5,
+                fontWeight: 500,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
 
       {loading || !data ? (
         <div style={{ padding: 40, textAlign: 'center', color: palette.textMute, fontFamily: baseFont }}>Loading…</div>
@@ -79,7 +113,7 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
               gap: 1,
-              marginBottom: 32,
+              marginBottom: 40,
               backgroundColor: palette.border,
               border: `1px solid ${palette.border}`,
               borderRadius: 12,
@@ -88,12 +122,14 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
           >
             <StatTile palette={palette} label="Total active" value={`${data.summary.totalActiveHours}h`} />
             <StatTile palette={palette} label="Tasks completed" value={data.summary.completedCount} />
-            <StatTile palette={palette} label="Total break" value={`${data.summary.totalBreakHours ?? 0}h`} />
+            <StatTile palette={palette} label="Late starts" value={lateStarts} />
             <StatTile palette={palette} label="Daily avg" value={`${data.summary.avgHoursPerDay}h`} />
           </div>
 
-          <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Daily breakdown</h3>
-          <Card palette={palette} padding={0} style={{ marginBottom: 28 }}>
+          <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>
+            Daily breakdown
+          </h3>
+          <Card palette={palette} padding={0} style={{ marginBottom: 40 }}>
             <div
               style={{
                 display: 'grid',
@@ -104,8 +140,11 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                 backgroundColor: palette.surfaceAlt,
               }}
             >
-              {['DATE', 'START', 'AFK', 'END', 'HOURS', `DSM${data.dsmTime ? ' · ' + data.dsmTime : ''}`].map((h) => (
-                <div key={h} style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}>
+              {['DATE', 'HOURS', 'AFK', 'TASKS', `DSM${data.dsmTime ? ' · ' + data.dsmTime : ''}`].map((h) => (
+                <div
+                  key={h}
+                  style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.08em', fontWeight: 500 }}
+                >
                   {h}
                 </div>
               ))}
@@ -115,40 +154,46 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
                 No sessions in this period yet.
               </div>
             ) : (
-              data.days.map((d, i) => (
-                <div
-                  key={d.date + i}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: cols,
-                    gap: 14,
-                    padding: '14px 20px',
-                    alignItems: 'center',
-                    borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>
-                      {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                    <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, marginTop: 2 }}>
-                      {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}
-                    </div>
-                  </div>
-                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtTime(d.startedAt)}</div>
-                  <div>
-                    <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{fmtMinutes(Math.round(d.afkSec / 60))}</div>
-                    {d.afkPeriods?.length ? (
-                      <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, marginTop: 3, lineHeight: 1.4 }}>
-                        {intervalsLine(d.afkPeriods)}
+              data.days.map((d, i) => {
+                const afkMin = Math.round((d.afkSec || 0) / 60);
+                const taskCount = tasksPerDay[d.date] || 0;
+                return (
+                  <div
+                    key={d.date + i}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: cols,
+                      gap: 14,
+                      padding: '14px 20px',
+                      alignItems: 'center',
+                      borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>
+                        {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </div>
-                    ) : null}
+                      <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, marginTop: 2 }}>
+                        {new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long' })}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>
+                      {(d.activeSec / 3600).toFixed(1)}h
+                    </div>
+                    <div style={{ fontFamily: monoFont, fontSize: 13, color: afkMin ? palette.text : palette.textMute }}>
+                      {afkMin ? fmtMinutes(afkMin) : '—'}
+                    </div>
+                    <div style={{ fontFamily: monoFont, fontSize: 13, color: taskCount ? palette.text : palette.textMute }}>
+                      {taskCount}
+                    </div>
+                    <div>{renderDsm(d.dsm)}</div>
                   </div>
-                  <div style={{ fontFamily: monoFont, fontSize: 13, color: d.endedAt ? palette.text : palette.textMute }}>{d.endedAt ? fmtTime(d.endedAt) : '—'}</div>
-                  <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>{(d.activeSec / 3600).toFixed(1)}h</div>
-                  <div>{renderDsm(d.dsm)}</div>
-                </div>
-              ))
+                );
+              })
             )}
           </Card>
 
@@ -156,12 +201,14 @@ export default function HistoryView({ palette, isDark, currentUserId }) {
             Tasks you completed
           </h3>
           <Card palette={palette} padding={0}>
-            {data.completedTasks.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>None yet.</div>
+            {completedTasks.length === 0 ? (
+              <div style={{ padding: 24, textAlign: 'center', color: palette.textMute, fontFamily: baseFont, fontSize: 13 }}>
+                None yet.
+              </div>
             ) : (
-              data.completedTasks.map((t, i) => (
+              completedTasks.map((t, i) => (
                 <div
-                  key={t.id}
+                  key={t._id}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ChevronLeft, ChevronRight, Plus, Copy, Check, ExternalLink, Link2,
+  ChevronLeft, ChevronRight, Plus, Copy, Check,
   Trash2, X, CalendarDays, Video, Phone, MapPin, Globe,
 } from 'lucide-react';
 import { teamCalendarAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont } from '../theme';
-import { Avatar, PageHeader, SolidButton } from '../components/Primitives';
+import { Avatar, PageHeader, SolidButton, GhostButton } from '../components/Primitives';
 import BlockModal from '../components/BlockModal';
 import BookingDetailModal from '../components/BookingDetailModal';
+import InternalBookingModal from '../components/InternalBookingModal';
 
 // ---------- shared constants & helpers ----------
 
@@ -50,6 +51,27 @@ function addMinStr(hhmm, mins) {
 function dateKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+// Mirrors server/utils/blockRecurrence.js — keep the two in sync.
+function blockAppliesOn(block, dateObj) {
+  if (!block) return false;
+  const targetKey = dateKey(dateObj);
+  if (targetKey < block.dateKey) return false;
+  if (block.endDate && targetKey > block.endDate) return false;
+  if (Array.isArray(block.exceptions) && block.exceptions.includes(targetKey)) return false;
+
+  const repeat = block.repeat || 'NONE';
+  if (repeat === 'NONE') return targetKey === block.dateKey;
+  if (repeat === 'WEEKDAYS') {
+    const dow = dateObj.getDay();
+    return dow >= 1 && dow <= 5;
+  }
+  if (repeat === 'WEEKLY') {
+    const startDate = new Date(`${block.dateKey}T00:00:00`);
+    return startDate.getDay() === dateObj.getDay();
+  }
+  return false;
+}
+
 function weekDates(offset) {
   const base = new Date();
   const dow = (base.getDay() + 6) % 7;
@@ -96,7 +118,9 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
   const [loading, setLoading] = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showInternalBook, setShowInternalBook] = useState(false);
   const [bookingDetail, setBookingDetail] = useState(null);
+  const [blockToDelete, setBlockToDelete] = useState(null); // { block, dateKey }
 
   // Load config + initial window of bookings & blocks
   const loadAll = async () => {
@@ -118,6 +142,12 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  const saveConfigPatch = async (patch) => {
+    const res = await teamCalendarAPI.updateMyConfig(patch);
+    setConfig(res.data.config);
+    return res.data.config;
+  };
 
   if (loading || !config) {
     return (
@@ -178,7 +208,9 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
           weekOffset={weekOffset}
           setWeekOffset={setWeekOffset}
           onAddBlock={() => setShowBlockModal(true)}
+          onBookMeeting={() => setShowInternalBook(true)}
           onOpenBooking={(b) => setBookingDetail(b)}
+          onOpenBlock={(block, occurrenceDateKey) => setBlockToDelete({ block, dateKey: occurrenceDateKey })}
           switchToBookingLink={() => setTab('bookingLink')}
         />
       )}
@@ -186,21 +218,17 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
         <AvailabilityTab
           palette={palette}
           config={config}
-          onChange={async (patch) => {
-            try {
-              const res = await teamCalendarAPI.updateMyConfig(patch);
-              setConfig(res.data.config);
-            } catch (err) {
-              console.error('[Calendar] config save failed:', err?.response?.data?.message || err.message);
-            }
-          }}
+          onChange={saveConfigPatch}
+          onBookMeeting={() => setShowInternalBook(true)}
         />
       )}
       {active === 'bookingLink' && (
         <BookingLinkTab
           palette={palette}
           config={config}
+          onConfigChange={saveConfigPatch}
           reload={loadAll}
+          onBookMeeting={() => setShowInternalBook(true)}
         />
       )}
       {active === 'teamCalls' && isAdmin && (
@@ -214,6 +242,13 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
         onCreated={(b) => setBlocks((arr) => [...arr, b])}
       />
 
+      <InternalBookingModal
+        open={showInternalBook}
+        palette={palette}
+        onClose={() => setShowInternalBook(false)}
+        onBooked={loadAll}
+      />
+
       <BookingDetailModal
         booking={bookingDetail}
         palette={palette}
@@ -224,33 +259,171 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
         }}
         openTask={openTask}
       />
+
+      <BlockDeleteModal
+        target={blockToDelete}
+        palette={palette}
+        onClose={() => setBlockToDelete(null)}
+        onSkipOccurrence={async () => {
+          const { block, dateKey: occKey } = blockToDelete;
+          try {
+            const res = await teamCalendarAPI.skipBlockOccurrence(block._id, occKey);
+            if (res.data.deleted) {
+              setBlocks((arr) => arr.filter((b) => b._id !== block._id));
+            } else {
+              setBlocks((arr) => arr.map((b) => (b._id === block._id ? res.data.block : b)));
+            }
+            setBlockToDelete(null);
+          } catch (err) {
+            alert(err?.response?.data?.message || 'Could not skip this occurrence.');
+          }
+        }}
+        onDeleteSeries={async () => {
+          const { block } = blockToDelete;
+          try {
+            await teamCalendarAPI.removeBlock(block._id);
+            setBlocks((arr) => arr.filter((b) => b._id !== block._id));
+            setBlockToDelete(null);
+          } catch (err) {
+            alert(err?.response?.data?.message || 'Could not delete the block.');
+          }
+        }}
+      />
     </div>
   );
+}
+
+// ====================================================================
+// BLOCK DELETE MODAL — recurring blocks get an extra "this occurrence" option
+// ====================================================================
+function BlockDeleteModal({ target, palette, onClose, onSkipOccurrence, onDeleteSeries }) {
+  if (!target) return null;
+  const { block, dateKey: occKey } = target;
+  const isRecurring = block.repeat && block.repeat !== 'NONE';
+  const niceDate = new Date(`${occKey}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+          borderRadius: 14, padding: 24, width: '100%', maxWidth: 420,
+        }}
+      >
+        <h3 style={{ fontFamily: serifFont, fontSize: 20, fontWeight: 500, color: palette.text, margin: 0, marginBottom: 6 }}>
+          {block.title}
+        </h3>
+        <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.06em', marginBottom: 16, textTransform: 'uppercase' }}>
+          {niceDate}{isRecurring && ' · RECURRING'}
+        </div>
+
+        {isRecurring ? (
+          <>
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginBottom: 16 }}>
+              How do you want to remove this block?
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                type="button"
+                onClick={onSkipOccurrence}
+                style={modalChoiceBtn(palette, false)}
+              >
+                <div style={{ fontFamily: baseFont, fontSize: 13.5, fontWeight: 500, color: palette.text }}>Only this occurrence</div>
+                <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim, marginTop: 2 }}>
+                  Keeps the rest of the series intact.
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={onDeleteSeries}
+                style={modalChoiceBtn(palette, true)}
+              >
+                <div style={{ fontFamily: baseFont, fontSize: 13.5, fontWeight: 500, color: palette.danger }}>Delete the entire series</div>
+                <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim, marginTop: 2 }}>
+                  Removes every past and future occurrence.
+                </div>
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginBottom: 16 }}>
+              Delete this block?
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 13, color: palette.textDim, fontWeight: 500 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onDeleteSeries}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', backgroundColor: palette.accent, color: palette.accentText, fontFamily: baseFont, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+              >
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+
+        {isRecurring && (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ marginTop: 12, width: '100%', padding: '8px 0', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 12.5, color: palette.textDim, fontWeight: 500 }}
+          >
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function modalChoiceBtn(palette, danger) {
+  return {
+    width: '100%', padding: '12px 14px', borderRadius: 10,
+    backgroundColor: palette.surfaceAlt,
+    border: `1px solid ${danger ? palette.dangerBg : palette.border}`,
+    textAlign: 'left', cursor: 'pointer',
+  };
 }
 
 // ====================================================================
 // SCHEDULE TAB
 // ====================================================================
 
-function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOffset, onAddBlock, onOpenBooking, switchToBookingLink }) {
+function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOffset, onAddBlock, onBookMeeting, onOpenBooking, onOpenBlock, switchToBookingLink }) {
   const [view, setView] = useState('week');
   const [dayIdx, setDayIdx] = useState((new Date().getDay() + 6) % 7);
 
   const week = useMemo(() => weekDates(weekOffset), [weekOffset]);
   const todayKey = dateKey(new Date());
   const weekKeys = week.map(dateKey);
-  const weekBookings = bookings.filter((b) => weekKeys.includes(b.dateKey) && b.status === 'confirmed');
-  const weekBlocks = blocks.filter((b) => weekKeys.includes(b.dateKey));
+  // Include cancelled — we render them in red so the user sees the cancellation history.
+  const weekBookings = bookings.filter((b) => weekKeys.includes(b.dateKey));
+  // Any block applying on any day in the visible week
+  const weekHasBlocks = blocks.some((b) => week.some((d) => blockAppliesOn(b, d)));
   const rangeLabel = `${week[0].getDate()} ${MONTH_LABELS[week[0].getMonth()]} – ${week[6].getDate()} ${MONTH_LABELS[week[6].getMonth()]} ${week[6].getFullYear()}`;
 
   const dayDate = week[dayIdx] || week[0];
   const dayKey = dateKey(dayDate);
-  const dayBookings = bookings.filter((b) => b.dateKey === dayKey && b.status === 'confirmed').sort((a, b) => toMin(a.start) - toMin(b.start));
-  const dayBlocks = blocks.filter((b) => b.dateKey === dayKey);
-  const dayTotalMin = dayBookings.reduce((a, b) => a + b.duration, 0);
+  const dayBookings = bookings.filter((b) => b.dateKey === dayKey).sort((a, b) => toMin(a.start) - toMin(b.start));
+  const dayBlocks = blocks.filter((b) => blockAppliesOn(b, dayDate));
+  const dayTotalMin = dayBookings.filter((b) => b.status !== 'cancelled').reduce((a, b) => a + b.duration, 0);
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const nextCall = dayBookings.find((b) => toMin(b.start) > nowMin);
+  const nextCall = dayBookings.find((b) => b.status !== 'cancelled' && toMin(b.start) > nowMin);
 
   const today = new Date();
   const kicker = today.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
@@ -262,7 +435,12 @@ function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOff
         title="Your"
         accentWord="calendar"
         palette={palette}
-        right={<SolidButton onClick={onAddBlock} icon={Plus} palette={palette}>Add block</SolidButton>}
+        right={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <GhostButton onClick={onAddBlock} icon={Plus} palette={palette}>Add block</GhostButton>
+            <SolidButton onClick={onBookMeeting} icon={Video} palette={palette}>Book meeting</SolidButton>
+          </div>
+        }
       />
 
       {/* View toggle + week nav */}
@@ -315,7 +493,7 @@ function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOff
       </div>
 
       {/* Empty state for week */}
-      {view === 'week' && weekBookings.length === 0 && weekBlocks.length === 0 ? (
+      {view === 'week' && weekBookings.length === 0 && !weekHasBlocks ? (
         <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, padding: '72px 24px', textAlign: 'center' }}>
           <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.text }}>Nothing booked this week.</div>
           <button
@@ -332,8 +510,9 @@ function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOff
           week={week}
           todayKey={todayKey}
           bookings={weekBookings}
-          blocks={weekBlocks}
+          blocks={blocks}
           onOpenBooking={onOpenBooking}
+          onOpenBlock={onOpenBlock}
         />
       ) : (
         <DayView
@@ -348,6 +527,7 @@ function ScheduleTab({ palette, config, bookings, blocks, weekOffset, setWeekOff
           dayTotalMin={dayTotalMin}
           nextCall={nextCall}
           onOpenBooking={onOpenBooking}
+          onOpenBlock={onOpenBlock}
         />
       )}
     </div>
@@ -379,42 +559,64 @@ function NowLine({ palette }) {
 function GridBooking({ b, big, palette, onClick }) {
   const top = ((toMin(b.start) - GRID_START * 60) / 60) * HOUR_H;
   const height = Math.max((b.duration / 60) * HOUR_H - 3, 22);
+  const cancelled = b.status === 'cancelled';
   return (
     <div
       onClick={onClick}
+      title={cancelled ? `Cancelled · ${b.clientName} · ${fmt12(b.start)}` : `${b.clientName} · ${fmt12(b.start)}`}
       style={{
         position: 'absolute', top, left: big ? 6 : 3, right: big ? 6 : 3, height,
-        backgroundColor: palette.accentBg, borderLeft: `3px solid ${palette.accent}`,
+        backgroundColor: cancelled ? palette.dangerBg : palette.accentBg,
+        borderLeft: `3px solid ${cancelled ? palette.danger : palette.accent}`,
         borderRadius: 6, padding: big ? '8px 10px' : '4px 7px', cursor: 'pointer', overflow: 'hidden',
+        opacity: cancelled ? 0.85 : 1,
       }}
     >
-      <div style={{ fontFamily: baseFont, fontSize: big ? 13 : 11, fontWeight: 500, color: palette.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{
+        fontFamily: baseFont, fontSize: big ? 13 : 11, fontWeight: 500,
+        color: cancelled ? palette.danger : palette.text,
+        textDecoration: cancelled ? 'line-through' : 'none',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}>
         {b.clientName}
       </div>
-      <div style={{ fontFamily: monoFont, fontSize: big ? 11 : 9.5, color: palette.accent, marginTop: 1 }}>
-        {fmt12(b.start)}{big && ` – ${fmt12(addMinStr(b.start, b.duration))}`}
+      <div style={{
+        fontFamily: monoFont, fontSize: big ? 11 : 9.5,
+        color: cancelled ? palette.danger : palette.accent,
+        marginTop: 1,
+      }}>
+        {cancelled ? 'CANCELLED · ' : ''}{fmt12(b.start)}{big && ` – ${fmt12(addMinStr(b.start, b.duration))}`}
       </div>
-      {big && <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textDim, marginTop: 3 }}>{b.eventTypeName}</div>}
+      {big && <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textDim, marginTop: 3, textDecoration: cancelled ? 'line-through' : 'none' }}>{b.eventTypeName}</div>}
     </div>
   );
 }
-function GridBlock({ blk, big, palette }) {
+function GridBlock({ blk, big, palette, onClick }) {
   const top = ((toMin(blk.start) - GRID_START * 60) / 60) * HOUR_H;
   const height = Math.max(((toMin(blk.end) - toMin(blk.start)) / 60) * HOUR_H - 3, 20);
+  const isRecurring = blk.repeat && blk.repeat !== 'NONE';
   return (
-    <div style={{
-      position: 'absolute', top, left: big ? 6 : 3, right: big ? 6 : 3, height,
-      backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`,
-      borderRadius: 6, padding: big ? '6px 10px' : '3px 7px', overflow: 'hidden',
-    }}>
-      <div style={{ fontFamily: baseFont, fontSize: big ? 12 : 10.5, fontWeight: 500, color: palette.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+    <div
+      onClick={onClick}
+      title={isRecurring ? `${blk.title} · recurring — click to edit` : `${blk.title} — click to delete`}
+      style={{
+        position: 'absolute', top, left: big ? 6 : 3, right: big ? 6 : 3, height,
+        backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`,
+        borderRadius: 6, padding: big ? '6px 10px' : '3px 7px', overflow: 'hidden',
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
+      <div style={{ fontFamily: baseFont, fontSize: big ? 12 : 10.5, fontWeight: 500, color: palette.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 4 }}>
+        {isRecurring && (
+          <span style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: palette.accent, flexShrink: 0 }} />
+        )}
         {blk.title}
       </div>
     </div>
   );
 }
 
-function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking }) {
+function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking, onOpenBlock }) {
   return (
     <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden' }}>
       <div style={{ display: 'flex', borderBottom: `1px solid ${palette.border}` }}>
@@ -448,12 +650,19 @@ function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking }) 
           const k = dateKey(d);
           const isToday = k === todayKey;
           const dayBookings = bookings.filter((b) => b.dateKey === k);
-          const dayBlocks = blocks.filter((b) => b.dateKey === k);
+          const dayBlocks = blocks.filter((b) => blockAppliesOn(b, d));
           return (
             <div key={i} style={{ flex: 1, position: 'relative', borderLeft: `1px solid ${palette.border}` }}>
               <HourLines palette={palette} />
               {isToday && <NowLine palette={palette} />}
-              {dayBlocks.map((blk) => <GridBlock key={blk._id} blk={blk} palette={palette} />)}
+              {dayBlocks.map((blk) => (
+                <GridBlock
+                  key={`${blk._id}-${k}`}
+                  blk={blk}
+                  palette={palette}
+                  onClick={() => onOpenBlock && onOpenBlock(blk, k)}
+                />
+              ))}
               {dayBookings.map((b) => (
                 <GridBooking key={b._id} b={b} palette={palette} onClick={() => onOpenBooking(b)} />
               ))}
@@ -465,7 +674,7 @@ function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking }) 
   );
 }
 
-function DayView({ palette, week, dayIdx, setDayIdx, dayDate, todayKey, dayBookings, dayBlocks, dayTotalMin, nextCall, onOpenBooking }) {
+function DayView({ palette, week, dayIdx, setDayIdx, dayDate, todayKey, dayBookings, dayBlocks, dayTotalMin, nextCall, onOpenBooking, onOpenBlock }) {
   return (
     <div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
@@ -509,7 +718,15 @@ function DayView({ palette, week, dayIdx, setDayIdx, dayDate, todayKey, dayBooki
           <div style={{ flex: 1, position: 'relative', borderLeft: `1px solid ${palette.border}` }}>
             <HourLines palette={palette} />
             {dateKey(dayDate) === todayKey && <NowLine palette={palette} />}
-            {dayBlocks.map((blk) => <GridBlock key={blk._id} blk={blk} big palette={palette} />)}
+            {dayBlocks.map((blk) => (
+              <GridBlock
+                key={`${blk._id}-${dateKey(dayDate)}`}
+                blk={blk}
+                big
+                palette={palette}
+                onClick={() => onOpenBlock && onOpenBlock(blk, dateKey(dayDate))}
+              />
+            ))}
             {dayBookings.map((b) => (
               <GridBooking key={b._id} b={b} big palette={palette} onClick={() => onOpenBooking(b)} />
             ))}
@@ -524,7 +741,7 @@ function DayView({ palette, week, dayIdx, setDayIdx, dayDate, todayKey, dayBooki
 // AVAILABILITY TAB
 // ====================================================================
 
-function AvailabilityTab({ palette, config, onChange }) {
+function AvailabilityTab({ palette, config, onChange, onBookMeeting }) {
   // Local draft state so we can debounce / batch saves while editing.
   const [draft, setDraft] = useState(config);
   useEffect(() => { setDraft(config); }, [config]);
@@ -570,7 +787,13 @@ function AvailabilityTab({ palette, config, onChange }) {
 
   return (
     <div>
-      <PageHeader kicker="WHEN YOU CAN BE BOOKED" title="Your" accentWord="availability" palette={palette} />
+      <PageHeader
+        kicker="WHEN YOU CAN BE BOOKED"
+        title="Your"
+        accentWord="availability"
+        palette={palette}
+        right={<SolidButton onClick={onBookMeeting} icon={Video} palette={palette}>Book meeting</SolidButton>}
+      />
 
       <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Weekly hours</h3>
       <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden', marginBottom: 32 }}>
@@ -678,23 +901,121 @@ function AvailabilityTab({ palette, config, onChange }) {
 // BOOKING LINK TAB
 // ====================================================================
 
-function BookingLinkTab({ palette, config, reload }) {
+// Compact meeting-link row, same shape as the booking-URL row. Display by default; edit on demand.
+function MeetingLinkRow({ config, palette, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(config.meetingLink || '');
   const [copied, setCopied] = useState(false);
-  const [working, setWorking] = useState(false);
-  const link = `${window.location.host}/meet/${config.slug}`;
-  const publicUrl = `${window.location.origin}/meet/${config.slug}`;
+  const [saving, setSaving] = useState(false);
 
+  useEffect(() => { setValue(config.meetingLink || ''); }, [config.meetingLink]);
+
+  const startEdit = () => { setValue(config.meetingLink || ''); setEditing(true); };
+  const cancelEdit = () => { setValue(config.meetingLink || ''); setEditing(false); };
+  const save = async () => {
+    const trimmed = value.trim();
+    if (trimmed === (config.meetingLink || '').trim()) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      await onSave(trimmed);
+      setEditing(false);
+    } finally { setSaving(false); }
+  };
   const copy = () => {
-    navigator.clipboard?.writeText(publicUrl);
+    if (!config.meetingLink) return;
+    navigator.clipboard?.writeText(config.meetingLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const hasLink = !!(config.meetingLink && config.meetingLink.trim());
+
+  return (
+    <div style={{ padding: 18, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <Video size={16} color={palette.textDim} style={{ flexShrink: 0 }} />
+      {editing ? (
+        <>
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') save(); else if (e.key === 'Escape') cancelEdit(); }}
+            placeholder="https://meet.google.com/abc-defg-hij"
+            style={{
+              flex: 1, minWidth: 200, padding: '7px 10px', borderRadius: 8,
+              backgroundColor: palette.surfaceAlt, color: palette.text,
+              fontFamily: monoFont, fontSize: 13, border: `1px solid ${palette.accent}`, outline: 'none',
+            }}
+          />
+          <button
+            type="button"
+            onClick={cancelEdit}
+            disabled={saving}
+            style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 12, color: palette.textDim, fontWeight: 500 }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              backgroundColor: palette.accent, color: palette.accentText, border: 'none',
+              fontFamily: baseFont, fontSize: 12, fontWeight: 500, opacity: saving ? 0.5 : 1,
+            }}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </>
+      ) : (
+        <>
+          <span style={{ fontFamily: monoFont, fontSize: 14, color: hasLink ? palette.text : palette.textMute, flex: 1, minWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {hasLink ? config.meetingLink : 'No meeting link set — auto-generated per booking'}
+          </span>
+          {hasLink && (
+            <button
+              type="button"
+              onClick={copy}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                backgroundColor: copied ? palette.accentBg : palette.surfaceAlt,
+                color: copied ? palette.accent : palette.text,
+                border: `1px solid ${copied ? palette.accent : palette.border}`,
+                fontFamily: baseFont, fontSize: 12, fontWeight: 500,
+              }}
+            >
+              {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={startEdit}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              backgroundColor: palette.surfaceAlt, color: palette.text,
+              border: `1px solid ${palette.border}`,
+              fontFamily: baseFont, fontSize: 12, fontWeight: 500,
+            }}
+          >
+            Edit
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BookingLinkTab({ palette, config, onConfigChange, reload, onBookMeeting }) {
+  const [working, setWorking] = useState(false);
 
   const updateET = async (id, patch) => {
     setWorking(true);
     try {
       await teamCalendarAPI.updateEventType(id, patch);
       await reload();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Could not save.');
     } finally { setWorking(false); }
   };
   const addET = async () => {
@@ -711,7 +1032,16 @@ function BookingLinkTab({ palette, config, reload }) {
     try {
       await teamCalendarAPI.removeEventType(id);
       await reload();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Could not delete.');
     } finally { setWorking(false); }
+  };
+  const saveMeetingLink = async (value) => {
+    try {
+      await onConfigChange({ meetingLink: value });
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Could not save link.');
+    }
   };
 
   const selectStyle = {
@@ -721,37 +1051,15 @@ function BookingLinkTab({ palette, config, reload }) {
 
   return (
     <div>
-      <PageHeader kicker="ONE LINK · ZERO BACK-AND-FORTH" title="Your booking" accentWord="link" palette={palette} />
+      <PageHeader
+        kicker="ONE LINK · ZERO BACK-AND-FORTH"
+        title="Your booking"
+        accentWord="link"
+        palette={palette}
+        right={<SolidButton onClick={onBookMeeting} icon={Video} palette={palette}>Book meeting</SolidButton>}
+      />
 
-      <div style={{ padding: 18, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Link2 size={16} color={palette.textDim} style={{ flexShrink: 0 }} />
-        <span style={{ fontFamily: monoFont, fontSize: 14, color: palette.text, flex: 1, minWidth: 200 }}>{link}</span>
-        <button
-          type="button"
-          onClick={copy}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-            backgroundColor: copied ? palette.accentBg : palette.surfaceAlt,
-            color: copied ? palette.accent : palette.text,
-            border: `1px solid ${copied ? palette.accent : palette.border}`,
-            fontFamily: baseFont, fontSize: 12, fontWeight: 500,
-          }}
-        >
-          {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
-        </button>
-        <a
-          href={publicUrl}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8,
-            backgroundColor: palette.accent, color: palette.accentText,
-            fontFamily: baseFont, fontSize: 12, fontWeight: 500, textDecoration: 'none',
-          }}
-        >
-          <ExternalLink size={12} /> Preview booking page
-        </a>
-      </div>
+      <MeetingLinkRow config={config} palette={palette} onSave={saveMeetingLink} />
 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
         <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, margin: 0 }}>Event types</h3>
@@ -768,11 +1076,19 @@ function BookingLinkTab({ palette, config, reload }) {
                   <LIcon size={15} color={palette.accent} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <input
-                    value={et.name}
-                    onChange={(e) => updateET(et.id, { name: e.target.value })}
-                    style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: baseFont, fontSize: 14, fontWeight: 500, color: palette.text, marginBottom: 4 }}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <input
+                      value={et.name}
+                      onChange={(e) => updateET(et.id, { name: e.target.value })}
+                      style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: baseFont, fontSize: 14, fontWeight: 500, color: palette.text }}
+                    />
+                    {et.isDefault && (
+                      <span title="Default — used for internal team meetings, can't be removed"
+                        style={{ fontFamily: monoFont, fontSize: 9.5, letterSpacing: '0.08em', color: palette.accent, backgroundColor: palette.accentBg, padding: '2px 6px', borderRadius: 4, fontWeight: 500 }}>
+                        DEFAULT
+                      </span>
+                    )}
+                  </div>
                   <input
                     value={et.description}
                     onChange={(e) => updateET(et.id, { description: e.target.value })}
@@ -789,14 +1105,20 @@ function BookingLinkTab({ palette, config, reload }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, flexShrink: 0 }}>
-                  <Toggle on={et.active} onChange={(v) => updateET(et.id, { active: v })} palette={palette} />
-                  <button
-                    type="button"
-                    onClick={() => deleteET(et.id)}
-                    style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer' }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <Toggle
+                    on={et.active}
+                    onChange={(v) => { if (!et.isDefault) updateET(et.id, { active: v }); }}
+                    palette={palette}
+                  />
+                  {!et.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => deleteET(et.id)}
+                      style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer' }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

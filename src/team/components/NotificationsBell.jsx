@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CheckSquare, CalendarDays, FileText } from 'lucide-react';
+import { Bell, CheckSquare, CalendarDays, FileText, Video, XCircle } from 'lucide-react';
 import { teamNotificationsAPI } from '../teamAPI';
 import { baseFont, monoFont } from '../theme';
 
@@ -15,6 +15,8 @@ const TYPE_META = {
   task_assigned: { icon: CheckSquare, color: '#2D5A3D' },
   task_created_by_employee: { icon: FileText, color: '#0E7490' },
   leave_applied: { icon: CalendarDays, color: '#7C3AED' },
+  meeting_booked: { icon: Video, color: '#2D5A3D' },
+  meeting_cancelled: { icon: XCircle, color: '#DC2626' },
 };
 
 export default function NotificationsBell({ palette, onNavigate }) {
@@ -37,8 +39,21 @@ export default function NotificationsBell({ palette, onNavigate }) {
 
   useEffect(() => {
     fetchNotifications();
-    const id = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(id);
+    // Poll every 5s so newly-booked meetings / cancellations appear without a manual refresh.
+    // Pause while the page is hidden to avoid wasted requests, resume on focus.
+    let id = setInterval(fetchNotifications, 5000);
+    const onVisibility = () => {
+      clearInterval(id);
+      if (!document.hidden) {
+        fetchNotifications();
+        id = setInterval(fetchNotifications, 5000);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Close on outside click

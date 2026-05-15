@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Video, Phone, MapPin, Globe, Check,
 } from 'lucide-react';
@@ -50,6 +50,8 @@ function locationIcon(loc) {
 
 export default function PublicBookingPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const isPreview = searchParams.get('preview') === '1';
   const [isDark, setIsDark] = useState(false);
   const [loading, setLoading] = useState(true);
   const [host, setHost] = useState(null);
@@ -84,7 +86,9 @@ export default function PublicBookingPage() {
         if (cancelled) return;
         setHost(res.data.host);
         setEventTypes(res.data.eventTypes || []);
-        if ((res.data.eventTypes || []).length === 1) {
+        // Auto-skip step 1 when there's only one event type — but never in preview mode,
+        // so the host can review their full public flow.
+        if (!isPreview && (res.data.eventTypes || []).length === 1) {
           setPickedEventType(res.data.eventTypes[0]);
           setStep(2);
         }
@@ -233,6 +237,15 @@ export default function PublicBookingPage() {
             {/* STEP 1 */}
             {step === 1 && (
               <div>
+                {isPreview && (
+                  <button
+                    type="button"
+                    onClick={() => { try { window.close(); } catch (e) { window.history.back(); } }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 16, background: 'none', border: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 12.5, color: palette.textDim }}
+                  >
+                    <ArrowLeft size={13} /> Back to Booking Link
+                  </button>
+                )}
                 <h2 style={{ fontFamily: serifFont, fontSize: 26, fontWeight: 400, color: palette.text, marginBottom: 4, marginTop: 0 }}>
                   Pick a <em style={{ fontStyle: 'italic', fontWeight: 300 }}>call type</em>
                 </h2>
@@ -278,12 +291,13 @@ export default function PublicBookingPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (eventTypes.length > 1) { setStep(1); setPickedDate(null); setPickedSlot(null); }
+                    setStep(1);
+                    setPickedDate(null);
+                    setPickedSlot(null);
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 16, background: 'none', border: 'none', cursor: eventTypes.length > 1 ? 'pointer' : 'default', fontFamily: baseFont, fontSize: 12.5, color: palette.textDim }}
-                  disabled={eventTypes.length <= 1}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 16, background: 'none', border: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 12.5, color: palette.textDim }}
                 >
-                  {eventTypes.length > 1 && <><ArrowLeft size={13} /> Back</>}
+                  <ArrowLeft size={13} /> Back
                 </button>
                 <h2 style={{ fontFamily: serifFont, fontSize: 26, fontWeight: 400, color: palette.text, marginBottom: 4, marginTop: 0 }}>
                   Pick a <em style={{ fontStyle: 'italic', fontWeight: 300 }}>day & time</em>

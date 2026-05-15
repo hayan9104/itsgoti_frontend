@@ -118,11 +118,28 @@ export const teamCalendarAPI = {
   listBlocks: (params = {}) => teamAPI.get('/calendar/blocks', { params }),
   createBlock: (payload) => teamAPI.post('/calendar/blocks', payload),
   removeBlock: (id) => teamAPI.delete(`/calendar/blocks/${id}`),
+  skipBlockOccurrence: (id, dateKey) => teamAPI.post(`/calendar/blocks/${id}/skip`, { dateKey }),
 
   // Bookings
   listBookings: (params = {}) => teamAPI.get('/calendar/bookings', { params }),
   cancelBooking: (id) => teamAPI.post(`/calendar/bookings/${id}/cancel`),
   updateBooking: (id, payload) => teamAPI.patch(`/calendar/bookings/${id}`, payload),
+
+  // Internal "Book meeting" flow
+  internalHosts: () => teamAPI.get('/calendar/internal/hosts'),
+  internalHost: (employeeId) => teamAPI.get(`/calendar/internal/host/${employeeId}`),
+  internalHostSlots: (employeeId, eventTypeId, date) =>
+    teamAPI.get(`/calendar/internal/host/${employeeId}/slots`, { params: { eventTypeId, date } }),
+  internalHostMonth: (employeeId, eventTypeId, year, month) =>
+    teamAPI.get(`/calendar/internal/host/${employeeId}/slots-month`, { params: { eventTypeId, year, month } }),
+  internalHostBook: (employeeId, payload) =>
+    teamAPI.post(`/calendar/internal/host/${employeeId}/book`, payload),
+  internalTeamSlots: (hostIds, date) =>
+    teamAPI.post('/calendar/internal/team/slots', { hostIds, date }),
+  internalTeamMonth: (hostIds, year, month) =>
+    teamAPI.post('/calendar/internal/team/slots-month', { hostIds, year, month }),
+  internalTeamBook: (hostIds, payload) =>
+    teamAPI.post('/calendar/internal/team/book', { hostIds, ...payload }),
 };
 
 export const teamReportsAPI = {
