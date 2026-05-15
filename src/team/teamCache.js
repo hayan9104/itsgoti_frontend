@@ -110,8 +110,12 @@ export function warmTeamCache(apis, { isAdmin = false } = {}) {
 
     if (isAdmin) {
       prefetch('employees:list', () => apis.employees.list());
-      prefetch('reports:overview:week', () => apis.reports.overview('week'));
-      prefetch('reports:overview:month', () => apis.reports.overview('month'));
+      // Reports view builds its key as `reports:overview:${period}:${date || ''}` — keep these in sync.
+      prefetch('reports:overview:today:', () => apis.reports.overview('today'));
+      prefetch('reports:overview:week:', () => apis.reports.overview('week'));
+      prefetch('reports:overview:month:', () => apis.reports.overview('month'));
+      prefetch('reports:overview:lastmonth:', () => apis.reports.overview('lastmonth'));
+      prefetch('reports:overview:year:', () => apis.reports.overview('year'));
       prefetch('leaves:balances:all', () => apis.leaves.allBalances());
       prefetch('calendar:config:all', () => apis.calendar.getAllConfigs());
       prefetch('calendar:hosts', () => apis.calendar.internalHosts());
