@@ -48,9 +48,11 @@ export default function TeamLogin() {
     >
       {/* Left — form */}
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 56px', minHeight: '100vh' }}>
-        <div style={{ fontFamily: serifFont, fontSize: 22, fontWeight: 500, color: palette.text, letterSpacing: '-0.01em' }}>
-          GOTI<span style={{ color: palette.accent }}>.</span>
-        </div>
+        <img
+          src="/Goti%20Logo%20Black.png"
+          alt="Goti"
+          style={{ height: 28, width: 'auto', display: 'block' }}
+        />
 
         <div style={{ maxWidth: 380, width: '100%', marginInline: 'auto' }}>
           <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.08em' }}>TEAM PORTAL</div>

@@ -174,9 +174,16 @@ export default function TeamDashboard() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 28 }}>
-            <div style={{ fontFamily: serifFont, fontSize: 22, fontWeight: 500, color: palette.text, letterSpacing: '-0.01em' }}>
-              GOTI<span style={{ color: palette.accent }}>.</span>
-            </div>
+            <img
+              src="/Goti%20Logo%20Black.png"
+              alt="Goti"
+              style={{
+                height: 28,
+                width: 'auto',
+                display: 'block',
+                filter: isDark ? 'invert(1)' : 'none',
+              }}
+            />
             <button
               type="button"
               onClick={() => setIsDark((d) => !d)}

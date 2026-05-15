@@ -149,8 +149,13 @@ export default function TeamReportPrint() {
           justifyContent: 'space-between',
         }}
       >
-        <div style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500 }}>
-          GOTI<span style={{ color: palette.accent }}>.</span> Team report
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: serifFont, fontSize: 18, fontWeight: 500 }}>
+          <img
+            src="/Goti%20Logo%20Black.png"
+            alt="Goti"
+            style={{ height: 22, width: 'auto', display: 'block' }}
+          />
+          <span>Team report</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button

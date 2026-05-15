@@ -213,9 +213,16 @@ export default function PublicBookingPage() {
   return (
     <div style={containerStyle}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', maxWidth: 760, margin: '0 auto' }}>
-        <div style={{ fontFamily: serifFont, fontSize: 22, fontWeight: 500, color: palette.text }}>
-          GOTI<span style={{ color: palette.accent }}>.</span>
-        </div>
+        <img
+          src="/Goti%20Logo%20Black.png"
+          alt="Goti"
+          style={{
+            height: 28,
+            width: 'auto',
+            display: 'block',
+            filter: isDark ? 'invert(1)' : 'none',
+          }}
+        />
       </div>
 
       <div style={{ maxWidth: 620, margin: '0 auto', padding: '8px 24px 80px' }}>
