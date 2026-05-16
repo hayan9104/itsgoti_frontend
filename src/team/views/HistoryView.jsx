@@ -80,8 +80,11 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
     return map;
   }, [completedTasks]);
 
-  const lateStarts = useMemo(
-    () => (data?.days || []).filter((d) => d.dsm?.status === 'late').length,
+  // Total minutes the user was late across the period — formatted by fmtMinutes ("23m", "1h 12m").
+  const lateMinutes = useMemo(
+    () => (data?.days || [])
+      .filter((d) => d.dsm?.status === 'late')
+      .reduce((acc, d) => acc + (Number(d.dsm?.offsetMin) || 0), 0),
     [data]
   );
 
@@ -222,7 +225,7 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
           >
             <StatTile palette={palette} label="Total active" value={`${data.summary.totalActiveHours}h`} />
             <StatTile palette={palette} label="Tasks completed" value={data.summary.completedCount} />
-            <StatTile palette={palette} label="Late starts" value={lateStarts} />
+            <StatTile palette={palette} label="Late starts" value={lateMinutes > 0 ? fmtMinutes(lateMinutes) : '0m'} />
             <StatTile palette={palette} label="Daily avg" value={`${data.summary.avgHoursPerDay}h`} />
           </div>
 
