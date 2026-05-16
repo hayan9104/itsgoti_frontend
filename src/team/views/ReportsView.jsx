@@ -491,13 +491,22 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
                   textAlign: 'left',
                 }}
               >
+                {/*
+                  Children (in order — referenced by .team-per-person-row CSS via nth-child):
+                    1) Avatar
+                    2) Name span (contains nested sessions for desktop)
+                    3) Bar
+                    4) Hours
+                    5) Chevron
+                    6) Mobile-only sessions span (hidden on desktop)
+                */}
                 <Avatar initials={p.avatar} size={28} palette={palette} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500 }}>{p.name}</div>
-                  <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, marginTop: 2 }}>
+                <span style={{ fontFamily: baseFont, fontSize: 13.5, color: palette.text, fontWeight: 500, minWidth: 0 }}>
+                  {p.name}
+                  <span className="team-per-person-desktop-sessions" style={{ display: 'block', fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, fontWeight: 400, marginTop: 2 }}>
                     {p.days} {p.days === 1 ? 'session' : 'sessions'}
-                  </div>
-                </div>
+                  </span>
+                </span>
                 <div style={{ width: 200, height: 6, borderRadius: 3, backgroundColor: palette.surfaceAlt }}>
                   <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, backgroundColor: palette.accent }} />
                 </div>
@@ -505,6 +514,9 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
                   {(p.activeSec / 3600).toFixed(1)}h
                 </div>
                 <ChevronRight size={14} style={{ color: palette.textMute }} />
+                <span className="team-per-person-mobile-sessions" style={{ display: 'none', fontFamily: baseFont, fontSize: 11.5, color: palette.textMute }}>
+                  {p.days} {p.days === 1 ? 'session' : 'sessions'}
+                </span>
               </button>
             );
           })

@@ -30,7 +30,7 @@ export default function PeriodPicker({ period, date, onChange, palette, periods 
   };
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+    <div className="team-mobile-tabbar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 28 }}>
       <div
         style={{
           display: 'inline-flex',

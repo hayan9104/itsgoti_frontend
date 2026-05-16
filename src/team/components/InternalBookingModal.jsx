@@ -344,21 +344,23 @@ export default function InternalBookingModal({ open, palette, onClose, onBooked 
                       style={{
                         display: 'flex', alignItems: 'center', gap: 14, padding: 14, borderRadius: 10,
                         border: `1px solid ${palette.border}`, backgroundColor: palette.surface,
-                        textAlign: 'left', cursor: 'pointer',
+                        textAlign: 'left', cursor: 'pointer', flexWrap: 'wrap',
                       }}
                     >
                       <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: palette.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <LIcon size={15} color={palette.accent} />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: baseFont, fontSize: 14, fontWeight: 500, color: palette.text }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: baseFont, fontSize: 14, fontWeight: 500, color: palette.text, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                           {et.name}{et.isDefault && <span style={{ fontFamily: monoFont, fontSize: 9, color: palette.accent, marginLeft: 8 }}>DEFAULT</span>}
                         </div>
-                        {et.description && <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim, marginTop: 2 }}>{et.description}</div>}
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: monoFont, fontSize: 12.5, color: palette.text }}>{et.duration} min</div>
-                        <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>{et.location}</div>
+                        {et.description && <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim, marginTop: 2, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{et.description}</div>}
+                        {/* Inline meta — sits below name+desc on narrow screens, on the right on desktop */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.04em' }}>
+                          <span>{et.duration} MIN</span>
+                          <span>·</span>
+                          <span>{(et.location || '').toUpperCase()}</span>
+                        </div>
                       </div>
                     </button>
                   );

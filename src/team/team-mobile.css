@@ -59,15 +59,17 @@
   }
 
   /* ============================================================
-     BUTTONS — never break text across lines on mobile
+     BUTTONS
+     - Pill buttons (SolidButton, GhostButton) keep nowrap labels — they
+       have their own .team-pill-btn class that opts in.
+     - Big content-buttons (option cards in modals, event-type cards, task
+       rows) intentionally allow wrapping so descriptions don't get clipped.
      ============================================================ */
 
-  .team-root button {
-    white-space: nowrap;
+  .team-root .team-pill-btn {
+    white-space: nowrap !important;
+    justify-content: center !important;
   }
-  /* Wider primary buttons that span full width — keep label centered and
-     don't let space-between push the icon to the left edge. */
-  .team-root button[style*="100%"],
   .team-root .team-page-header button {
     justify-content: center !important;
   }
@@ -235,23 +237,33 @@
   }
 
   /* ============================================================
-     PER-PERSON ROW (Reports overview) — stack name / bar / total
+     PER-PERSON ROW (Reports overview) — 3-row mobile layout:
+       Row 1: avatar | name | chevron
+       Row 2: avatar | bar  | hours
+       Row 3:   .    | sessions
      ============================================================ */
 
   .team-root .team-per-person-row {
-    flex-wrap: wrap !important;
-    gap: 10px !important;
+    display: grid !important;
+    grid-template-columns: 32px 1fr auto auto !important;
+    grid-template-areas:
+      "avatar name name chevron"
+      "avatar bar bar hours"
+      ". sessions sessions sessions" !important;
+    gap: 6px 12px !important;
     align-items: center !important;
+    padding: 14px 12px !important;
   }
-  .team-root .team-per-person-row > div:nth-of-type(2) {
-    /* Progress bar — go full width on its own row */
-    width: 100% !important;
-    order: 3;
-  }
-  .team-root .team-per-person-row > div:nth-of-type(3) {
-    /* "31.5h" total — sits next to the chevron */
-    margin-left: auto;
-  }
+  .team-root .team-per-person-row > :nth-child(1) { grid-area: avatar; }
+  .team-root .team-per-person-row > :nth-child(2) { grid-area: name; }
+  .team-root .team-per-person-row > :nth-child(3) { grid-area: bar; width: 100% !important; }
+  .team-root .team-per-person-row > :nth-child(4) { grid-area: hours; justify-self: end; }
+  .team-root .team-per-person-row > :nth-child(5) { grid-area: chevron; align-self: center; justify-self: end; }
+  .team-root .team-per-person-row > :nth-child(6) { grid-area: sessions; display: inline-block !important; }
+
+  /* Hide the desktop nested "X sessions" on mobile — it's surfaced via the
+     standalone 6th child in the grid above. */
+  .team-root .team-per-person-row .team-per-person-desktop-sessions { display: none !important; }
 
   /* ============================================================
      RECORDINGS — single column on mobile so cards keep aspect ratio

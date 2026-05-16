@@ -100,9 +100,11 @@ export function SolidButton({ children, onClick, icon: Icon, palette, type = 'bu
       type={type}
       onClick={onClick}
       disabled={disabled}
+      className="team-pill-btn"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 8,
         padding: '8px 16px',
         borderRadius: 8,
@@ -115,6 +117,7 @@ export function SolidButton({ children, onClick, icon: Icon, palette, type = 'bu
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.55 : 1,
         transition: 'opacity 120ms',
+        whiteSpace: 'nowrap',
       }}
       onMouseEnter={(e) => !disabled && (e.currentTarget.style.opacity = '0.88')}
       onMouseLeave={(e) => !disabled && (e.currentTarget.style.opacity = '1')}
@@ -130,9 +133,11 @@ export function GhostButton({ children, onClick, icon: Icon, palette, type = 'bu
       type={type}
       onClick={onClick}
       disabled={disabled}
+      className="team-pill-btn"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 8,
         padding: '8px 14px',
         borderRadius: 8,
@@ -144,6 +149,7 @@ export function GhostButton({ children, onClick, icon: Icon, palette, type = 'bu
         fontWeight: 500,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.55 : 1,
+        whiteSpace: 'nowrap',
       }}
     >
       {Icon && <Icon size={13} strokeWidth={2} />} {children}
