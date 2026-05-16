@@ -109,10 +109,10 @@ export function warmTeamCache(apis, { isAdmin = false, currentUserId } = {}) {
     prefetch('calendar:blocks', () => apis.calendar.listBlocks());
     prefetch('reports:me:weekly', () => apis.reports.myWeekly());
 
-    // Employee history — prefetch all three preset periods so My history opens instantly
+    // Employee history — prefetch all four preset periods so My history opens instantly
     // and toggling between the buttons is also instant. Key shape matches HistoryView.
     if (currentUserId && apis.reports?.employee) {
-      ['week', 'month', 'lastmonth'].forEach((p) => {
+      ['today', 'week', 'month', 'lastmonth'].forEach((p) => {
         prefetch(`reports:history:${currentUserId}:${p}:`, () => apis.reports.employee(currentUserId, p));
       });
     }

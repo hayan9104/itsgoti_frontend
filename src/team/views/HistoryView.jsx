@@ -6,6 +6,7 @@ import { baseFont, serifFont, monoFont, fmtMinutes } from '../theme';
 import { PageHeader, Card, StatTile } from '../components/Primitives';
 
 const PERIODS = [
+  { id: 'today', label: 'Today' },
   { id: 'week', label: 'This week' },
   { id: 'month', label: 'This month' },
   { id: 'lastmonth', label: 'Last month' },
@@ -59,7 +60,10 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
   const kicker = custom.active
     ? `YOUR ACTIVITY · ${new Date(custom.from + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).toUpperCase()} – ${new Date(custom.to + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}`
     : `YOUR ACTIVITY · ${
-        period === 'week' ? 'THIS WEEK' : period === 'month' ? 'THIS MONTH' : 'LAST MONTH'
+        period === 'today' ? 'TODAY'
+          : period === 'week' ? 'THIS WEEK'
+          : period === 'month' ? 'THIS MONTH'
+          : 'LAST MONTH'
       }`;
 
   const completedTasks = useMemo(
