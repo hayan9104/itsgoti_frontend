@@ -95,7 +95,8 @@ function runWhenIdle(fn) {
 
 // Warm the team-area cache. Call this once when the user lands on /team after auth.
 // `apis` is an object with the relevant API clients. `isAdmin` toggles admin-only prefetches.
-export function warmTeamCache(apis, { isAdmin = false } = {}) {
+// `currentUserId` is required to warm the employee-history payload for the My history tab.
+export function warmTeamCache(apis, { isAdmin = false, currentUserId } = {}) {
   runWhenIdle(() => {
     // Common to all roles
     prefetch('tasks:list', () => apis.tasks.list());
@@ -107,6 +108,14 @@ export function warmTeamCache(apis, { isAdmin = false } = {}) {
     prefetch('calendar:bookings', () => apis.calendar.listBookings());
     prefetch('calendar:blocks', () => apis.calendar.listBlocks());
     prefetch('reports:me:weekly', () => apis.reports.myWeekly());
+
+    // Employee history — prefetch all three preset periods so My history opens instantly
+    // and toggling between the buttons is also instant. Key shape matches HistoryView.
+    if (currentUserId && apis.reports?.employee) {
+      ['week', 'month', 'lastmonth'].forEach((p) => {
+        prefetch(`reports:history:${currentUserId}:${p}:`, () => apis.reports.employee(currentUserId, p));
+      });
+    }
 
     // Recordings — prefetch own + shared lists so the library tab opens instantly.
     if (apis.recordings) {

@@ -72,14 +72,19 @@ export const teamTasksAPI = {
     for (const f of files) fd.append('files', f);
     return teamAPI.post('/tasks/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  logs: (id) => teamAPI.get(`/tasks/${id}/logs`),
 };
 
 export const teamLeavesAPI = {
   list: (params = {}) => teamAPI.get('/leaves', { params }),
   get: (id) => teamAPI.get(`/leaves/detail/${id}`),
   apply: (payload) => teamAPI.post('/leaves', payload),
+  update: (id, payload) => teamAPI.patch(`/leaves/${id}`, payload),
   decide: (id, decision, note) => teamAPI.post(`/leaves/${id}/decision`, { decision, note }),
   cancel: (id) => teamAPI.delete(`/leaves/${id}`),
+  // Cancel-flow for approved leaves: owner requests, admin decides.
+  requestCancel: (id, reason) => teamAPI.post(`/leaves/${id}/request-cancel`, { reason }),
+  decideCancel: (id, decision, note) => teamAPI.post(`/leaves/${id}/cancel-decision`, { decision, note }),
   myBalance: () => teamAPI.get('/leaves/balance/me'),
   employeeBalance: (employeeId) => teamAPI.get(`/leaves/balance/${employeeId}`),
   allBalances: () => teamAPI.get('/leaves/balances/all'),
@@ -140,6 +145,8 @@ export const teamCalendarAPI = {
     teamAPI.post('/calendar/internal/team/slots-month', { hostIds, year, month }),
   internalTeamBook: (hostIds, payload) =>
     teamAPI.post('/calendar/internal/team/book', { hostIds, ...payload }),
+  internalClientBook: (payload) =>
+    teamAPI.post('/calendar/internal/client/book', payload),
 };
 
 export const teamReportsAPI = {
@@ -148,9 +155,16 @@ export const teamReportsAPI = {
     if (date) q.set('date', date);
     return teamAPI.get(`/reports/overview?${q.toString()}`);
   },
-  employee: (employeeId, period = 'month', date) => {
-    const q = new URLSearchParams({ period });
-    if (date) q.set('date', date);
+  employee: (employeeId, period = 'month', date, range) => {
+    const q = new URLSearchParams();
+    // Custom range wins server-side when both `from` and `to` are present.
+    if (range?.from && range?.to) {
+      q.set('from', range.from);
+      q.set('to', range.to);
+    } else {
+      q.set('period', period);
+      if (date) q.set('date', date);
+    }
     return teamAPI.get(`/reports/employee/${employeeId}?${q.toString()}`);
   },
   myWeekly: () => teamAPI.get('/reports/me/weekly'),

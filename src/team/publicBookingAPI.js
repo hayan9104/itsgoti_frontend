@@ -12,6 +12,8 @@ export const publicBookingAPI = {
     publicBookingClient.get(`/${slug}/slots`, { params: { eventTypeId, date } }),
   getMonthSlots: (slug, eventTypeId, year, month) =>
     publicBookingClient.get(`/${slug}/slots-month`, { params: { eventTypeId, year, month } }),
+  getMonthSlotsDetail: (slug, eventTypeId, year, month) =>
+    publicBookingClient.get(`/${slug}/slots-month-detail`, { params: { eventTypeId, year, month } }),
   book: (slug, payload) => publicBookingClient.post(`/${slug}/book`, payload),
 };
 

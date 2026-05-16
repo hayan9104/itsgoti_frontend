@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Plus, Copy, Check,
-  Trash2, X, CalendarDays, Video, Phone, MapPin, Globe,
+  Trash2, X, CalendarDays, Video, Phone, MapPin, Globe, ExternalLink, Link2, Share2,
 } from 'lucide-react';
 import { teamCalendarAPI } from '../teamAPI';
+import { publicBookingAPI } from '../publicBookingAPI';
+import { prefetchPublicBooking } from '../publicBookingCache';
 import { getCached, setCached, invalidate } from '../teamCache';
 import { baseFont, serifFont, monoFont } from '../theme';
 import { Avatar, PageHeader, SolidButton, GhostButton } from '../components/Primitives';
@@ -150,6 +152,41 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  // Once we know the slug, warm the public booking page cache so clicking Preview
+  // (or sharing the link) opens the page with host info + month slots already in
+  // localStorage — first paint is instant instead of waiting for 2-3 round-trips.
+  useEffect(() => {
+    if (config?.slug) prefetchPublicBooking(config.slug, publicBookingAPI);
+  }, [config?.slug]);
+
+  // Light background refresh of bookings + blocks every 30s so a 3rd-party booking
+  // made via the public link shows up on the schedule without a manual reload.
+  // Refresh skips when the tab is hidden so we don't waste requests.
+  useEffect(() => {
+    const refresh = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      try {
+        const [bRes, blRes] = await Promise.all([
+          teamCalendarAPI.listBookings(),
+          teamCalendarAPI.listBlocks(),
+        ]);
+        setBookings(bRes.data.bookings || []);
+        setBlocks(blRes.data.blocks || []);
+        setCached('calendar:bookings', bRes.data);
+        setCached('calendar:blocks', blRes.data);
+      } catch {
+        // silent — next tick will retry
+      }
+    };
+    const id = setInterval(refresh, 30_000);
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   const saveConfigPatch = async (patch) => {
     const res = await teamCalendarAPI.updateMyConfig(patch);
@@ -571,32 +608,52 @@ function GridBooking({ b, big, palette, onClick }) {
   const top = ((toMin(b.start) - GRID_START * 60) / 60) * HOUR_H;
   const height = Math.max((b.duration / 60) * HOUR_H - 3, 22);
   const cancelled = b.status === 'cancelled';
+  // External = booked from the public /meet/{slug} page (3rd-party visitor, not internal).
+  const external = b.meetingType === 'public' && !b.bookedBy;
+  const accent = cancelled ? palette.danger : (external ? '#0E7490' : palette.accent);
+  const bg = cancelled ? palette.dangerBg : (external ? (palette.bg === '#0F0E0C' ? '#0E2A2F' : '#ECFEFF') : palette.accentBg);
   return (
     <div
       onClick={onClick}
-      title={cancelled ? `Cancelled · ${b.clientName} · ${fmt12(b.start)}` : `${b.clientName} · ${fmt12(b.start)}`}
+      title={
+        (cancelled ? 'Cancelled · ' : '') +
+        (external ? 'External · ' : '') +
+        `${b.clientName} · ${fmt12(b.start)}`
+      }
       style={{
         position: 'absolute', top, left: big ? 6 : 3, right: big ? 6 : 3, height,
-        backgroundColor: cancelled ? palette.dangerBg : palette.accentBg,
-        borderLeft: `3px solid ${cancelled ? palette.danger : palette.accent}`,
+        backgroundColor: bg,
+        borderLeft: `3px ${external ? 'dashed' : 'solid'} ${accent}`,
         borderRadius: 6, padding: big ? '8px 10px' : '4px 7px', cursor: 'pointer', overflow: 'hidden',
         opacity: cancelled ? 0.85 : 1,
       }}
     >
       <div style={{
+        display: 'flex', alignItems: 'center', gap: 4,
         fontFamily: baseFont, fontSize: big ? 13 : 11, fontWeight: 500,
         color: cancelled ? palette.danger : palette.text,
         textDecoration: cancelled ? 'line-through' : 'none',
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
       }}>
-        {b.clientName}
+        {external && (
+          <span
+            title="Booked from your public link"
+            style={{
+              flexShrink: 0,
+              width: big ? 6 : 5, height: big ? 6 : 5, borderRadius: 999,
+              backgroundColor: accent,
+              boxShadow: `0 0 0 2px ${bg}, 0 0 0 3px ${accent}`,
+            }}
+          />
+        )}
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.clientName}</span>
       </div>
       <div style={{
         fontFamily: monoFont, fontSize: big ? 11 : 9.5,
-        color: cancelled ? palette.danger : palette.accent,
+        color: cancelled ? palette.danger : accent,
         marginTop: 1,
       }}>
-        {cancelled ? 'CANCELLED · ' : ''}{fmt12(b.start)}{big && ` – ${fmt12(addMinStr(b.start, b.duration))}`}
+        {cancelled ? 'CANCELLED · ' : (external ? 'EXTERNAL · ' : '')}{fmt12(b.start)}{big && ` – ${fmt12(addMinStr(b.start, b.duration))}`}
       </div>
       {big && <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textDim, marginTop: 3, textDecoration: cancelled ? 'line-through' : 'none' }}>{b.eventTypeName}</div>}
     </div>
@@ -912,6 +969,56 @@ function AvailabilityTab({ palette, config, onChange, onBookMeeting }) {
 // BOOKING LINK TAB
 // ====================================================================
 
+// Public booking-page URL — Copy + Preview. Slug is server-assigned; not editable here yet.
+function BookingUrlRow({ config, palette }) {
+  const [copied, setCopied] = useState(false);
+  const url = typeof window !== 'undefined'
+    ? `${window.location.origin}/meet/${config.slug}`
+    : `/meet/${config.slug}`;
+
+  const copy = () => {
+    navigator.clipboard?.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const preview = () => {
+    window.open(`/meet/${config.slug}?preview=1`, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div style={{ padding: 18, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <Link2 size={16} color={palette.textDim} style={{ flexShrink: 0 }} />
+      <span style={{ fontFamily: monoFont, fontSize: 14, color: palette.text, flex: 1, minWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {url}
+      </span>
+      <button
+        type="button"
+        onClick={copy}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+          backgroundColor: copied ? palette.accentBg : palette.surfaceAlt,
+          color: copied ? palette.accent : palette.text,
+          border: `1px solid ${copied ? palette.accent : palette.border}`,
+          fontFamily: baseFont, fontSize: 12, fontWeight: 500,
+        }}
+      >
+        {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+      </button>
+      <button
+        type="button"
+        onClick={preview}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+          backgroundColor: palette.accent, color: palette.accentText, border: 'none',
+          fontFamily: baseFont, fontSize: 12, fontWeight: 500,
+        }}
+      >
+        <ExternalLink size={12} /> Preview
+      </button>
+    </div>
+  );
+}
+
 // Compact meeting-link row, same shape as the booking-URL row. Display by default; edit on demand.
 function MeetingLinkRow({ config, palette, onSave }) {
   const [editing, setEditing] = useState(false);
@@ -1019,6 +1126,7 @@ function MeetingLinkRow({ config, palette, onSave }) {
 
 function BookingLinkTab({ palette, config, onConfigChange, reload, onBookMeeting }) {
   const [working, setWorking] = useState(false);
+  const [shareEvent, setShareEvent] = useState(null); // event-type object being shared
 
   const updateET = async (id, patch) => {
     setWorking(true);
@@ -1070,6 +1178,7 @@ function BookingLinkTab({ palette, config, onConfigChange, reload, onBookMeeting
         right={<SolidButton onClick={onBookMeeting} icon={Video} palette={palette}>Book meeting</SolidButton>}
       />
 
+      <BookingUrlRow config={config} palette={palette} />
       <MeetingLinkRow config={config} palette={palette} onSave={saveMeetingLink} />
 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -1115,20 +1224,35 @@ function BookingLinkTab({ palette, config, onConfigChange, reload, onBookMeeting
                     </select>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
                   <Toggle
                     on={et.active}
                     onChange={(v) => { if (!et.isDefault) updateET(et.id, { active: v }); }}
                     palette={palette}
                   />
                   {!et.isDefault && (
-                    <button
-                      type="button"
-                      onClick={() => deleteET(et.id)}
-                      style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer' }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => setShareEvent(et)}
+                        title="Share a direct link to this event type"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6,
+                          backgroundColor: palette.surfaceAlt, color: palette.text,
+                          border: `1px solid ${palette.border}`, cursor: 'pointer',
+                          fontFamily: baseFont, fontSize: 11.5, fontWeight: 500,
+                        }}
+                      >
+                        <Share2 size={11} /> Share
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteET(et.id)}
+                        style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer', padding: 4 }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1158,6 +1282,113 @@ function BookingLinkTab({ palette, config, onConfigChange, reload, onBookMeeting
           3 is the max — keep it simple.
         </span>
       )}
+
+      <ShareEventModal
+        event={shareEvent}
+        slug={config.slug}
+        palette={palette}
+        onClose={() => setShareEvent(null)}
+      />
+    </div>
+  );
+}
+
+// Per-event-type share modal — gives a URL that locks the booking page to a single
+// event so the visitor never has to choose. Format: /meet/{slug}?event={id}
+function ShareEventModal({ event, slug, palette, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!event) return null;
+  const url = typeof window !== 'undefined'
+    ? `${window.location.origin}/meet/${slug}?event=${event.id}`
+    : `/meet/${slug}?event=${event.id}`;
+
+  const copy = () => {
+    navigator.clipboard?.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const preview = () => {
+    window.open(`/meet/${slug}?event=${event.id}&preview=1`, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 50, padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+          borderRadius: 14, padding: 24, width: '100%', maxWidth: 480,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+          <div>
+            <h3 style={{ fontFamily: serifFont, fontSize: 20, fontWeight: 500, color: palette.text, margin: 0 }}>
+              Share <em style={{ fontStyle: 'italic', fontWeight: 300 }}>{event.name}</em>
+            </h3>
+            <div style={{ fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.06em', marginTop: 4, textTransform: 'uppercase' }}>
+              {event.duration} MIN · {event.location}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer', padding: 4 }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginBottom: 16, lineHeight: 1.5 }}>
+          Anyone with this link will only see <strong style={{ color: palette.text }}>{event.name}</strong> — the other event types stay hidden.
+        </div>
+
+        <div style={{
+          padding: 14, borderRadius: 10,
+          backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`,
+          display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+        }}>
+          <Link2 size={14} color={palette.textDim} style={{ flexShrink: 0 }} />
+          <span style={{ fontFamily: monoFont, fontSize: 13, color: palette.text, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {url}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            type="button"
+            onClick={preview}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+              backgroundColor: palette.surfaceAlt, color: palette.text,
+              border: `1px solid ${palette.border}`,
+              fontFamily: baseFont, fontSize: 12.5, fontWeight: 500,
+            }}
+          >
+            <ExternalLink size={12} /> Preview
+          </button>
+          <button
+            type="button"
+            onClick={copy}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+              backgroundColor: copied ? palette.accentBg : palette.accent,
+              color: copied ? palette.accent : palette.accentText,
+              border: copied ? `1px solid ${palette.accent}` : 'none',
+              fontFamily: baseFont, fontSize: 12.5, fontWeight: 500,
+            }}
+          >
+            {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

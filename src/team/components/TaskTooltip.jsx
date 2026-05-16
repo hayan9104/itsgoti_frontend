@@ -32,20 +32,22 @@ function Row({ label, value, palette }) {
   );
 }
 
-export default function TaskTooltip({ task, anchor, palette, isDark }) {
-  const [pos, setPos] = useState(() => computePosition(anchor));
+export default function TaskTooltip({ task, anchor, mouse, palette, isDark }) {
+  // mouse = { x, y } in viewport coords — preferred anchor (sits next to the cursor).
+  // anchor = a DOMElement — legacy fallback when mouse isn't passed (e.g. drilldown view).
+  const [pos, setPos] = useState(() => computePosition(mouse, anchor));
   const [tick, setTick] = useState(0); // forces live timer re-render
 
   useEffect(() => {
-    setPos(computePosition(anchor));
-    const onResize = () => setPos(computePosition(anchor));
+    setPos(computePosition(mouse, anchor));
+    const onResize = () => setPos(computePosition(mouse, anchor));
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onResize, true);
     return () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onResize, true);
     };
-  }, [anchor]);
+  }, [mouse?.x, mouse?.y, anchor]);
 
   // Live tick once a second when the task is actively timing.
   useEffect(() => {
@@ -227,24 +229,42 @@ export default function TaskTooltip({ task, anchor, palette, isDark }) {
   );
 }
 
-function computePosition(anchor) {
-  if (!anchor) return { top: 0, left: 0 };
-  const rect = anchor.getBoundingClientRect();
+// Position relative to the cursor when we have mouse coords, falling back to the row rect
+// when the caller only passed a DOM anchor. The cursor variant prefers right-of-cursor and
+// flips to left when there's no room — never letting the tooltip slide off-screen.
+function computePosition(mouse, anchor) {
   const viewportW = window.innerWidth;
   const viewportH = window.innerHeight;
   const estimatedHeight = 360;
 
-  // Prefer LEFT of the row so it doesn't overlap the dropdown / avatar / delete area.
+  if (mouse && Number.isFinite(mouse.x) && Number.isFinite(mouse.y)) {
+    // Horizontal: prefer right of cursor; flip to left if it would overflow.
+    let left = mouse.x + TOOLTIP_OFFSET;
+    if (left + TOOLTIP_WIDTH + 8 > viewportW) {
+      left = mouse.x - TOOLTIP_OFFSET - TOOLTIP_WIDTH;
+      if (left < 8) {
+        // Neither side has room — clamp to whichever edge has more space.
+        left = Math.max(8, viewportW - TOOLTIP_WIDTH - 8);
+      }
+    }
+
+    // Vertical: anchor a bit above the cursor; if it would overflow the bottom, slide up.
+    let top = mouse.y - 20;
+    if (top + estimatedHeight + 8 > viewportH) top = Math.max(8, viewportH - estimatedHeight - 8);
+    if (top < 8) top = 8;
+    return { top, left };
+  }
+
+  // Legacy element-anchor fallback (used by surfaces that don't capture the mouse position).
+  if (!anchor) return { top: 0, left: 0 };
+  const rect = anchor.getBoundingClientRect();
   let left = rect.left - TOOLTIP_OFFSET - TOOLTIP_WIDTH;
   if (left < 8) {
-    // Not enough room on the left → fall back to right side.
     left = rect.right + TOOLTIP_OFFSET;
     if (left + TOOLTIP_WIDTH + 8 > viewportW) {
-      // Neither side fits — clamp to viewport.
       left = Math.max(8, viewportW - TOOLTIP_WIDTH - 8);
     }
   }
-
   let top = rect.top;
   if (top + estimatedHeight > viewportH - 8) top = Math.max(8, viewportH - estimatedHeight - 8);
   return { top, left };

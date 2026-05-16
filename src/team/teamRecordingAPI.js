@@ -43,6 +43,10 @@ export const teamRecordingsAPI = {
     });
   },
   update: (id, patch) => teamRecordingClient.patch(`/${id}`, patch),
+  // Trim is a separate field on the same PATCH endpoint — server stamps `originalDuration`
+  // on first trim so restore knows the full length.
+  saveTrim: (id, start, end) => teamRecordingClient.patch(`/${id}`, { trim: { start, end } }),
+  restoreOriginal: (id) => teamRecordingClient.post(`/${id}/restore-original`),
   remove: (id) => teamRecordingClient.delete(`/${id}`),
   incrementView: (id) => teamRecordingClient.post(`/${id}/view`),
 

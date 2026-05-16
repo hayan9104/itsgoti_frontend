@@ -60,14 +60,10 @@ export default function PublicRecordingPage() {
 
   const Shell = ({ children }) => (
     <div style={{ minHeight: '100vh', backgroundColor: palette.bg, color: palette.text, fontFamily: baseFont, WebkitFontSmoothing: 'antialiased' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', maxWidth: 760, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 24px', maxWidth: 760, margin: '0 auto' }}>
         <a href="/" style={{ textDecoration: 'none' }}>
           <img src="/Goti%20Logo%20Black.png" alt="Goti" style={{ height: 22, width: 'auto', display: 'block', filter: isDark ? 'invert(1)' : 'none' }} />
         </a>
-        <button type="button" onClick={() => window.close()}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 6 }}>
-          <X size={18} />
-        </button>
       </div>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 64px' }}>{children}</div>
     </div>
@@ -77,23 +73,38 @@ export default function PublicRecordingPage() {
     return <Shell><div style={{ paddingTop: 80, textAlign: 'center', fontFamily: baseFont, fontSize: 14, color: palette.textDim }}>Loading…</div></Shell>;
   }
   if (state.error) {
-    return <Shell><div style={{ paddingTop: 80, textAlign: 'center', fontFamily: serifFont, fontSize: 22, color: palette.text }}>This recording isn’t available.</div></Shell>;
+    // Private or deleted — same response shape for both. Treat as "private/no-access"
+    // since that's the common case worth explaining; if it's truly missing, the message still fits.
+    const isPrivate = /private|access|not available/i.test(state.error || '');
+    return (
+      <Shell>
+        <MessageCard
+          palette={palette}
+          emoji={isPrivate ? '🔒' : '🤷‍♂️'}
+          title={isPrivate ? 'Private — no access' : 'Not found'}
+          subtitle={isPrivate
+            ? "The owner hasn't shared this recording with you. Ask them for access if you need to watch it."
+            : "This link doesn't lead to a recording. Double-check it with the person who sent it."}
+        />
+      </Shell>
+    );
   }
   if (state.gated === 'team') {
     return (
       <Shell>
-        <div style={{ paddingTop: 80, textAlign: 'center' }}>
-          <Users2 size={28} color={palette.textMute} style={{ display: 'block', margin: '0 auto 14px' }} />
-          <div style={{ fontFamily: serifFont, fontSize: 22, color: palette.text }}>Sign in to GOTI to watch this.</div>
-          <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginTop: 8 }}>
-            This recording is shared with the GOTI team only.
-          </div>
-          <a href="/team" style={{
-            display: 'inline-block', marginTop: 16, padding: '8px 16px', borderRadius: 8, textDecoration: 'none',
-            backgroundColor: palette.accent, color: palette.accentText,
-            fontFamily: baseFont, fontSize: 13, fontWeight: 500,
-          }}>Open team portal</a>
-        </div>
+        <MessageCard
+          palette={palette}
+          emoji="👥"
+          title="GOTI team only"
+          subtitle="This recording is shared with the GOTI team. Sign in to watch it."
+          action={(
+            <a href="/team" style={{
+              display: 'inline-block', marginTop: 8, padding: '10px 20px', borderRadius: 8, textDecoration: 'none',
+              backgroundColor: palette.accent, color: palette.accentText,
+              fontFamily: baseFont, fontSize: 13, fontWeight: 500,
+            }}>Open team portal</a>
+          )}
+        />
       </Shell>
     );
   }
@@ -178,5 +189,47 @@ export default function PublicRecordingPage() {
         </div>
       )}
     </Shell>
+  );
+}
+
+// Centered card empty state — used for private / team-only / not-found responses on the
+// public share page. Big emoji + serif headline + muted subtitle + optional action.
+function MessageCard({ palette, emoji, title, subtitle, action }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      minHeight: 'calc(100vh - 200px)', padding: '40px 24px',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 440,
+        backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+        borderRadius: 16, padding: '40px 32px 36px',
+        textAlign: 'center',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+      }}>
+        <div style={{
+          fontSize: 64, lineHeight: 1, marginBottom: 18,
+          // Render emoji at full color even on dark backgrounds.
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.08))',
+        }}>
+          {emoji}
+        </div>
+        <h2 style={{
+          fontFamily: serifFont, fontSize: 24, fontWeight: 500, color: palette.text,
+          margin: 0, letterSpacing: '-0.01em',
+        }}>
+          {title}
+        </h2>
+        {subtitle && (
+          <p style={{
+            fontFamily: baseFont, fontSize: 13.5, color: palette.textDim,
+            lineHeight: 1.55, marginTop: 12, marginBottom: 0, maxWidth: 340, marginLeft: 'auto', marginRight: 'auto',
+          }}>
+            {subtitle}
+          </p>
+        )}
+        {action && <div style={{ marginTop: 20 }}>{action}</div>}
+      </div>
+    </div>
   );
 }

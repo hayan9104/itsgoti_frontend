@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, Paperclip, FileText, ExternalLink, Timer, Calendar, User, MonitorPlay, Play } from 'lucide-react';
+import { ChevronLeft, Paperclip, FileText, ExternalLink, Timer, Calendar, User, MonitorPlay, Play, Activity, X, ArrowRight, Plus, ArrowDown, ArrowUp, ArchiveRestore, Archive } from 'lucide-react';
 import { teamTasksAPI } from '../teamAPI';
 import { teamRecordingsAPI } from '../teamRecordingAPI';
 import { getCached, setCached } from '../teamCache';
@@ -24,15 +24,45 @@ function fmtBytes(n) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
+// Look up a task we already have in cache so the detail view can paint instantly.
+// Two sources, in order: a dedicated detail cache, then the prefetched list.
+function seedTaskFromCache(taskId) {
+  const direct = getCached(`tasks:detail:${taskId}`);
+  if (direct) return direct;
+  const list = getCached('tasks:list');
+  const found = (list?.tasks || []).find((t) => String(t._id) === String(taskId));
+  return found || null;
+}
+
 export default function TaskDetailView({ palette, isDark, taskId, onBack, openRecording }) {
-  const [task, setTask] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Seed from cache — the list is already prefetched on dashboard mount, so the task body
+  // renders instantly. Background refetch still runs to keep timers / spent / status fresh.
+  const cached = seedTaskFromCache(taskId);
+  const [task, setTask] = useState(cached);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState('');
   const [, setTick] = useState(0); // forces live timer
+  const [logOpen, setLogOpen] = useState(false);
 
   // Recordings linked to this task — seeded from cache so the section paints instantly.
   const recCacheKey = `recordings:byTask:${taskId}`;
   const [recordings, setRecordings] = useState(() => getCached(recCacheKey)?.recordings || []);
+
+  // Activity log — fetched alongside the task and cached so the modal opens instantly.
+  // Re-fetches whenever the task body changes (status / spent / inProgress) since those
+  // changes are exactly what generate new log entries.
+  const logsCacheKey = `tasks:logs:${taskId}`;
+  const [logs, setLogs] = useState(() => getCached(logsCacheKey) || null);
+
+  const fetchLogs = async () => {
+    try {
+      const { data } = await teamTasksAPI.logs(taskId);
+      if (data?.success) {
+        setLogs(data.logs || []);
+        setCached(logsCacheKey, data.logs || []);
+      }
+    } catch (e) { /* swallow — modal will render last known logs */ }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -41,18 +71,32 @@ export default function TaskDetailView({ palette, isDark, taskId, onBack, openRe
       setRecordings(data.recordings || []);
       setCached(recCacheKey, data);
     }).catch(() => {});
+    fetchLogs();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId, recCacheKey]);
 
+  // Refresh logs the moment a status/spent/timer change suggests a new entry was generated.
+  useEffect(() => {
+    if (!task) return;
+    fetchLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.status, task?.spentMinutes, task?.inProgressSince]);
+
   const fetchTask = async () => {
-    setLoading(true);
+    // Don't show the global spinner if we already have a cached body on screen.
     setError('');
     try {
       const { data } = await teamTasksAPI.get(taskId);
-      if (data?.success) setTask(data.task);
-      else setError(data?.message || 'Task not found');
+      if (data?.success) {
+        setTask(data.task);
+        setCached(`tasks:detail:${taskId}`, data.task);
+      } else {
+        setError(data?.message || 'Task not found');
+      }
     } catch (err) {
-      setError(err?.response?.data?.message || 'Could not load task');
+      // Soft-fail when we have cached data — keep showing it, log the error to console only.
+      if (!task) setError(err?.response?.data?.message || 'Could not load task');
     } finally {
       setLoading(false);
     }
@@ -98,7 +142,23 @@ export default function TaskDetailView({ palette, isDark, taskId, onBack, openRe
 
   return (
     <div>
-      <BackBar onBack={onBack} palette={palette} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <BackBar onBack={onBack} palette={palette} />
+        <button
+          type="button"
+          onClick={() => setLogOpen(true)}
+          title="View activity log"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+            backgroundColor: palette.surface, color: palette.text,
+            border: `1px solid ${palette.border}`,
+            fontFamily: baseFont, fontSize: 12.5, fontWeight: 500,
+          }}
+        >
+          <Activity size={12} /> Log
+        </button>
+      </div>
 
       {/* Header */}
       <div style={{ paddingBottom: 24, borderBottom: `1px solid ${palette.border}`, marginBottom: 28 }}>
@@ -341,8 +401,191 @@ export default function TaskDetailView({ palette, isDark, taskId, onBack, openRe
           </div>
         </Card>
       )}
+
+      {logOpen && (
+        <TaskLogModal taskId={taskId} logs={logs} palette={palette} isDark={isDark} onClose={() => setLogOpen(false)} />
+      )}
     </div>
   );
+}
+
+// ---- Activity log modal ----
+// Logs come in via prop (already fetched + cached by the parent) so the modal opens with
+// data on screen. A silent background refresh keeps it current — never showing a spinner
+// once we have any logs cached.
+function TaskLogModal({ taskId, logs: logsFromProp, palette, isDark, onClose }) {
+  const [logs, setLogs] = useState(logsFromProp || getCached(`tasks:logs:${taskId}`) || null);
+  const [error, setError] = useState('');
+
+  // Keep in sync when the parent's prop changes (e.g. status flipped while modal open).
+  useEffect(() => {
+    if (logsFromProp) setLogs(logsFromProp);
+  }, [logsFromProp]);
+
+  useEffect(() => {
+    let cancelled = false;
+    teamTasksAPI.logs(taskId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) {
+          setLogs(data.logs || []);
+          setCached(`tasks:logs:${taskId}`, data.logs || []);
+        } else if (!logs) {
+          setError(data?.message || 'Activity log endpoint did not respond as expected. Restart the backend so the new route is registered.');
+          setLogs([]);
+        }
+      })
+      .catch((err) => {
+        if (cancelled || logs) return;
+        const status = err?.response?.status;
+        const msg = err?.response?.data?.message
+          || (status === 404 ? 'Activity log route not found — restart the backend.' : 'Could not load activity');
+        setError(msg);
+        setLogs([]);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 60, padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+          borderRadius: 14, width: '100%', maxWidth: 540, maxHeight: '80vh',
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: `1px solid ${palette.border}` }}>
+          <div>
+            <h3 style={{ fontFamily: serifFont, fontSize: 19, fontWeight: 500, color: palette.text, margin: 0 }}>
+              Activity log
+            </h3>
+            <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.06em', marginTop: 4, textTransform: 'uppercase' }}>
+              EVERY STATUS CHANGE · MOST RECENT FIRST
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ color: palette.textMute, border: 'none', background: 'none', cursor: 'pointer', padding: 4 }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: 'auto', flex: 1, padding: '14px 22px' }}>
+          {error && (
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.danger, padding: 16, textAlign: 'center' }}>
+              {error}
+            </div>
+          )}
+          {!error && logs === null && (
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute, padding: 16, textAlign: 'center' }}>
+              Loading…
+            </div>
+          )}
+          {!error && logs && logs.length === 0 && (
+            <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute, padding: 24, textAlign: 'center' }}>
+              No activity yet.
+            </div>
+          )}
+          {!error && logs && logs.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {logs.map((l, i) => (
+                <LogRow key={l._id} log={l} palette={palette} isDark={isDark} isLast={i === logs.length - 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogRow({ log, palette, isDark, isLast }) {
+  const meta = logMeta(log, palette, isDark);
+  const when = new Date(log.createdAt);
+  const whenStr = when.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+  return (
+    <div style={{ display: 'flex', gap: 12, paddingBottom: isLast ? 0 : 14, position: 'relative' }}>
+      {/* timeline rail */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{
+          width: 24, height: 24, borderRadius: 999,
+          backgroundColor: meta.bg, color: meta.color,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <meta.Icon size={12} strokeWidth={2} />
+        </div>
+        {!isLast && <div style={{ flex: 1, width: 1, backgroundColor: palette.border, marginTop: 4 }} />}
+      </div>
+      <div style={{ flex: 1, paddingTop: 1 }}>
+        <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>
+          {meta.label}
+        </div>
+        {meta.detail && (
+          <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim, marginTop: 2 }}>
+            {meta.detail}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          {log.actor && (
+            <span style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute }}>
+              by <span style={{ color: palette.textDim, fontWeight: 500 }}>{log.actor.name}</span>
+            </span>
+          )}
+          <span style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.04em' }}>
+            · {whenStr}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function logMeta(log, palette, isDark) {
+  const statusLabel = (s) => taskStatusMeta(palette, isDark)[s]?.label || s;
+  const priorityLabel = (p) => priorityMeta[p]?.label || p;
+  switch (log.action) {
+    case 'created':
+      return { Icon: Plus, label: 'Task created', detail: log.toValue || '', color: '#2D5A3D', bg: '#EEF3EF' };
+    case 'status_change': {
+      const from = statusLabel(log.fromValue);
+      const to = statusLabel(log.toValue);
+      return {
+        Icon: ArrowRight,
+        label: `Status changed to ${to}`,
+        detail: log.fromValue ? `from ${from}` : '',
+        color: '#0E7490', bg: '#ECFEFF',
+      };
+    }
+    case 'priority_change':
+      return {
+        Icon: log.toValue === 'urgent' || log.toValue === 'high' ? ArrowUp : ArrowDown,
+        label: `Priority set to ${priorityLabel(log.toValue)}`,
+        detail: log.fromValue ? `from ${priorityLabel(log.fromValue)}` : '',
+        color: '#92400E', bg: '#FFFBEB',
+      };
+    case 'owner_change':
+      return { Icon: User, label: 'Reassigned', detail: log.note || '', color: '#5B21B6', bg: '#F5F3FF' };
+    case 'archived':
+      return { Icon: Archive, label: 'Archived', detail: log.fromValue ? `was ${statusLabel(log.fromValue)}` : '', color: '#991B1B', bg: '#FEF2F2' };
+    case 'restored':
+      return { Icon: ArchiveRestore, label: 'Restored', detail: log.toValue ? `back to ${statusLabel(log.toValue)}` : '', color: '#065F46', bg: '#ECFDF5' };
+    case 'attachment_added':
+      return { Icon: Paperclip, label: 'Attachment added', detail: log.note || '', color: '#1E40AF', bg: '#EFF6FF' };
+    default:
+      return { Icon: Activity, label: log.action, detail: log.note || '', color: palette.textDim, bg: palette.surfaceAlt };
+  }
 }
 
 function BackBar({ onBack, palette }) {

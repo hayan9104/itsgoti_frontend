@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  X, ArrowLeft, ChevronLeft, ChevronRight, Check, User, Users, Video, Phone, MapPin, Globe,
+  X, ArrowLeft, ChevronLeft, ChevronRight, Check, User, Users, Briefcase,
+  Video, Phone, MapPin, Globe,
 } from 'lucide-react';
 import { teamCalendarAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont } from '../theme';
@@ -34,9 +35,24 @@ function locationIcon(loc) {
   return loc === 'Google Meet' ? Video : loc === 'Phone call' ? Phone : loc === 'In person' ? MapPin : Globe;
 }
 
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const emptyClientForm = () => ({
+  title: '',
+  clientName: '',
+  clientEmail: '',
+  description: '',
+  date: todayKey(),
+  start: '10:00',
+  duration: 30,
+  meetingLink: '',
+});
+
 export default function InternalBookingModal({ open, palette, onClose, onBooked }) {
-  const [step, setStep] = useState(0);             // 0:mode  1:members  2:eventType  3:date+time  4:confirm  5:done
-  const [mode, setMode] = useState(null);          // 'oneToOne' | 'team'
+  const [step, setStep] = useState(0);             // 0:mode  1:members  2:eventType  3:date+time  4:confirm  5:done  6:client form
+  const [mode, setMode] = useState(null);          // 'oneToOne' | 'team' | 'client'
   const [hosts, setHosts] = useState([]);
   const [selectedHostIds, setSelectedHostIds] = useState([]);
   const [hostInfo, setHostInfo] = useState(null);  // { host, eventTypes } for 1-on-1
@@ -52,12 +68,14 @@ export default function InternalBookingModal({ open, palette, onClose, onBooked 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [windowDays, setWindowDays] = useState(14);
+  const [clientForm, setClientForm] = useState(emptyClientForm);
 
   const reset = () => {
     setStep(0); setMode(null); setSelectedHostIds([]); setHostInfo(null);
     setPickedEventType(null); setPickedDate(null); setPickedSlot(null);
     setMonthOffset(0); setMonthSlots({}); setMonthLeaves({}); setDaySlots([]);
     setNote(''); setError(null); setWindowDays(14);
+    setClientForm(emptyClientForm());
   };
 
   // Load hosts when modal opens
@@ -230,6 +248,13 @@ export default function InternalBookingModal({ open, palette, onClose, onBooked 
                 title="Team meeting"
                 desc="Pick multiple teammates and find a time that works for everyone."
                 onClick={() => { setMode('team'); setSelectedHostIds([]); setStep(1); }}
+              />
+              <ModeOption
+                palette={palette}
+                icon={Briefcase}
+                title="Client"
+                desc="Book a call with a client by email. Goes straight onto your calendar."
+                onClick={() => { setMode('client'); setStep(6); }}
               />
             </div>
           </div>
@@ -499,7 +524,9 @@ export default function InternalBookingModal({ open, palette, onClose, onBooked 
               Booked.
             </h3>
             <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, marginTop: 8 }}>
-              The meeting now shows on {mode === 'oneToOne' ? "your teammate's" : "everyone's"} schedule.
+              {mode === 'client'
+                ? "It's on your calendar. The client invite email will go out automatically once we wire up email — for now share the meeting link directly."
+                : `The meeting now shows on ${mode === 'oneToOne' ? "your teammate's" : "everyone's"} schedule.`}
             </div>
             <button
               type="button"
@@ -510,6 +537,171 @@ export default function InternalBookingModal({ open, palette, onClose, onBooked 
             </button>
           </div>
         )}
+
+        {/* STEP 6 — client booking form (all fields in one page; no slot logic) */}
+        {step === 6 && (
+          <ClientBookingForm
+            palette={palette}
+            form={clientForm}
+            setForm={setClientForm}
+            submitting={submitting}
+            error={error}
+            onBack={() => { setStep(0); setMode(null); setError(null); }}
+            onSubmit={async () => {
+              setError(null);
+              const trim = (s) => (s || '').trim();
+              const title = trim(clientForm.title);
+              const email = trim(clientForm.clientEmail);
+              if (!title) return setError('Title is required.');
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError('Enter a valid client email.');
+              if (!clientForm.date || !clientForm.start) return setError('Pick a date and time.');
+              setSubmitting(true);
+              try {
+                await teamCalendarAPI.internalClientBook({
+                  title,
+                  clientName: trim(clientForm.clientName),
+                  clientEmail: email,
+                  description: trim(clientForm.description),
+                  date: clientForm.date,
+                  start: clientForm.start,
+                  duration: Number(clientForm.duration),
+                  meetingLink: trim(clientForm.meetingLink),
+                });
+                setStep(5);
+                if (onBooked) onBooked();
+              } catch (err) {
+                setError(err?.response?.data?.message || 'Could not book. Try again.');
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Client form (no slot logic, just a manual booking) ----------
+function ClientBookingForm({ palette, form, setForm, submitting, error, onBack, onSubmit }) {
+  const labelStyle = { display: 'block', fontFamily: baseFont, fontSize: 12, color: palette.textDim, fontWeight: 500, marginBottom: 5 };
+  const inputStyle = {
+    width: '100%', padding: '9px 11px', borderRadius: 8,
+    backgroundColor: palette.surfaceAlt, color: palette.text,
+    fontFamily: baseFont, fontSize: 13, border: `1px solid ${palette.border}`, outline: 'none',
+  };
+  return (
+    <div>
+      <BackBtn palette={palette} onClick={onBack} />
+      <h4 style={titleStyle(palette)}>Book a client call</h4>
+      <p style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim, marginTop: -8, marginBottom: 16 }}>
+        Fill the details — it'll go straight on your calendar.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Title *</label>
+          <input
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="e.g. Kickoff call with Acme Co."
+            style={inputStyle}
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <label style={labelStyle}>Client name</label>
+            <input
+              value={form.clientName}
+              onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+              placeholder="optional"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Client email *</label>
+            <input
+              type="email"
+              value={form.clientEmail}
+              onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
+              placeholder="client@company.com"
+              style={{ ...inputStyle, fontFamily: monoFont }}
+            />
+          </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Description</label>
+          <textarea
+            rows={3}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="What's this call about?"
+            style={{ ...inputStyle, resize: 'none' }}
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 10 }}>
+          <div>
+            <label style={labelStyle}>Date *</label>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Time *</label>
+            <input
+              type="time"
+              value={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.value })}
+              style={{ ...inputStyle, fontFamily: monoFont }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Duration</label>
+            <select
+              value={form.duration}
+              onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })}
+              style={inputStyle}
+            >
+              {[15, 30, 45, 60, 90, 120].map((d) => (
+                <option key={d} value={d}>{d} min</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Meeting link</label>
+          <input
+            value={form.meetingLink}
+            onChange={(e) => setForm({ ...form, meetingLink: e.target.value })}
+            placeholder="Leave blank to use your default link"
+            style={{ ...inputStyle, fontFamily: monoFont }}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 12, fontFamily: baseFont, fontSize: 12, color: palette.danger }}>{error}</div>
+      )}
+
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={submitting}
+        style={{
+          width: '100%', marginTop: 18, padding: '11px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+          backgroundColor: palette.accent, color: palette.accentText,
+          fontFamily: baseFont, fontSize: 13.5, fontWeight: 500,
+          opacity: submitting ? 0.5 : 1,
+        }}
+      >
+        {submitting ? 'Saving…' : 'Save booking'}
+      </button>
+
+      <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, marginTop: 10, textAlign: 'center' }}>
+        Email invite to the client will be added in a future update.
       </div>
     </div>
   );

@@ -22,7 +22,9 @@ const STATUS_STYLES = {
   pending: { bg: '#FFFBEB', color: '#92400E', label: 'Pending' },
   approved: { bg: '#ECFDF5', color: '#065F46', label: 'Approved' },
   rejected: { bg: '#FEF2F2', color: '#991B1B', label: 'Rejected' },
+  cancelled: { bg: '#F3F4F6', color: '#4B5563', label: 'Cancelled' },
 };
+const FALLBACK_STATUS_STYLE = { bg: '#F3F4F6', color: '#4B5563', label: 'Unknown' };
 
 const CATEGORY_META = {
   sick: { label: 'Sick', color: '#7C3AED', bg: '#F5F3FF', icon: Heart },
@@ -189,6 +191,8 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
   const [leaves, setLeaves] = useState(cachedLeaves?.leaves || []);
   const [loading, setLoading] = useState(!cachedLeaves);
   const [showApply, setShowApply] = useState(false);
+  // When set, the apply modal is in EDIT mode for this leave id (owner only, pending only).
+  const [editingLeaveId, setEditingLeaveId] = useState(null);
   const [form, setForm] = useState({
     startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)),
     endDate: '',
@@ -298,11 +302,11 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === cursor.getFullYear() && today.getMonth() === cursor.getMonth();
 
-  // Map of day → leaves on that day. Includes pending too; rejected ones are skipped.
+  // Map of day → leaves on that day. Includes pending too; rejected/cancelled are skipped.
   const leavesByDay = useMemo(() => {
     const map = new Map();
     for (const l of leaves) {
-      if (l.status === 'rejected') continue;
+      if (l.status === 'rejected' || l.status === 'cancelled') continue;
       const start = new Date(l.startDate);
       const end = new Date(l.endDate);
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -367,14 +371,23 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
       type: form.type,
       category: form.category,
       reason: form.reason.trim(),
-      attachments: applyAttachments,
     };
     if (form.type === 'hours') payload.durationHours = form.durationHours;
-    const { data } = await teamLeavesAPI.apply(payload).catch((err) => ({ data: err.response?.data }));
+
+    // Edit mode: PATCH instead of POST. Attachments aren't editable here — they're
+    // owned by the original apply; the existing addAttachments endpoint handles those.
+    const req = editingLeaveId
+      ? teamLeavesAPI.update(editingLeaveId, payload)
+      : teamLeavesAPI.apply({ ...payload, attachments: applyAttachments });
+    const { data } = await req.catch((err) => ({ data: err.response?.data }));
     setSubmitting(false);
     if (data?.success) {
       const replaced = new Set((data.replacedIds || []).map(String));
-      setLeaves((prev) => [data.leave, ...prev.filter((l) => !replaced.has(String(l._id)))]);
+      setLeaves((prev) => {
+        // On edit, replace the existing row; on apply, prepend and drop any replacedIds.
+        if (editingLeaveId) return prev.map((l) => (l._id === editingLeaveId ? data.leave : l));
+        return [data.leave, ...prev.filter((l) => !replaced.has(String(l._id)))];
+      });
       invalidate('leaves:*');
       teamLeavesAPI.myBalance().then(({ data }) => {
         if (data?.success) {
@@ -383,10 +396,61 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
         }
       });
       setShowApply(false);
+      setEditingLeaveId(null);
       setForm({ startDate: ymd(new Date(Date.now() + 24 * 60 * 60 * 1000)), endDate: '', type: 'full', durationHours: 2, category: 'paid', reason: '' });
       setApplyAttachments([]);
     } else {
-      setError(data?.message || 'Could not apply');
+      setError(data?.message || (editingLeaveId ? 'Could not update' : 'Could not apply'));
+    }
+  };
+
+  // Open the apply modal pre-filled for an existing pending leave.
+  const onEdit = (leave) => {
+    setEditingLeaveId(leave._id);
+    setForm({
+      startDate: ymd(new Date(leave.startDate)),
+      endDate: ymd(new Date(leave.endDate)),
+      type: leave.type || 'full',
+      durationHours: leave.durationHours || 2,
+      category: leave.category || 'paid',
+      reason: leave.reason || '',
+    });
+    setApplyAttachments([]);
+    setError('');
+    setShowApply(true);
+  };
+
+  // Owner asks to cancel an approved leave — admin must confirm before quota returns.
+  const onRequestCancel = async (leave) => {
+    const reason = window.prompt('Add a short reason for cancellation (optional):', '') || '';
+    if (reason === null) return; // user hit Esc
+    const { data } = await teamLeavesAPI.requestCancel(leave._id, reason).catch((err) => ({ data: err.response?.data }));
+    if (data?.success) {
+      setLeaves((prev) => prev.map((l) => (l._id === leave._id ? data.leave : l)));
+      invalidate('leaves:*');
+    } else {
+      alert(data?.message || 'Could not request cancel.');
+    }
+  };
+
+  // Admin decides on a pending cancel request. Approving restores the days automatically.
+  const onDecideCancel = async (leave, decision) => {
+    const verb = decision === 'approved' ? 'approve' : 'reject';
+    if (!window.confirm(`${verb === 'approve' ? 'Approve' : 'Reject'} this cancellation request?`)) return;
+    const { data } = await teamLeavesAPI.decideCancel(leave._id, decision).catch((err) => ({ data: err.response?.data }));
+    if (data?.success) {
+      setLeaves((prev) => prev.map((l) => (l._id === leave._id ? data.leave : l)));
+      invalidate('leaves:*');
+      // Approving a cancel returns quota — refresh admin's balances panel.
+      if (decision === 'approved') {
+        const { data: bData } = await teamLeavesAPI.allBalances();
+        if (bData?.success) {
+          setAllBalances(bData.balances || []);
+          setCached('leaves:balances:all', bData);
+        }
+      }
+    } else {
+      alert(data?.message || 'Could not decide.');
     }
   };
 
@@ -1202,7 +1266,7 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
           </div>
         ) : (
           visibleLeaves.map((l, i) => {
-            const styles = STATUS_STYLES[l.status];
+            const styles = STATUS_STYLES[l.status] || FALLBACK_STATUS_STYLE;
             const range =
               ymd(new Date(l.startDate)) === ymd(new Date(l.endDate))
                 ? new Date(l.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -1289,6 +1353,45 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
                       Reject
                     </button>
                   </div>
+                ) : isAdmin && l.status === 'approved' && l.cancelRequested ? (
+                  /* Admin sees the cancellation request — decide approve/reject. */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      style={{
+                        padding: '4px 10px', borderRadius: 999,
+                        backgroundColor: '#FFF7ED', color: '#9A3412',
+                        fontFamily: baseFont, fontSize: 11, fontWeight: 500, letterSpacing: '0.02em',
+                      }}
+                    >
+                      Cancel requested
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onDecideCancel(l, 'approved'); }}
+                      title="Approve cancellation — restores the days"
+                      style={{
+                        padding: '6px 12px', borderRadius: 8,
+                        backgroundColor: palette.accentBg, color: palette.accent,
+                        border: `1px solid ${palette.accent}`,
+                        fontFamily: baseFont, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <Check size={13} /> Approve cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onDecideCancel(l, 'rejected'); }}
+                      style={{
+                        padding: '6px 12px', borderRadius: 8,
+                        backgroundColor: palette.surfaceAlt, color: palette.textDim,
+                        border: `1px solid ${palette.border}`,
+                        fontFamily: baseFont, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                      }}
+                    >
+                      Keep approved
+                    </button>
+                  </div>
                 ) : (
                   <span
                     style={{
@@ -1304,18 +1407,54 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
                     {styles.label}
                   </span>
                 )}
+
+                {/* Employee-side action cluster */}
                 {!isAdmin && l.status === 'pending' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onEdit(l); }}
+                      title="Edit"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textMute }}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onCancel(l); }}
+                      title="Cancel"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textMute }}
+                    >
+                      <XIcon size={14} />
+                    </button>
+                  </div>
+                )}
+                {!isAdmin && l.status === 'approved' && !l.cancelRequested && (
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCancel(l);
+                    onClick={(e) => { e.stopPropagation(); onRequestCancel(l); }}
+                    title="Request cancellation — admin will approve before the days return to your balance"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '5px 10px', borderRadius: 8,
+                      backgroundColor: palette.surfaceAlt, color: palette.text,
+                      border: `1px solid ${palette.border}`,
+                      fontFamily: baseFont, fontSize: 11.5, fontWeight: 500, cursor: 'pointer',
                     }}
-                    title="Cancel"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, color: palette.textMute }}
                   >
-                    <XIcon size={14} />
+                    <XIcon size={11} /> Request cancel
                   </button>
+                )}
+                {!isAdmin && l.status === 'approved' && l.cancelRequested && (
+                  <span
+                    style={{
+                      padding: '4px 10px', borderRadius: 999,
+                      backgroundColor: '#FFF7ED', color: '#9A3412',
+                      fontFamily: baseFont, fontSize: 11, fontWeight: 500, letterSpacing: '0.02em',
+                    }}
+                  >
+                    Cancel pending review
+                  </span>
                 )}
               </div>
             );
@@ -1324,7 +1463,13 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
       </Card>
 
       {/* Apply leave (employee only) */}
-      <Modal open={showApply} onClose={() => setShowApply(false)} title="Apply leave" palette={palette} width={480}>
+      <Modal
+        open={showApply}
+        onClose={() => { setShowApply(false); setEditingLeaveId(null); }}
+        title={editingLeaveId ? 'Edit leave' : 'Apply leave'}
+        palette={palette}
+        width={480}
+      >
         <form onSubmit={onApply}>
           <div style={{ marginBottom: 14 }}>
             <FieldLabel palette={palette}>Category</FieldLabel>
@@ -1549,11 +1694,11 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <GhostButton onClick={() => setShowApply(false)} palette={palette}>
+            <GhostButton onClick={() => { setShowApply(false); setEditingLeaveId(null); }} palette={palette}>
               Cancel
             </GhostButton>
-            <SolidButton type="submit" palette={palette} disabled={submitting} icon={Plus}>
-              {submitting ? 'Submitting…' : 'Submit'}
+            <SolidButton type="submit" palette={palette} disabled={submitting} icon={editingLeaveId ? Pencil : Plus}>
+              {submitting ? (editingLeaveId ? 'Saving…' : 'Submitting…') : (editingLeaveId ? 'Save changes' : 'Submit')}
             </SolidButton>
           </div>
         </form>

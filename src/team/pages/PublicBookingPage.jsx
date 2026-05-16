@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Video, Phone, MapPin, Globe, Check,
+  ArrowLeft, ChevronLeft, ChevronRight, Video, Phone, MapPin, Globe, Check, Calendar,
 } from 'lucide-react';
 import { publicBookingAPI } from '../publicBookingAPI';
+import {
+  readHost as readCachedHost, writeHost as writeCachedHost,
+  readMonthSlots as readCachedMonthSlots, writeMonthSlots as writeCachedMonthSlots,
+  readMonthSlotsDetail as readCachedMonthDetail, writeMonthSlotsDetail as writeCachedMonthDetail,
+  readDaySlotsFromDetail,
+} from '../publicBookingCache';
 import { getPalette, baseFont, serifFont, monoFont, ensureFontsLoaded } from '../theme';
 import { Avatar } from '../components/Primitives';
 
@@ -52,10 +58,20 @@ export default function PublicBookingPage() {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const isPreview = searchParams.get('preview') === '1';
+  const lockedEventId = searchParams.get('event') || null;
   const [isDark, setIsDark] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [host, setHost] = useState(null);
-  const [eventTypes, setEventTypes] = useState([]);
+  // Hydrate from localStorage prefetch — when present, paint instantly while the
+  // network request refreshes in the background.
+  const cachedHost = typeof window !== 'undefined' ? readCachedHost(slug) : null;
+  const cachedTypes = cachedHost?.eventTypes || [];
+  const initialTypes = lockedEventId
+    ? (cachedTypes.filter((t) => String(t.id) === String(lockedEventId)).length > 0
+        ? cachedTypes.filter((t) => String(t.id) === String(lockedEventId))
+        : cachedTypes)
+    : cachedTypes;
+  const [loading, setLoading] = useState(!cachedHost);
+  const [host, setHost] = useState(cachedHost?.host || null);
+  const [eventTypes, setEventTypes] = useState(initialTypes);
   const [error, setError] = useState(null);
 
   const [step, setStep] = useState(1); // 1, 2, 3, 'confirmed'
@@ -76,60 +92,113 @@ export default function PublicBookingPage() {
 
   useEffect(() => { ensureFontsLoaded(); }, []);
 
-  // Load host info
+  // Load host info — fetch fresh in background, but if we hydrated from cache the
+  // UI is already on screen and this is just a silent refresh.
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
       setError(null);
       try {
         const res = await publicBookingAPI.getHost(slug);
         if (cancelled) return;
+        const allTypes = res.data.eventTypes || [];
+        // When the URL specifies ?event=<id>, lock the page to that single event so
+        // the visitor never sees the others. Falls back to the full list if the id
+        // doesn't match (e.g. event was disabled or removed since the link was shared).
+        const filteredTypes = lockedEventId
+          ? (allTypes.filter((t) => String(t.id) === String(lockedEventId)).length > 0
+              ? allTypes.filter((t) => String(t.id) === String(lockedEventId))
+              : allTypes)
+          : allTypes;
         setHost(res.data.host);
-        setEventTypes(res.data.eventTypes || []);
-        // Auto-skip step 1 when there's only one event type — but never in preview mode,
-        // so the host can review their full public flow.
-        if (!isPreview && (res.data.eventTypes || []).length === 1) {
-          setPickedEventType(res.data.eventTypes[0]);
+        setEventTypes(filteredTypes);
+        writeCachedHost(slug, { host: res.data.host, eventTypes: allTypes });
+        // Auto-skip step 1 only when the host *organically* has just one event type.
+        // Never skip in preview mode (host wants to see the full flow), and never
+        // skip when the URL locked us to a single event via ?event= — in that case
+        // step 1 still renders with that one card so the visitor sees what they're
+        // about to book.
+        if (!isPreview && !lockedEventId && filteredTypes.length === 1 && !pickedEventType) {
+          setPickedEventType(filteredTypes[0]);
           setStep(2);
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err?.response?.data?.message || 'This booking page is not available.');
+        // Don't blow away a cached UI on a transient network error.
+        if (!host) setError(err?.response?.data?.message || 'This booking page is not available.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
-  // Load month dots whenever event type or month changes
+  // Load month dots whenever event type or month changes. Hydrate from cache for
+  // instant paint, then refresh in background. We also kick off a detail-fetch
+  // in parallel so that clicking any date in this month paints time pills instantly.
   useEffect(() => {
     if (!pickedEventType || step !== 2) return;
     let cancelled = false;
     const g = monthGrid(monthOffset);
+
+    const cached = readCachedMonthSlots(slug, pickedEventType.id, g.year, g.month);
+    if (cached) setMonthSlots(cached.days || {});
+
     publicBookingAPI.getMonthSlots(slug, pickedEventType.id, g.year, g.month)
-      .then((res) => { if (!cancelled) setMonthSlots(res.data.days || {}); })
-      .catch(() => { if (!cancelled) setMonthSlots({}); });
+      .then((res) => {
+        if (cancelled) return;
+        setMonthSlots(res.data.days || {});
+        writeCachedMonthSlots(slug, pickedEventType.id, g.year, g.month, res.data);
+      })
+      .catch(() => { if (!cancelled && !cached) setMonthSlots({}); });
+
+    // Warm the day-slot detail cache in the background — fire-and-forget.
+    const haveDetail = readCachedMonthDetail(slug, pickedEventType.id, g.year, g.month);
+    if (!haveDetail) {
+      publicBookingAPI.getMonthSlotsDetail(slug, pickedEventType.id, g.year, g.month)
+        .then((res) => { if (!cancelled) writeCachedMonthDetail(slug, pickedEventType.id, g.year, g.month, res.data); })
+        .catch(() => {});
+    }
+
     return () => { cancelled = true; };
   }, [slug, pickedEventType, monthOffset, step]);
 
-  // Load day slots whenever a date is picked
+  // Load day slots whenever a date is picked. Hydrate from the month-detail
+  // cache for instant paint, then revalidate against the live endpoint to catch
+  // any slot that was booked since the prefetch. The submit step still hits a
+  // fresh server check, so a stale slot just means a friendly error if it's
+  // already taken — it can't cause a double-booking.
   useEffect(() => {
     if (!pickedEventType || !pickedDate) { setDaySlots([]); setDayLimitReached(false); return; }
     let cancelled = false;
-    setDaySlotsLoading(true);
-    publicBookingAPI.getSlots(slug, pickedEventType.id, dateKey(pickedDate))
+
+    const g = monthGrid(monthOffset);
+    const dKey = dateKey(pickedDate);
+    const cached = readDaySlotsFromDetail(slug, pickedEventType.id, g.year, g.month, dKey);
+
+    if (cached) {
+      setDaySlots(cached);
+      setDayLimitReached(false);
+      setDaySlotsLoading(false);
+    } else {
+      setDaySlotsLoading(true);
+    }
+
+    publicBookingAPI.getSlots(slug, pickedEventType.id, dKey)
       .then((res) => {
         if (cancelled) return;
         setDaySlots(res.data.slots || []);
         setDayLimitReached(!!res.data.limitReached);
       })
-      .catch(() => { if (!cancelled) { setDaySlots([]); setDayLimitReached(false); } })
+      .catch(() => {
+        if (cancelled) return;
+        if (!cached) { setDaySlots([]); setDayLimitReached(false); }
+      })
       .finally(() => { if (!cancelled) setDaySlotsLoading(false); });
     return () => { cancelled = true; };
-  }, [slug, pickedEventType, pickedDate]);
+  }, [slug, pickedEventType, pickedDate, monthOffset]);
 
   const submit = async () => {
     if (!pickedEventType || !pickedDate || !pickedSlot) return;
@@ -212,27 +281,62 @@ export default function PublicBookingPage() {
 
   return (
     <div style={containerStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', maxWidth: 760, margin: '0 auto' }}>
+      {/* Subtle accent rule across the top — sets a formal, branded tone without competing with content. */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${palette.accent}, ${palette.accent}55)` }} />
+
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        padding: '24px 24px 18px',
+      }}>
         <img
           src="/Goti%20Logo%20Black.png"
           alt="Goti"
           style={{
-            height: 28,
+            height: 32,
             width: 'auto',
             display: 'block',
             filter: isDark ? 'invert(1)' : 'none',
           }}
         />
+        <div style={{ fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.14em' }}>
+          BOOK A MEETING
+        </div>
       </div>
 
-      <div style={{ maxWidth: 620, margin: '0 auto', padding: '8px 24px 80px' }}>
-        {/* host header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
-          <Avatar initials={host.avatar} size={48} palette={palette} />
-          <div>
-            <div style={{ fontFamily: serifFont, fontSize: 24, fontWeight: 500, color: palette.text }}>{host.name}</div>
-            <div style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim }}>{host.jobTitle}, GOTI</div>
+      <div style={{ maxWidth: 660, margin: '0 auto', padding: '8px 24px 24px' }}>
+        {/* host header — refined with a subtle availability pill. */}
+        <div
+          style={{
+            display: 'flex', alignItems: 'center', gap: 16,
+            marginBottom: 36,
+            padding: '20px 22px',
+            borderRadius: 14,
+            border: `1px solid ${palette.border}`,
+            backgroundColor: palette.surface,
+          }}
+        >
+          <Avatar initials={host.avatar} size={52} palette={palette} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: serifFont, fontSize: 24, fontWeight: 500, color: palette.text, lineHeight: 1.15 }}>
+              {host.name}
+            </div>
+            <div style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim, marginTop: 2 }}>
+              {host.jobTitle}{host.jobTitle ? ' · ' : ''}GOTI
+            </div>
           </div>
+          {eventTypes.length > 0 && (
+            <span
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 10px', borderRadius: 999,
+                backgroundColor: palette.accentBg, color: palette.accent,
+                fontFamily: monoFont, fontSize: 10.5, fontWeight: 500, letterSpacing: '0.06em',
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: 999, backgroundColor: palette.accent }} />
+              ACCEPTING BOOKINGS
+            </span>
+          )}
         </div>
 
         {eventTypes.length === 0 ? (
@@ -271,25 +375,45 @@ export default function PublicBookingPage() {
                         type="button"
                         onClick={() => { setPickedEventType(et); setStep(2); }}
                         style={{
-                          width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 12,
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 18, padding: '20px 22px', borderRadius: 14,
                           border: `1px solid ${palette.border}`, backgroundColor: palette.surface,
-                          textAlign: 'left', cursor: 'pointer', transition: 'border-color .15s',
+                          textAlign: 'left', cursor: 'pointer',
+                          transition: 'border-color .15s, box-shadow .15s, transform .15s',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = palette.accent)}
-                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = palette.border)}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = palette.accent;
+                          e.currentTarget.style.boxShadow = `0 6px 22px ${palette.bg === '#0F0E0C' ? 'rgba(0,0,0,0.35)' : 'rgba(45, 90, 61, 0.08)'}`;
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = palette.border;
+                          e.currentTarget.style.boxShadow = 'none';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
                       >
-                        <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: palette.accentBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <LIcon size={17} color={palette.accent} />
+                        <div style={{
+                          width: 44, height: 44, borderRadius: 10,
+                          backgroundColor: palette.accentBg,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
+                          <LIcon size={18} color={palette.accent} />
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontFamily: baseFont, fontSize: 14.5, fontWeight: 500, color: palette.text }}>{et.name}</div>
-                          {et.description && <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim, marginTop: 2 }}>{et.description}</div>}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, lineHeight: 1.2 }}>
+                            {et.name}
+                          </div>
+                          {et.description && (
+                            <div style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim, marginTop: 4, lineHeight: 1.4 }}>
+                              {et.description}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 8, fontFamily: monoFont, fontSize: 11, color: palette.textMute, letterSpacing: '0.04em' }}>
+                            <span>{et.duration} MIN</span>
+                            <span>·</span>
+                            <span>{et.location.toUpperCase()}</span>
+                          </div>
                         </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontFamily: monoFont, fontSize: 13, color: palette.text }}>{et.duration} min</div>
-                          <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>{et.location}</div>
-                        </div>
-                        <ChevronRight size={16} color={palette.textMute} />
+                        <ChevronRight size={18} color={palette.textMute} style={{ flexShrink: 0 }} />
                       </button>
                     );
                   })}
@@ -335,30 +459,39 @@ export default function PublicBookingPage() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
                     {/* month calendar */}
-                    <div style={{ padding: 16, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, flexShrink: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ padding: 20, borderRadius: 14, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                         <button
                           type="button"
                           onClick={() => setMonthOffset(Math.max(0, monthOffset - 1))}
                           disabled={monthOffset === 0}
-                          style={{ color: monthOffset > 0 ? palette.textDim : palette.textMute, padding: 2, border: 'none', background: 'none', cursor: monthOffset > 0 ? 'pointer' : 'default' }}
+                          style={{
+                            color: monthOffset > 0 ? palette.textDim : palette.textMute,
+                            padding: 6, border: `1px solid ${palette.border}`, borderRadius: 6, background: 'none',
+                            cursor: monthOffset > 0 ? 'pointer' : 'default',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          }}
                         >
-                          <ChevronLeft size={15} />
+                          <ChevronLeft size={14} />
                         </button>
-                        <span style={{ fontFamily: serifFont, fontSize: 15, color: palette.text }}>{grid.label}</span>
+                        <span style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text }}>{grid.label}</span>
                         <button
                           type="button"
                           onClick={() => setMonthOffset(monthOffset + 1)}
-                          style={{ color: palette.textDim, padding: 2, border: 'none', background: 'none', cursor: 'pointer' }}
+                          style={{
+                            color: palette.textDim,
+                            padding: 6, border: `1px solid ${palette.border}`, borderRadius: 6, background: 'none', cursor: 'pointer',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          }}
                         >
-                          <ChevronRight size={15} />
+                          <ChevronRight size={14} />
                         </button>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, width: 252 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, width: 280 }}>
                         {WEEKDAY_LABELS.map((d) => (
-                          <div key={d} style={{ textAlign: 'center', fontFamily: monoFont, fontSize: 9.5, color: palette.textMute, paddingBottom: 4 }}>{d[0]}</div>
+                          <div key={d} style={{ textAlign: 'center', fontFamily: monoFont, fontSize: 10, color: palette.textMute, paddingBottom: 6, letterSpacing: '0.06em', fontWeight: 500 }}>{d[0]}</div>
                         ))}
                         {grid.cells.map((c, i) => {
                           const dm = new Date(c.date); dm.setHours(0, 0, 0, 0);
@@ -367,6 +500,7 @@ export default function PublicBookingPage() {
                           const slotCount = monthSlots[cellKey] || 0;
                           const has = c.inMonth && inWindow && slotCount > 0;
                           const sel = pickedDate && dateKey(pickedDate) === cellKey;
+                          const isToday = cellKey === dateKey(new Date());
                           return (
                             <button
                               key={i}
@@ -374,19 +508,23 @@ export default function PublicBookingPage() {
                               disabled={!has}
                               onClick={() => { setPickedDate(c.date); setPickedSlot(null); }}
                               style={{
-                                aspectRatio: '1', borderRadius: 6, border: 'none',
+                                aspectRatio: '1', borderRadius: 8,
+                                border: isToday && !sel ? `1.5px solid ${palette.accent}` : 'none',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
                                 backgroundColor: sel ? palette.accent : has ? palette.surfaceAlt : 'transparent',
                                 cursor: has ? 'pointer' : 'default',
+                                transition: 'background-color .12s',
                               }}
+                              onMouseEnter={(e) => { if (has && !sel) e.currentTarget.style.backgroundColor = palette.accentBg; }}
+                              onMouseLeave={(e) => { if (has && !sel) e.currentTarget.style.backgroundColor = palette.surfaceAlt; }}
                             >
                               <span style={{
-                                fontFamily: monoFont, fontSize: 12,
+                                fontFamily: monoFont, fontSize: 13,
                                 color: sel ? palette.accentText : !c.inMonth ? 'transparent' : has ? palette.text : palette.textMute,
-                                fontWeight: sel ? 600 : 400,
+                                fontWeight: sel || isToday ? 600 : 400,
                               }}>{c.date.getDate()}</span>
                               {has && !sel && (
-                                <span style={{ position: 'absolute', bottom: 3, width: 4, height: 4, borderRadius: 2, backgroundColor: palette.accent }} />
+                                <span style={{ position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: palette.accent }} />
                               )}
                             </button>
                           );
@@ -396,29 +534,38 @@ export default function PublicBookingPage() {
 
                     {/* slots */}
                     <div style={{ flex: 1, minWidth: 240 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                        <Globe size={12} color={palette.textMute} />
-                        <span style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim }}>Times shown in</span>
-                        <select
-                          value={tz}
-                          onChange={(e) => setTz(e.target.value)}
-                          style={{ backgroundColor: palette.surfaceAlt, color: palette.text, fontFamily: baseFont, fontSize: 11.5, border: `1px solid ${palette.border}`, borderRadius: 6, padding: '3px 6px', outline: 'none' }}
-                        >
-                          {TZ_OPTIONS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
-                        </select>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                        {pickedDate && (
+                          <div style={{ fontFamily: serifFont, fontSize: 16, color: palette.text }}>
+                            {pickedDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: pickedDate ? 'auto' : 0 }}>
+                          <Globe size={12} color={palette.textMute} />
+                          <span style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textDim }}>Times in</span>
+                          <select
+                            value={tz}
+                            onChange={(e) => setTz(e.target.value)}
+                            style={{ backgroundColor: palette.surfaceAlt, color: palette.text, fontFamily: baseFont, fontSize: 11.5, border: `1px solid ${palette.border}`, borderRadius: 6, padding: '3px 6px', outline: 'none' }}
+                          >
+                            {TZ_OPTIONS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                          </select>
+                        </div>
                       </div>
                       {!pickedDate ? (
-                        <div style={{ borderRadius: 12, border: `1px dashed ${palette.border}`, padding: '48px 16px', textAlign: 'center' }}>
+                        <div style={{ borderRadius: 14, border: `1px dashed ${palette.border}`, padding: '56px 16px', textAlign: 'center', backgroundColor: palette.surfaceAlt }}>
                           <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
                             Pick a day to see open times.
                           </span>
                         </div>
                       ) : daySlotsLoading ? (
-                        <div style={{ borderRadius: 12, border: `1px dashed ${palette.border}`, padding: '48px 16px', textAlign: 'center' }}>
-                          <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>Loading…</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
+                          {Array.from({ length: 9 }).map((_, i) => (
+                            <div key={i} style={{ height: 36, borderRadius: 8, backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}` }} />
+                          ))}
                         </div>
                       ) : daySlots.length === 0 ? (
-                        <div style={{ borderRadius: 12, border: `1px dashed ${palette.border}`, padding: '48px 16px', textAlign: 'center' }}>
+                        <div style={{ borderRadius: 14, border: `1px dashed ${palette.border}`, padding: '56px 16px', textAlign: 'center', backgroundColor: palette.surfaceAlt }}>
                           <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textMute }}>
                             {dayLimitReached
                               ? `Call limit with ${host.name.split(' ')[0]} is over for today.`
@@ -426,19 +573,27 @@ export default function PublicBookingPage() {
                           </span>
                         </div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
                           {daySlots.map((s) => (
                             <button
                               key={s}
                               type="button"
                               onClick={() => { setPickedSlot(s); setStep(3); }}
                               style={{
-                                padding: '8px 0', borderRadius: 8, border: `1px solid ${palette.border}`,
-                                backgroundColor: palette.surface, fontFamily: monoFont, fontSize: 12.5, color: palette.text,
-                                cursor: 'pointer', transition: 'all .15s',
+                                padding: '10px 0', borderRadius: 8, border: `1px solid ${palette.border}`,
+                                backgroundColor: palette.surface, fontFamily: monoFont, fontSize: 13, color: palette.text,
+                                cursor: 'pointer', transition: 'all .12s', letterSpacing: '0.02em',
                               }}
-                              onMouseEnter={(e) => { e.currentTarget.style.borderColor = palette.accent; e.currentTarget.style.color = palette.accent; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.borderColor = palette.border; e.currentTarget.style.color = palette.text; }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = palette.accent;
+                                e.currentTarget.style.color = palette.accent;
+                                e.currentTarget.style.backgroundColor = palette.accentBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = palette.border;
+                                e.currentTarget.style.color = palette.text;
+                                e.currentTarget.style.backgroundColor = palette.surface;
+                              }}
                             >
                               {fmt12(applyTz(s, tz))}
                             </button>
@@ -465,15 +620,29 @@ export default function PublicBookingPage() {
                   Confirm your <em style={{ fontStyle: 'italic', fontWeight: 300 }}>details</em>
                 </h2>
 
-                <div style={{ padding: 16, borderRadius: 10, backgroundColor: palette.accentBg, marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    {(() => { const I = locationIcon(pickedEventType.location); return <I size={14} color={palette.accent} />; })()}
-                    <span style={{ fontFamily: baseFont, fontSize: 13.5, fontWeight: 500, color: palette.text }}>
-                      {pickedEventType.name} · {pickedEventType.duration} min
+                <div style={{
+                  padding: 18, borderRadius: 12,
+                  backgroundColor: palette.accentBg,
+                  border: `1px solid ${palette.accent}`,
+                  marginBottom: 24,
+                }}>
+                  <div style={{ fontFamily: monoFont, fontSize: 10, color: palette.accent, letterSpacing: '0.1em', fontWeight: 500, marginBottom: 8 }}>
+                    WHAT YOU'RE BOOKING
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    {(() => { const I = locationIcon(pickedEventType.location); return <I size={15} color={palette.accent} />; })()}
+                    <span style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text }}>
+                      {pickedEventType.name}
+                    </span>
+                    <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.accent, padding: '2px 8px', borderRadius: 999, border: `1px solid ${palette.accent}` }}>
+                      {pickedEventType.duration} MIN
                     </span>
                   </div>
-                  <div style={{ fontFamily: monoFont, fontSize: 12, color: palette.accent }}>
-                    {pickedDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })} · {fmt12(applyTz(pickedSlot, tz))} {tz}
+                  <div style={{ fontFamily: monoFont, fontSize: 12.5, color: palette.text, marginTop: 4 }}>
+                    {pickedDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </div>
+                  <div style={{ fontFamily: monoFont, fontSize: 12.5, color: palette.accent, marginTop: 2 }}>
+                    {fmt12(applyTz(pickedSlot, tz))} {tz} · {pickedEventType.location}
                   </div>
                 </div>
 
@@ -539,36 +708,74 @@ export default function PublicBookingPage() {
 
             {/* CONFIRMED */}
             {step === 'confirmed' && pickedEventType && pickedDate && pickedSlot && (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 999, width: 52, height: 52, backgroundColor: palette.accentBg, marginBottom: 20 }}>
-                  <Check size={24} color={palette.accent} />
+              <div style={{ textAlign: 'center', paddingTop: 8 }}>
+                <div
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: 999, width: 64, height: 64,
+                    backgroundColor: palette.accentBg,
+                    border: `2px solid ${palette.accent}`,
+                    marginBottom: 24,
+                  }}
+                >
+                  <Check size={28} color={palette.accent} strokeWidth={2.5} />
                 </div>
-                <h2 style={{ fontFamily: serifFont, fontSize: 36, fontWeight: 400, color: palette.text, margin: 0 }}>
+                <h2 style={{ fontFamily: serifFont, fontSize: 40, fontWeight: 400, color: palette.text, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   You're <em style={{ fontStyle: 'italic', fontWeight: 300 }}>booked.</em>
                 </h2>
-                <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, marginTop: 24, textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    {(() => { const I = locationIcon(pickedEventType.location); return <I size={15} color={palette.accent} />; })()}
-                    <span style={{ fontFamily: baseFont, fontSize: 14, fontWeight: 500, color: palette.text }}>
-                      {pickedEventType.name} with {host.name.split(' ')[0]}
-                    </span>
+                <p style={{ fontFamily: baseFont, fontSize: 14, color: palette.textDim, marginTop: 10, marginBottom: 28 }}>
+                  A confirmation has been sent to <span style={{ fontFamily: monoFont, color: palette.text }}>{form.email}</span>.
+                </p>
+
+                <div style={{
+                  padding: '22px 24px', borderRadius: 14,
+                  border: `1px solid ${palette.border}`, backgroundColor: palette.surface,
+                  textAlign: 'left',
+                  boxShadow: palette.bg === '#0F0E0C' ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(45, 90, 61, 0.08)',
+                }}>
+                  <div style={{ fontFamily: monoFont, fontSize: 10, color: palette.textMute, letterSpacing: '0.1em', fontWeight: 500, marginBottom: 10 }}>
+                    BOOKING CONFIRMED
                   </div>
-                  <div style={{ fontFamily: monoFont, fontSize: 12.5, color: palette.textDim, lineHeight: 1.7 }}>
-                    {pickedDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}<br />
-                    {fmt12(applyTz(pickedSlot, tz))} {tz} · {pickedEventType.duration} min<br />
-                    {pickedEventType.location}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <Avatar initials={host.avatar} size={32} palette={palette} />
+                    <div>
+                      <div style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text }}>
+                        {pickedEventType.name} with {host.name.split(' ')[0]}
+                      </div>
+                      <div style={{ fontFamily: baseFont, fontSize: 12, color: palette.textDim }}>
+                        {pickedEventType.duration} min · {pickedEventType.location}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute, marginTop: 20 }}>
-                  A confirmation has been sent to your email.
+                  <div style={{
+                    padding: 14, borderRadius: 10, backgroundColor: palette.accentBg,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                  }}>
+                    <Calendar size={16} color={palette.accent} />
+                    <div>
+                      <div style={{ fontFamily: baseFont, fontSize: 13, color: palette.text, fontWeight: 500 }}>
+                        {pickedDate.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      </div>
+                      <div style={{ fontFamily: monoFont, fontSize: 12, color: palette.accent, marginTop: 2 }}>
+                        {fmt12(applyTz(pickedSlot, tz))} {tz}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
           </>
         )}
 
-        <div style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute, textAlign: 'center', marginTop: 48 }}>
-          Powered by GOTI
+        <div style={{
+          marginTop: 64, paddingTop: 24, borderTop: `1px solid ${palette.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          fontFamily: monoFont, fontSize: 10.5, color: palette.textMute, letterSpacing: '0.1em',
+        }}>
+          <span>POWERED BY</span>
+          <span style={{ fontFamily: serifFont, fontSize: 13, color: palette.textDim, letterSpacing: 0, fontWeight: 500 }}>
+            Goti<span style={{ color: palette.accent }}>.</span>
+          </span>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Calendar as CalendarIcon, X as XIcon } from 'lucide-react';
 import { teamReportsAPI } from '../teamAPI';
+import { getCached, setCached } from '../teamCache';
 import { baseFont, serifFont, monoFont, fmtMinutes } from '../theme';
 import { PageHeader, Card, StatTile } from '../components/Primitives';
 
@@ -10,22 +11,56 @@ const PERIODS = [
   { id: 'lastmonth', label: 'Last month' },
 ];
 
-export default function HistoryView({ palette, currentUserId }) {
+// Today as YYYY-MM-DD, used to default the custom range pickers.
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function daysAgoKey(n) {
+  const d = new Date(); d.setDate(d.getDate() - n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export default function HistoryView({ palette, currentUserId, openTask }) {
   const [period, setPeriod] = useState('month');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Custom range state — `active` toggles between preset and custom modes.
+  const [custom, setCustom] = useState({ active: false, from: daysAgoKey(13), to: todayKey() });
+  // Build a stable cache key for whichever mode is active so warmTeamCache + the view agree.
+  const cacheKey = custom.active
+    ? `reports:history:${currentUserId}:range:${custom.from}_${custom.to}`
+    : `reports:history:${currentUserId}:${period}:`;
+  // Seed from cache so the tab paints instantly on first open after login.
+  const [data, setData] = useState(() => getCached(cacheKey));
+  const [loading, setLoading] = useState(!getCached(cacheKey));
 
   useEffect(() => {
-    setLoading(true);
-    teamReportsAPI.employee(currentUserId, period, null).then(({ data }) => {
-      if (data?.success) setData(data);
+    const key = custom.active
+      ? `reports:history:${currentUserId}:range:${custom.from}_${custom.to}`
+      : `reports:history:${currentUserId}:${period}:`;
+    const cached = getCached(key);
+    if (cached) {
+      setData(cached);
       setLoading(false);
-    });
-  }, [currentUserId, period]);
+    } else {
+      setLoading(true);
+    }
+    const params = custom.active
+      ? [currentUserId, 'range', null, { from: custom.from, to: custom.to }]
+      : [currentUserId, period, null];
+    teamReportsAPI.employee(...params).then(({ data: res }) => {
+      if (res?.success) {
+        setData(res);
+        setCached(key, res);
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [currentUserId, period, custom.active, custom.from, custom.to]);
 
-  const kicker = `YOUR ACTIVITY · ${
-    period === 'week' ? 'THIS WEEK' : period === 'month' ? 'THIS MONTH' : 'LAST MONTH'
-  }`;
+  const kicker = custom.active
+    ? `YOUR ACTIVITY · ${new Date(custom.from + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).toUpperCase()} – ${new Date(custom.to + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}`
+    : `YOUR ACTIVITY · ${
+        period === 'week' ? 'THIS WEEK' : period === 'month' ? 'THIS MONTH' : 'LAST MONTH'
+      }`;
 
   const completedTasks = useMemo(
     () => (data?.tasks || []).filter((t) => t.status === 'completed' && t.completedAt),
@@ -69,39 +104,100 @@ export default function HistoryView({ palette, currentUserId }) {
     <div>
       <PageHeader kicker={kicker} title="My" accentWord="history" palette={palette} />
 
-      <div
-        style={{
-          display: 'inline-flex',
-          border: `1px solid ${palette.border}`,
-          backgroundColor: palette.surface,
-          padding: 3,
-          borderRadius: 8,
-          marginBottom: 32,
-        }}
-      >
-        {PERIODS.map((p) => {
-          const on = period === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPeriod(p.id)}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 32 }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            border: `1px solid ${palette.border}`,
+            backgroundColor: palette.surface,
+            padding: 3,
+            borderRadius: 8,
+          }}
+        >
+          {PERIODS.map((p) => {
+            const on = !custom.active && period === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => { setPeriod(p.id); setCustom((c) => ({ ...c, active: false })); }}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: 6,
+                  backgroundColor: on ? palette.accentBg : 'transparent',
+                  color: on ? palette.accent : palette.textDim,
+                  fontFamily: baseFont,
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setCustom((c) => ({ ...c, active: true }))}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 6,
+              backgroundColor: custom.active ? palette.accentBg : 'transparent',
+              color: custom.active ? palette.accent : palette.textDim,
+              fontFamily: baseFont,
+              fontSize: 12.5,
+              fontWeight: 500,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <CalendarIcon size={12} strokeWidth={1.75} />
+            Custom
+          </button>
+        </div>
+
+        {custom.active && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '4px 10px', borderRadius: 8,
+            backgroundColor: palette.surface, border: `1px solid ${palette.border}`,
+          }}>
+            <input
+              type="date"
+              value={custom.from}
+              max={custom.to}
+              onChange={(e) => setCustom((c) => ({ ...c, from: e.target.value }))}
               style={{
-                padding: '6px 16px',
-                borderRadius: 6,
-                backgroundColor: on ? palette.accentBg : 'transparent',
-                color: on ? palette.accent : palette.textDim,
-                fontFamily: baseFont,
-                fontSize: 12.5,
-                fontWeight: 500,
-                border: 'none',
-                cursor: 'pointer',
+                padding: '4px 6px', borderRadius: 6, outline: 'none',
+                backgroundColor: palette.surfaceAlt, color: palette.text,
+                fontFamily: monoFont, fontSize: 12, border: `1px solid ${palette.border}`,
               }}
+            />
+            <span style={{ fontFamily: baseFont, fontSize: 11.5, color: palette.textMute }}>→</span>
+            <input
+              type="date"
+              value={custom.to}
+              min={custom.from}
+              max={todayKey()}
+              onChange={(e) => setCustom((c) => ({ ...c, to: e.target.value }))}
+              style={{
+                padding: '4px 6px', borderRadius: 6, outline: 'none',
+                backgroundColor: palette.surfaceAlt, color: palette.text,
+                fontFamily: monoFont, fontSize: 12, border: `1px solid ${palette.border}`,
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setCustom({ active: false, from: daysAgoKey(13), to: todayKey() })}
+              title="Exit custom range"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 2 }}
             >
-              {p.label}
+              <XIcon size={13} />
             </button>
-          );
-        })}
+          </div>
+        )}
       </div>
 
       {loading || !data ? (
@@ -207,15 +303,27 @@ export default function HistoryView({ palette, currentUserId }) {
               </div>
             ) : (
               completedTasks.map((t, i) => (
-                <div
+                <button
                   key={t._id}
+                  type="button"
+                  onClick={() => openTask?.(t._id)}
                   style={{
+                    width: '100%',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 14,
                     padding: '14px 18px',
                     borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    background: 'transparent',
+                    cursor: openTask ? 'pointer' : 'default',
+                    textAlign: 'left',
+                    transition: 'background-color 120ms',
                   }}
+                  onMouseEnter={(e) => { if (openTask) e.currentTarget.style.backgroundColor = palette.surfaceAlt; }}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   <Check size={14} style={{ color: palette.accent, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -226,7 +334,7 @@ export default function HistoryView({ palette, currentUserId }) {
                       <span style={{ fontFamily: monoFont }}>{fmtMinutes(t.spentMinutes)}</span>
                     </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </Card>

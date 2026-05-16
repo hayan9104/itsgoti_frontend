@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Share2, Copy, Check, ExternalLink, Trash2, Download, MessageSquare, CheckSquare, Scissors } from 'lucide-react';
+import { ArrowLeft, Share2, Copy, Check, ExternalLink, Trash2, Download, MessageSquare, CheckSquare, Scissors, RotateCcw } from 'lucide-react';
 import { teamRecordingsAPI } from '../teamRecordingAPI';
 import { teamTasksAPI } from '../teamAPI';
 import { getCached, setCached, invalidate } from '../teamCache';
@@ -124,9 +124,23 @@ export default function RecordingWatchView({ palette, isDark, isAdmin, currentUs
 
   const saveTrim = async () => {
     if (!trimRange) return;
-    const newDur = Math.max(1, Math.round(trimRange.end - trimRange.start));
-    await patchRec({ durationSec: newDur });
-    setTrimRange(null);
+    try {
+      const { data } = await teamRecordingsAPI.saveTrim(rec.id, trimRange.start, trimRange.end);
+      if (data?.success && data.recording) setRec(data.recording);
+      setTrimRange(null);
+    } catch (e) {
+      alert(e?.response?.data?.message || 'Could not save trim.');
+    }
+  };
+
+  const restoreOriginal = async () => {
+    if (!window.confirm('Restore the full original recording? Your current trim will be cleared.')) return;
+    try {
+      const { data } = await teamRecordingsAPI.restoreOriginal(rec.id);
+      if (data?.success && data.recording) setRec(data.recording);
+    } catch (e) {
+      alert(e?.response?.data?.message || 'Could not restore original.');
+    }
   };
 
   const downloadUrl = rec.allowDownload && rec.blobUrl ? resolveBlobUrl(rec.blobUrl) : null;
@@ -184,10 +198,11 @@ export default function RecordingWatchView({ palette, isDark, isAdmin, currentUs
             <TrimEditor
               palette={palette}
               isDark={isDark}
-              durationSec={rec.durationSec}
+              rec={rec}
               trimRange={trimRange}
               setTrimRange={setTrimRange}
               onSave={saveTrim}
+              onRestore={restoreOriginal}
             />
           )}
 
@@ -390,48 +405,94 @@ function ToggleRow({ palette, label, on, onChange }) {
   );
 }
 
-function TrimEditor({ palette, isDark, durationSec, trimRange, setTrimRange, onSave }) {
+// Days during which the "Restore original" button stays visible after the trim was saved.
+// The underlying file is never deleted, so restore technically works forever — this just
+// hides the option for old, long-settled trims.
+const RESTORE_WINDOW_DAYS = 5;
+
+function TrimEditor({ palette, isDark, rec, trimRange, setTrimRange, onSave, onRestore }) {
+  const originalDuration = rec.originalDuration || rec.durationSec;
+  const isTrimmed = !!(rec.trimEnd && rec.trimEnd > (rec.trimStart || 0));
   const trimming = !!trimRange;
-  const tStart = trimRange ? trimRange.start : 0;
-  const tEnd = trimRange ? trimRange.end : durationSec;
+
+  // Range editor operates on the FULL original duration so the user can extend their trim
+  // back outwards, not just narrow it further. Start with current trim (or full range).
+  const tStart = trimRange ? trimRange.start : (rec.trimStart || 0);
+  const tEnd = trimRange ? trimRange.end : (rec.trimEnd || originalDuration);
+  const fullLen = originalDuration || 1;
+
+  // Restore-window check: hide after N days from trimmedAt. Always shown to admins inside
+  // the window. When `trimmedAt` is missing on legacy trims, we still show it.
+  const trimmedAt = rec.trimmedAt ? new Date(rec.trimmedAt) : null;
+  const restoreCutoff = trimmedAt ? new Date(trimmedAt.getTime() + RESTORE_WINDOW_DAYS * 24 * 60 * 60 * 1000) : null;
+  const restoreAvailable = isTrimmed && (!restoreCutoff || Date.now() <= restoreCutoff.getTime());
+  const restoreDaysLeft = restoreCutoff ? Math.max(0, Math.ceil((restoreCutoff.getTime() - Date.now()) / (24 * 60 * 60 * 1000))) : null;
+
   return (
-    <div style={{ marginTop: 24, padding: '16px', borderRadius: 10, backgroundColor: palette.surface, border: `1px solid ${palette.border}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div style={{ marginTop: 24, padding: 16, borderRadius: 10, backgroundColor: palette.surface, border: `1px solid ${palette.border}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Scissors size={13} strokeWidth={1.75} color={palette.textDim} />
           <span style={{ fontFamily: baseFont, fontSize: 12.5, fontWeight: 500, color: palette.text }}>Trim</span>
-          <span style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>· cut dead air at the start or end</span>
+          {isTrimmed ? (
+            <span style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>
+              · {recFmtDur(tStart)} – {recFmtDur(tEnd)} of {recFmtDur(originalDuration)} original
+            </span>
+          ) : (
+            <span style={{ fontFamily: baseFont, fontSize: 11, color: palette.textMute }}>· cut dead air at the start or end</span>
+          )}
         </div>
         {!trimming && (
-          <button type="button" onClick={() => setTrimRange({ start: 0, end: durationSec })}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 11.5, color: palette.accent, fontWeight: 500 }}>
-            Edit trim
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {restoreAvailable && (
+              <button
+                type="button"
+                onClick={onRestore}
+                title={restoreDaysLeft != null ? `Available for ${restoreDaysLeft} more day${restoreDaysLeft === 1 ? '' : 's'}` : 'Restore the original recording'}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: palette.surfaceAlt, border: `1px solid ${palette.border}`,
+                  borderRadius: 6, padding: '5px 10px', cursor: 'pointer',
+                  fontFamily: baseFont, fontSize: 11.5, color: palette.text, fontWeight: 500,
+                }}
+              >
+                <RotateCcw size={11} /> Restore original
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setTrimRange({ start: tStart, end: tEnd })}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: baseFont, fontSize: 11.5, color: palette.accent, fontWeight: 500 }}
+            >
+              {isTrimmed ? 'Edit trim' : 'Edit trim'}
+            </button>
+          </div>
         )}
       </div>
+
       {trimming ? (
         <>
           <div style={{ position: 'relative', height: 40, backgroundColor: palette.surfaceAlt, borderRadius: 6, overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${(tStart / durationSec) * 100}%`, backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.06)' }} />
-            <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: `${(1 - tEnd / durationSec) * 100}%`, backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.06)' }} />
+            <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: `${(tStart / fullLen) * 100}%`, backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.06)' }} />
+            <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: `${(1 - tEnd / fullLen) * 100}%`, backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.06)' }} />
             <div style={{
               position: 'absolute', top: 0, bottom: 0,
-              left: `${(tStart / durationSec) * 100}%`,
-              right: `${(1 - tEnd / durationSec) * 100}%`,
+              left: `${(tStart / fullLen) * 100}%`,
+              right: `${(1 - tEnd / fullLen) * 100}%`,
               border: `2px solid ${palette.accent}`, borderRadius: 4, backgroundColor: palette.accentBg, opacity: 0.5,
             }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontFamily: monoFont, fontSize: 10, color: palette.textMute }}>START</span>
-              <input type="range" min={0} max={durationSec} value={tStart}
+              <input type="range" min={0} max={fullLen} value={tStart}
                 onChange={(e) => setTrimRange((r) => ({ ...r, start: Math.min(Number(e.target.value), r.end - 1) }))}
                 style={{ accentColor: palette.accent, width: 110 }} />
               <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.text }}>{recFmtDur(tStart)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontFamily: monoFont, fontSize: 10, color: palette.textMute }}>END</span>
-              <input type="range" min={0} max={durationSec} value={tEnd}
+              <input type="range" min={0} max={fullLen} value={tEnd}
                 onChange={(e) => setTrimRange((r) => ({ ...r, end: Math.max(Number(e.target.value), r.start + 1) }))}
                 style={{ accentColor: palette.accent, width: 110 }} />
               <span style={{ fontFamily: monoFont, fontSize: 11, color: palette.text }}>{recFmtDur(tEnd)}</span>
@@ -447,12 +508,27 @@ function TrimEditor({ palette, isDark, durationSec, trimRange, setTrimRange, onS
               }}>Save trim</button>
           </div>
           <div style={{ fontFamily: baseFont, fontSize: 10.5, color: palette.textMute, marginTop: 8 }}>
-            For v1 this updates the displayed duration only; the underlying file is unchanged.
+            Lossless — your file isn't re-encoded. You can Restore original within {RESTORE_WINDOW_DAYS} days.
           </div>
         </>
       ) : (
-        <div style={{ height: 40, backgroundColor: palette.surfaceAlt, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: baseFont, fontSize: 11.5, color: palette.textMute }}>
-          Full recording · {recFmtDur(durationSec)}
+        <div style={{
+          height: 40, backgroundColor: palette.surfaceAlt, borderRadius: 6,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          fontFamily: baseFont, fontSize: 11.5, color: palette.textMute,
+        }}>
+          {isTrimmed ? (
+            <>
+              <span>Trimmed · plays {recFmtDur(tEnd - tStart)}</span>
+              {restoreDaysLeft != null && restoreAvailable && (
+                <span style={{ fontFamily: monoFont, fontSize: 10, color: palette.textMute, letterSpacing: '0.06em' }}>
+                  · RESTORE AVAILABLE FOR {restoreDaysLeft} MORE DAY{restoreDaysLeft === 1 ? '' : 'S'}
+                </span>
+              )}
+            </>
+          ) : (
+            <span>Full recording · {recFmtDur(originalDuration)}</span>
+          )}
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Video,
 } from 'lucide-react';
 import { useTeamAuth } from '../TeamAuthContext';
 import { warmTeamCache } from '../teamCache';
@@ -25,7 +26,7 @@ import {
   teamReportsAPI,
 } from '../teamAPI';
 import { teamRecordingsAPI } from '../teamRecordingAPI';
-import { RecorderProvider } from '../recording/RecorderContext';
+import { RecorderProvider, useRecorder } from '../recording/RecorderContext';
 import RecordingOverlays from '../recording/RecordingOverlays';
 import { getPalette, baseFont, serifFont, monoFont, ensureFontsLoaded } from '../theme';
 import { Avatar } from '../components/Primitives';
@@ -130,7 +131,7 @@ export default function TeamDashboard() {
         reports: teamReportsAPI,
         recordings: teamRecordingsAPI,
       },
-      { isAdmin },
+      { isAdmin, currentUserId: user.id },
     );
   }, [user, isAdmin]);
 
@@ -385,26 +386,29 @@ export default function TeamDashboard() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
               gap: 12,
               padding: '14px 40px',
               borderBottom: `1px solid ${palette.border}`,
               backgroundColor: palette.surface,
             }}
           >
-            {!isAdmin && <JoinEndButton palette={palette} />}
-            <NotificationsBell
-              palette={palette}
-              onNavigate={(n) => {
-                if (n.relatedType === 'task') {
-                  setHighlightTaskId(n.relatedId);
-                  switchView('tasks');
-                } else if (n.relatedType === 'leave') {
-                  setHighlightLeaveId(n.relatedId);
-                  switchView('leaves');
-                }
-              }}
-            />
+            <RecordTopBarButton palette={palette} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
+              {!isAdmin && <JoinEndButton palette={palette} />}
+              <NotificationsBell
+                palette={palette}
+                onNavigate={(n) => {
+                  if (n.relatedType === 'task') {
+                    setHighlightTaskId(n.relatedId);
+                    switchView('tasks');
+                  } else if (n.relatedType === 'leave') {
+                    setHighlightLeaveId(n.relatedId);
+                    switchView('leaves');
+                  }
+                }}
+              />
+            </div>
           </div>
 
           <div style={{ padding: '36px 40px', maxWidth: 1180, margin: '0 auto' }}>
@@ -498,7 +502,7 @@ export default function TeamDashboard() {
                 onBack={closeRecording}
               />
             )}
-            {view === 'history' && !isAdmin && <HistoryView palette={palette} isDark={isDark} currentUserId={user.id} />}
+            {view === 'history' && !isAdmin && <HistoryView palette={palette} isDark={isDark} currentUserId={user.id} openTask={openTask} />}
             {view === 'settings' && <TeamSettingsView palette={palette} isDark={isDark} />}
           </div>
         </main>
@@ -515,5 +519,30 @@ export default function TeamDashboard() {
       <RecordingOverlays />
     </div>
     </RecorderProvider>
+  );
+}
+
+// Top-bar Record entry — lives inside RecorderProvider so it can call openSetup().
+// Hidden while a session is active so the floating dock isn't double-triggered.
+function RecordTopBarButton({ palette }) {
+  const recorder = useRecorder();
+  const busy = recorder.state !== 'idle';
+  if (busy) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => recorder.openSetup()}
+      title="Record screen / camera"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
+        backgroundColor: palette.accent, color: palette.accentText, border: 'none',
+        fontFamily: baseFont, fontSize: 12.5, fontWeight: 500,
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+    >
+      <Video size={13} /> Record
+    </button>
   );
 }

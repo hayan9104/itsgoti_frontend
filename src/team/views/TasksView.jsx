@@ -95,16 +95,27 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
   const [draggingId, setDraggingId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
   const [tick, setTick] = useState(0);
-  const [hover, setHover] = useState(null); // { task, anchor }
+  const [hover, setHover] = useState(null); // { task, anchor, mouse }
   const hoverTimer = useRef(null);
+  const pendingMouseRef = useRef({ x: 0, y: 0 });
   const [miniHover, setMiniHover] = useState(null); // { task, anchor } — avatar mini tooltip
   const miniTimer = useRef(null);
 
-  const showHover = (task, anchor) => {
+  // showHover captures the latest cursor position so the tooltip anchors to it
+  // (rather than the row's bounding box, which overflows when the row is wide).
+  const showHover = (task, anchor, mouse) => {
+    if (mouse) pendingMouseRef.current = mouse;
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = setTimeout(() => {
-      setHover({ task, anchor });
+      setHover({ task, anchor, mouse: { ...pendingMouseRef.current } });
     }, 350);
+  };
+  const trackHover = (e) => {
+    pendingMouseRef.current = { x: e.clientX, y: e.clientY };
+    if (hover) {
+      // While the tooltip is already open, follow the cursor so the user always sees it nearby.
+      setHover((h) => (h ? { ...h, mouse: { x: e.clientX, y: e.clientY } } : h));
+    }
   };
   const hideHover = () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -631,11 +642,12 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
                         )}
                         <span style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: priorityMeta[t.priority].color, flexShrink: 0 }} />
                         <div
-                          style={{ flex: 1, minWidth: 0, cursor: openTask ? 'pointer' : 'default' }}
+                          style={{ flex: 1, minWidth: 0, cursor: canDrag ? 'grab' : (openTask ? 'pointer' : 'default') }}
                           onMouseEnter={(e) => {
                             const row = e.currentTarget.closest('[data-task-row]');
-                            showHover(t, row || e.currentTarget);
+                            showHover(t, row || e.currentTarget, { x: e.clientX, y: e.clientY });
                           }}
+                          onMouseMove={trackHover}
                           onMouseLeave={hideHover}
                           onClick={() => openTask && openTask(t._id)}
                         >
@@ -972,7 +984,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
       </Modal>
 
       {hover && !draggingId && (
-        <TaskTooltip task={hover.task} anchor={hover.anchor} palette={palette} isDark={isDark} />
+        <TaskTooltip task={hover.task} anchor={hover.anchor} mouse={hover.mouse} palette={palette} isDark={isDark} />
       )}
       {miniHover && !draggingId && (
         <MiniTooltip anchor={miniHover.anchor} palette={palette}>

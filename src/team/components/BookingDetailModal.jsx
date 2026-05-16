@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, CalendarClock, Mail, Phone, Video, MapPin, Globe, Users, User, Copy, Check } from 'lucide-react';
+import { X, CalendarClock, Mail, Phone, Video, MapPin, Globe, Users, User, Briefcase, Copy, Check } from 'lucide-react';
 import { teamCalendarAPI } from '../teamAPI';
 import { baseFont, serifFont, monoFont } from '../theme';
 import { Avatar } from './Primitives';
@@ -21,6 +21,7 @@ const locationIcon = (loc) =>
 const meetingTypeMeta = {
   one_on_one: { label: 'One-on-one', icon: User },
   team: { label: 'Team meeting', icon: Users },
+  client: { label: 'Client', icon: Briefcase },
   public: { label: null, icon: null }, // external booking — no badge
 };
 
@@ -35,7 +36,10 @@ export default function BookingDetailModal({ booking, palette, onClose, onCancel
   const dObj = new Date(`${booking.dateKey}T00:00:00`);
   const isCancelled = booking.status === 'cancelled';
   const typeMeta = meetingTypeMeta[booking.meetingType || 'public'] || meetingTypeMeta.public;
+  // 'one_on_one' and 'team' are pure internal (no client email row).
+  // 'client' is internally created but DOES have a client email worth showing.
   const isInternal = booking.meetingType === 'one_on_one' || booking.meetingType === 'team';
+  const isClient = booking.meetingType === 'client';
   const participants = Array.isArray(booking.participants) ? booking.participants : [];
   const bookedByEmployee = booking.bookedByEmployee || null;
 
@@ -103,7 +107,7 @@ export default function BookingDetailModal({ booking, palette, onClose, onCancel
             <LIcon size={14} color={palette.textDim} />
             <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.text }}>{booking.location}</span>
           </div>
-          {!isInternal && (
+          {(!isInternal || isClient) && booking.clientEmail && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Mail size={14} color={palette.textDim} />
               <span style={{ fontFamily: monoFont, fontSize: 12, color: palette.text }}>{booking.clientEmail}</span>
@@ -143,7 +147,7 @@ export default function BookingDetailModal({ booking, palette, onClose, onCancel
         {booking.note && (
           <div style={{ borderRadius: 10, padding: 12, marginBottom: 14, backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}` }}>
             <div style={{ fontFamily: monoFont, fontSize: 10, color: palette.textMute, letterSpacing: '0.08em', marginBottom: 4 }}>
-              {isInternal ? 'REASON' : 'CLIENT NOTE'}
+              {isInternal ? 'REASON' : isClient ? 'DESCRIPTION' : 'CLIENT NOTE'}
             </div>
             <div style={{ fontFamily: baseFont, fontSize: 12.5, color: palette.textDim, lineHeight: 1.5 }}>
               {booking.note}

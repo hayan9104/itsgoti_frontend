@@ -15,6 +15,11 @@ const TYPE_META = {
   task_assigned: { icon: CheckSquare, color: '#2D5A3D' },
   task_created_by_employee: { icon: FileText, color: '#0E7490' },
   leave_applied: { icon: CalendarDays, color: '#7C3AED' },
+  // Cancel request from an employee → admin needs to decide.
+  leave_cancel_requested: { icon: CalendarDays, color: '#9A3412' },
+  // Admin's decision lands back on the employee's bell.
+  leave_cancel_approved: { icon: CalendarDays, color: '#065F46' },
+  leave_cancel_rejected: { icon: CalendarDays, color: '#991B1B' },
   meeting_booked: { icon: Video, color: '#2D5A3D' },
   meeting_cancelled: { icon: XCircle, color: '#DC2626' },
 };

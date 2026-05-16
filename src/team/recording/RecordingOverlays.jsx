@@ -124,15 +124,22 @@ function RecSetupPanel() {
             <div>
               <SectionLabel palette={palette} label="CAMERA" />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  width: 56, height: 56, borderRadius: 999, overflow: 'hidden', flexShrink: 0,
-                  backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {r.livePreview && r.setup.cameraId !== 'off'
-                    ? <video ref={r.camPreviewRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-                    : <Camera size={18} color={palette.textMute} />}
-                </div>
+                {(() => {
+                  const camOff = r.setup.cameraId === 'off' || !r.livePreview;
+                  return (
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 999, overflow: 'hidden', flexShrink: 0,
+                      backgroundColor: camOff ? palette.dangerBg : palette.surfaceAlt,
+                      border: `1px solid ${camOff ? palette.danger + '55' : palette.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'relative',
+                    }}>
+                      {!camOff
+                        ? <video ref={r.camPreviewRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
+                        : <CameraOff size={20} color={palette.danger} strokeWidth={1.75} />}
+                    </div>
+                  );
+                })()}
                 <select value={r.setup.cameraId} onChange={(e) => r.setCamera(e.target.value)} style={selectStyle}>
                   {r.devices.cameras.length === 0 && <option value="">Default camera</option>}
                   {r.devices.cameras.map((c, i) => <option key={c.deviceId || i} value={c.deviceId}>{c.label || `Camera ${i + 1}`}</option>)}
