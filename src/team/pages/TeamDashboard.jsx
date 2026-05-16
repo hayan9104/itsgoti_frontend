@@ -228,13 +228,18 @@ export default function TeamDashboard() {
 
   // On mobile the sidebar lifts out of the flex row and becomes a slide-in drawer.
   // Same JSX, just different positioning so we don't have to duplicate the nav list.
+  // We use 100dvh (dynamic viewport height) which excludes the mobile browser
+  // chrome — falls back to 100vh on older browsers. overflowY: auto guarantees
+  // the bottom account row is reachable even if the drawer is taller than the
+  // available viewport (older Android Chrome, embedded WebViews, etc.).
   const sidebarStyle = isMobile
     ? {
         width: 264,
         position: 'fixed',
         top: 0,
         left: 0,
-        height: '100vh',
+        height: '100dvh',
+        maxHeight: '100vh',
         zIndex: 60,
         transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
         transition: 'transform 220ms ease',
@@ -244,6 +249,8 @@ export default function TeamDashboard() {
         borderRight: `1px solid ${palette.border}`,
         backgroundColor: palette.surfaceAlt,
         padding: '20px 12px',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }
     : {
         width: 232,
