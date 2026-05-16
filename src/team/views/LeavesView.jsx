@@ -866,7 +866,7 @@ export default function LeavesView({ palette, isDark, isAdmin, currentUserId, hi
             )}
           </div>
 
-          <div style={{ position: 'relative', marginLeft: 'auto' }}>
+          <div className="team-filter-search" style={{ position: 'relative', marginLeft: 'auto' }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}

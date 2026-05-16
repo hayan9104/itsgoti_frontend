@@ -111,7 +111,7 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
     <div>
       <PageHeader kicker={kicker} title="My" accentWord="history" palette={palette} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 32 }}>
+      <div className="team-mobile-tabbar" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 32 }}>
         <div
           style={{
             display: 'inline-flex',
@@ -212,6 +212,7 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
       ) : (
         <>
           <div
+            className="team-stack-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
@@ -232,7 +233,8 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
           <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>
             Daily breakdown
           </h3>
-          <Card palette={palette} padding={0} style={{ marginBottom: 40 }}>
+          <div className="team-scroll-wrap" style={{ marginBottom: 40 }}>
+          <Card palette={palette} padding={0}>
             <div
               style={{
                 display: 'grid',
@@ -299,6 +301,7 @@ export default function HistoryView({ palette, currentUserId, openTask }) {
               })
             )}
           </Card>
+          </div>
 
           <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>
             Tasks you completed

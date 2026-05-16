@@ -156,7 +156,7 @@ export default function RecordingWatchView({ palette, isDark, isAdmin, currentUs
         <ArrowLeft size={14} /> Back to recordings
       </button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 28 }}>
+      <div className="team-watch-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 28 }}>
         <div>
           <RecVideoPlayer rec={rec} palette={palette} />
 

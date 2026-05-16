@@ -394,6 +394,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
       {/* Filter bar — only when looking at the active Tasks tab */}
       {activeTab === 'tasks' && !loading && (
         <div
+          className="team-mobile-tabbar"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -618,6 +619,7 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
                         key={t._id}
                         id={`team-task-${t._id}`}
                         data-task-row
+                        className="team-stack-row"
                         draggable={canDrag}
                         onDragStart={(e) => canDrag && handleDragStart(e, t)}
                         onDragEnd={handleDragEnd}
@@ -680,50 +682,58 @@ export default function TasksView({ palette, isDark, isAdmin, currentUserId, hig
                             <span style={{ fontFamily: monoFont }}>{fmtMinutes(t.spentMinutes)}</span>
                           </div>
                         </div>
-                        {canChangeStatus && (
-                          <select
-                            value={t.status}
-                            onChange={(e) => onChangeStatus(t, e.target.value)}
-                            onMouseEnter={hideHover}
-                            style={{
-                              padding: '6px 10px',
-                              borderRadius: 8,
-                              backgroundColor: palette.surfaceAlt,
-                              border: `1px solid ${palette.border}`,
-                              color: palette.text,
-                              fontFamily: baseFont,
-                              fontSize: 12.5,
-                              outline: 'none',
+                        {/*
+                          Wrapper uses display: contents on desktop so the children flow
+                          as siblings of the title cluster (preserves the original row).
+                          On mobile, team-mobile.css flips it to a flex row that drops
+                          underneath via the .team-stack-row parent.
+                        */}
+                        <div className="team-row-actions" style={{ display: 'contents' }}>
+                          {canChangeStatus && (
+                            <select
+                              value={t.status}
+                              onChange={(e) => onChangeStatus(t, e.target.value)}
+                              onMouseEnter={hideHover}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: 8,
+                                backgroundColor: palette.surfaceAlt,
+                                border: `1px solid ${palette.border}`,
+                                color: palette.text,
+                                fontFamily: baseFont,
+                                fontSize: 12.5,
+                                outline: 'none',
+                              }}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="in_progress">In progress</option>
+                              <option value="review">In review</option>
+                              <option value="blocked">Blocked</option>
+                              <option value="completed">Done</option>
+                            </select>
+                          )}
+                          <span
+                            onMouseEnter={(e) => {
+                              hideHover();
+                              showMini(t, e.currentTarget);
                             }}
+                            onMouseLeave={hideMini}
+                            style={{ display: 'inline-flex' }}
                           >
-                            <option value="pending">Pending</option>
-                            <option value="in_progress">In progress</option>
-                            <option value="review">In review</option>
-                            <option value="blocked">Blocked</option>
-                            <option value="completed">Done</option>
-                          </select>
-                        )}
-                        <span
-                          onMouseEnter={(e) => {
-                            hideHover();
-                            showMini(t, e.currentTarget);
-                          }}
-                          onMouseLeave={hideMini}
-                          style={{ display: 'inline-flex' }}
-                        >
-                          <Avatar initials={t.owner?.avatar || '?'} size={28} palette={palette} />
-                        </span>
-                        {(isAdmin || ownerId?.toString?.() === currentUserId) && (
-                          <button
-                            type="button"
-                            onClick={() => onArchive(t)}
-                            onMouseEnter={hideHover}
-                            title="Move to Archive"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 4 }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
+                            <Avatar initials={t.owner?.avatar || '?'} size={28} palette={palette} />
+                          </span>
+                          {(isAdmin || ownerId?.toString?.() === currentUserId) && (
+                            <button
+                              type="button"
+                              onClick={() => onArchive(t)}
+                              onMouseEnter={hideHover}
+                              title="Move to Archive"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textMute, padding: 4 }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })

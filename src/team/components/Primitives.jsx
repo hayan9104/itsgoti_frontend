@@ -51,6 +51,7 @@ export function StatusPill({ status, palette, isDark }) {
 export function PageHeader({ kicker, title, accentWord, right, palette }) {
   return (
     <div
+      className="team-page-header"
       style={{
         display: 'flex',
         alignItems: 'flex-end',
@@ -212,6 +213,9 @@ export function Modal({ open, onClose, title, children, palette, width = 480 }) 
           padding: 24,
           width: '100%',
           maxWidth: width,
+          // Cap height to viewport so tall modals scroll on phones instead of clipping.
+          maxHeight: 'calc(100vh - 32px)',
+          overflowY: 'auto',
         }}
       >
         {title && (

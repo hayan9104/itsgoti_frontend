@@ -13,7 +13,11 @@ import {
   Moon,
   LogOut,
   Video,
+  Menu,
+  X,
 } from 'lucide-react';
+import useIsMobile from '../hooks/useIsMobile';
+import '../team-mobile.css';
 import { useTeamAuth } from '../TeamAuthContext';
 import { warmTeamCache } from '../teamCache';
 import {
@@ -101,6 +105,23 @@ export default function TeamDashboard() {
   const [previousView, setPreviousView] = useState(null);
   const palette = getPalette(isDark);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const isMobile = useIsMobile();
+  // Drawer is closed by default; we open it via the top-bar hamburger and close
+  // it on any sidebar navigation so the user lands on the new page right away.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Lock body scroll while the mobile drawer is open so the page behind doesn't bounce.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (isMobile && drawerOpen) document.body.classList.add('team-drawer-open');
+    else document.body.classList.remove('team-drawer-open');
+    return () => document.body.classList.remove('team-drawer-open');
+  }, [isMobile, drawerOpen]);
+
+  // Auto-close the drawer whenever the user crosses back to desktop width.
+  useEffect(() => {
+    if (!isMobile) setDrawerOpen(false);
+  }, [isMobile]);
 
   useEffect(() => {
     ensureFontsLoaded();
@@ -148,6 +169,8 @@ export default function TeamDashboard() {
     setWatchingRecordingId(null);
     setLeaveCategoryCtx(null);
     setPreviousView(null);
+    // On mobile the sidebar is a drawer — close it after any navigation.
+    setDrawerOpen(false);
   };
 
   const openRecording = (recordingId) => {
@@ -203,27 +226,56 @@ export default function TeamDashboard() {
 
   if (!user) return null;
 
+  // On mobile the sidebar lifts out of the flex row and becomes a slide-in drawer.
+  // Same JSX, just different positioning so we don't have to duplicate the nav list.
+  const sidebarStyle = isMobile
+    ? {
+        width: 264,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        zIndex: 60,
+        transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform 220ms ease',
+        boxShadow: drawerOpen ? '0 12px 40px rgba(0,0,0,0.18)' : 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: `1px solid ${palette.border}`,
+        backgroundColor: palette.surfaceAlt,
+        padding: '20px 12px',
+      }
+    : {
+        width: 232,
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        borderRight: `1px solid ${palette.border}`,
+        backgroundColor: palette.surfaceAlt,
+        padding: '20px 12px',
+        position: 'sticky',
+        top: 0,
+        alignSelf: 'flex-start',
+        height: '100vh',
+      };
+
   return (
     <RecorderProvider>
-    <div style={{ minHeight: '100vh', backgroundColor: palette.bg, color: palette.text, fontFamily: baseFont, WebkitFontSmoothing: 'antialiased' }}>
+    <div className="team-root" style={{ minHeight: '100vh', backgroundColor: palette.bg, color: palette.text, fontFamily: baseFont, WebkitFontSmoothing: 'antialiased' }}>
       <div style={{ display: 'flex', minHeight: '100vh' }}>
+        {/* Backdrop — only when the drawer is open on mobile. */}
+        {isMobile && drawerOpen && (
+          <div
+            onClick={() => setDrawerOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)',
+              zIndex: 55, transition: 'opacity 200ms',
+            }}
+          />
+        )}
         {/* Sidebar */}
-        <aside
-          style={{
-            width: 232,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            borderRight: `1px solid ${palette.border}`,
-            backgroundColor: palette.surfaceAlt,
-            padding: '20px 12px',
-            position: 'sticky',
-            top: 0,
-            alignSelf: 'flex-start',
-            height: '100vh',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 28 }}>
+        <aside style={sidebarStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: 28, gap: 8 }}>
             <img
               src="/Goti%20Logo%20Black.png"
               alt="Goti"
@@ -234,14 +286,26 @@ export default function TeamDashboard() {
                 filter: isDark ? 'invert(1)' : 'none',
               }}
             />
-            <button
-              type="button"
-              onClick={() => setIsDark((d) => !d)}
-              title={isDark ? 'Switch to light' : 'Switch to dark'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textDim, padding: 4 }}
-            >
-              {isDark ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                type="button"
+                onClick={() => setIsDark((d) => !d)}
+                title={isDark ? 'Switch to light' : 'Switch to dark'}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textDim, padding: 4 }}
+              >
+                {isDark ? <Sun size={14} /> : <Moon size={14} />}
+              </button>
+              {isMobile && (
+                <button
+                  type="button"
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Close menu"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: palette.textDim, padding: 4 }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -383,6 +447,7 @@ export default function TeamDashboard() {
         {/* Main */}
         <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
           <div
+            className="team-top-bar"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -393,6 +458,21 @@ export default function TeamDashboard() {
               backgroundColor: palette.surface,
             }}
           >
+            {/* Hamburger — mobile only, opens the drawer */}
+            {isMobile && (
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open menu"
+                style={{
+                  background: 'none', border: `1px solid ${palette.border}`, borderRadius: 8,
+                  padding: 8, color: palette.text, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Menu size={16} />
+              </button>
+            )}
             <RecordTopBarButton palette={palette} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
               {!isAdmin && <JoinEndButton palette={palette} />}
@@ -411,7 +491,7 @@ export default function TeamDashboard() {
             </div>
           </div>
 
-          <div style={{ padding: '36px 40px', maxWidth: 1180, margin: '0 auto' }}>
+          <div className="team-main-content" style={{ padding: '36px 40px', maxWidth: 1180, margin: '0 auto' }}>
             {view === 'dashboard' && (isAdmin ? (
               <AdminHomeView palette={palette} isDark={isDark} setView={switchView} goToDrilldown={goToDrilldown} openTask={openTask} />
             ) : (

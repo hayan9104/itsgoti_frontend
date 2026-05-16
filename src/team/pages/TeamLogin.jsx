@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useTeamAuth } from '../TeamAuthContext';
 import { getPalette, baseFont, serifFont, monoFont, ensureFontsLoaded } from '../theme';
+import '../team-mobile.css';
 
 export default function TeamLogin() {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ export default function TeamLogin() {
 
   return (
     <div
+      className="team-login-grid"
       style={{
         minHeight: '100vh',
         backgroundColor: palette.bg,
@@ -47,7 +49,7 @@ export default function TeamLogin() {
       }}
     >
       {/* Left — form */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 56px', minHeight: '100vh' }}>
+      <div className="team-login-form" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 56px', minHeight: '100vh' }}>
         <img
           src="/Goti%20Logo%20Black.png"
           alt="Goti"
@@ -188,8 +190,9 @@ export default function TeamLogin() {
         </div>
       </div>
 
-      {/* Right — quiet brand panel */}
+      {/* Right — quiet brand panel (hidden on mobile via team-login-aside) */}
       <div
+        className="team-login-aside"
         style={{
           backgroundColor: palette.surfaceAlt,
           borderLeft: `1px solid ${palette.border}`,

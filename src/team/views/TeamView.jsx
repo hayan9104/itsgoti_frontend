@@ -240,7 +240,7 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
       />
 
       {/* Filter bar — role multi-select + name/email search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+      <div className="team-filter-bar" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <div ref={roleMenuRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -314,7 +314,7 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
           )}
         </div>
 
-        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+        <div className="team-filter-search" style={{ position: 'relative', marginLeft: 'auto' }}>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -342,6 +342,7 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
 
       <Card palette={palette} padding={0}>
         <div
+          className="team-employee-header"
           style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 1.8fr) minmax(0, 2.6fr) 110px 150px',
@@ -382,6 +383,7 @@ export default function TeamView({ palette, isDark, currentUserId, setView, goTo
           filteredEmployees.map((emp, i) => (
             <div
               key={emp._id}
+              className="team-employee-row"
               onClick={() => goToDrilldown(emp._id)}
               onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}

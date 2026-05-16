@@ -209,7 +209,7 @@ export default function RecordingsView({ palette, isDark, isAdmin, currentUserId
       )}
 
       {isTeamTab && (
-        <div style={{
+        <div className="team-stack-grid" style={{
           display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1,
           backgroundColor: palette.border, border: `1px solid ${palette.border}`,
           borderRadius: 10, overflow: 'hidden', marginBottom: 24, maxWidth: 380,
@@ -280,7 +280,7 @@ export default function RecordingsView({ palette, isDark, isAdmin, currentUserId
           onRecord={() => recorder.openSetup()}
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div className="team-recordings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {filteredList.map((rec) => (
             <RecordingCard
               key={rec.id}

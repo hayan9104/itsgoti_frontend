@@ -214,6 +214,7 @@ export default function CalendarView({ palette, isDark, isAdmin, currentUserId, 
   return (
     <div>
       <div
+        className="team-mobile-tabbar"
         style={{
           display: 'inline-flex',
           borderRadius: 8,
@@ -686,7 +687,8 @@ function GridBlock({ blk, big, palette, onClick }) {
 
 function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking, onOpenBlock }) {
   return (
-    <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden' }}>
+    <div className="team-scroll-wrap">
+    <div style={{ borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, overflow: 'hidden', minWidth: 720 }}>
       <div style={{ display: 'flex', borderBottom: `1px solid ${palette.border}` }}>
         <div style={{ width: GUTTER, flexShrink: 0 }} />
         {week.map((d, i) => {
@@ -738,6 +740,7 @@ function WeekGrid({ palette, week, todayKey, bookings, blocks, onOpenBooking, on
           );
         })}
       </div>
+    </div>
     </div>
   );
 }
@@ -922,9 +925,9 @@ function AvailabilityTab({ palette, config, onChange, onBookMeeting }) {
       </div>
 
       <h3 style={{ fontFamily: serifFont, fontSize: 17, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Booking rules</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, backgroundColor: palette.border, border: `1px solid ${palette.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 32 }}>
+      <div className="team-stack-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, backgroundColor: palette.border, border: `1px solid ${palette.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 32 }}>
         {ruleDefs.map((r) => (
-          <div key={r.key} style={{ padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: palette.surface }}>
+          <div key={r.key} style={{ padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: palette.surface, gap: 12 }}>
             <span style={{ fontFamily: baseFont, fontSize: 13, color: palette.textDim, fontWeight: 500 }}>{r.label}</span>
             <select value={draft.rules[r.key]} onChange={(e) => setRule(r.key, Number(e.target.value))} style={selectStyle}>
               {r.opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -933,7 +936,7 @@ function AvailabilityTab({ palette, config, onChange, onBookMeeting }) {
         ))}
       </div>
 
-      <div style={{ padding: 20, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <div className="team-google-card" style={{ padding: 20, borderRadius: 12, border: `1px solid ${palette.border}`, backgroundColor: palette.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: palette.surfaceAlt, border: `1px solid ${palette.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CalendarDays size={17} color={palette.accent} />

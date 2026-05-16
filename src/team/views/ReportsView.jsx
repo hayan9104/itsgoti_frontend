@@ -129,6 +129,7 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
       />
 
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
@@ -167,7 +168,8 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
       )}
 
       <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>Daily breakdown</h3>
-      <Card palette={palette} padding={0} style={{ marginBottom: 28 }}>
+      <div className="team-scroll-wrap" style={{ marginBottom: 28 }}>
+      <Card palette={palette} padding={0}>
         <div
           style={{
             display: 'grid',
@@ -243,6 +245,7 @@ function Drilldown({ palette, isDark, employeeId, onBack, openTask }) {
           ))
         )}
       </Card>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, margin: 0 }}>
@@ -432,6 +435,7 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
       />
 
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -470,6 +474,7 @@ export default function ReportsView({ palette, isDark, drilldownEmployeeId, setD
               <button
                 type="button"
                 key={p.employeeId}
+                className="team-per-person-row"
                 onClick={() => setDrilldownEmployeeId(p.employeeId)}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = palette.surfaceAlt)}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}

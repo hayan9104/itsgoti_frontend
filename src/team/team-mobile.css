@@ -1,0 +1,271 @@
+/*
+ * Mobile-only overrides for the Team dashboard.
+ * Scoped under `.team-root` so this file can never affect non-team pages.
+ * Triggers only at ≤768px — desktop layout is completely untouched.
+ *
+ * Approach: SURGICAL, not blanket. Earlier we tried to collapse every inline
+ * grid to a single column — that broke task rows, daily-breakdown rows, the
+ * calendar week grid, and month-by-month rows (all of which use grid for
+ * intra-row column layout, not section layout).
+ *
+ * Now stacking is OPT-IN via classNames the views can add to specific containers:
+ *   .team-stack-grid   — single-column at ≤768px (stat tile rows, meta grids)
+ *   .team-scroll-wrap  — wrapper that becomes horizontally swipeable at ≤768px
+ *                        for wide tables / week grids
+ *   .team-stack        — generic stack-children flex container at ≤768px
+ */
+
+@media (max-width: 768px) {
+  /* ============================================================
+     BASE
+     ============================================================ */
+
+  .team-root,
+  .team-root *:not(input):not(select):not(textarea) { box-sizing: border-box; }
+  .team-root { overflow-x: hidden; }
+
+  /* ============================================================
+     SHELL — top bar + main content padding
+     ============================================================ */
+
+  .team-main-content { padding: 16px !important; max-width: 100% !important; }
+  .team-top-bar      { padding: 10px 14px !important; gap: 8px !important; }
+
+  /* ============================================================
+     PAGE HEADER (kicker + serif title + right cluster)
+     ============================================================ */
+
+  .team-root h1 { font-size: 24px !important; line-height: 1.15 !important; letter-spacing: -0.01em !important; }
+  .team-root h2 { font-size: 19px !important; }
+  .team-root h3 { font-size: 16px !important; }
+
+  .team-page-header {
+    flex-wrap: wrap !important;
+    gap: 14px !important;
+    margin-bottom: 22px !important;
+    padding-bottom: 16px !important;
+    align-items: flex-start !important;
+  }
+  /* Right slot (action buttons) goes full-width below the title on mobile. */
+  .team-page-header > :last-child {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .team-page-header > :last-child > * {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* ============================================================
+     BUTTONS — never break text across lines on mobile
+     ============================================================ */
+
+  .team-root button {
+    white-space: nowrap;
+  }
+  /* Wider primary buttons that span full width — keep label centered and
+     don't let space-between push the icon to the left edge. */
+  .team-root button[style*="100%"],
+  .team-root .team-page-header button {
+    justify-content: center !important;
+  }
+
+  /* ============================================================
+     OPT-IN STACKING — for stat tile rows / meta-card grids
+     ============================================================ */
+
+  .team-root .team-stack-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* ============================================================
+     OPT-IN SCROLL — for wide tables / week grids
+     ============================================================ */
+
+  .team-root .team-scroll-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .team-root .team-scroll-wrap > * {
+    min-width: 640px;
+  }
+
+  /* ============================================================
+     MODALS — go almost full-bleed
+     ============================================================ */
+
+  body > div[style*="position: fixed"][style*="inset: 0"] > div:not([style*="position: fixed"]) {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 32px) !important;
+    overflow-y: auto;
+  }
+
+  /* ============================================================
+     FORMS — inputs span full row ONLY when explicitly fluid.
+     Earlier we forced this on every input/select, which broke inline selects
+     (task-row status dropdown, calendar time-pill selects, etc.). Now it's
+     opt-in via .team-form-field (Modal wraps each field with that class).
+     ============================================================ */
+
+  .team-root .team-form-field input,
+  .team-root .team-form-field textarea,
+  .team-root .team-form-field select {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .team-root .team-keep-inline,
+  .team-root .team-keep-inline input,
+  .team-root .team-keep-inline select { width: auto !important; max-width: none !important; }
+
+  /* Native <select> popup overflow guard — selects inside the visible viewport
+     should never report a width larger than the viewport minus padding. */
+  .team-root select { max-width: calc(100vw - 48px) !important; }
+
+  /* ============================================================
+     SIDEBAR DRAWER
+     ============================================================ */
+
+  body.team-drawer-open { overflow: hidden; }
+
+  /* ============================================================
+     LOGIN PAGE — single-column on mobile, hide the brand panel
+     ============================================================ */
+
+  .team-login-grid { grid-template-columns: 1fr !important; }
+  .team-login-form { padding: 32px 24px !important; min-height: auto !important; }
+  .team-login-aside { display: none !important; }
+
+  /* ============================================================
+     SCROLLABLE TAB / FILTER BAR — opt-in via .team-mobile-tabbar.
+     Children stay on one line; the bar itself swipes horizontally.
+     Scrollbar is hidden so it looks native. Children get flex-shrink:0
+     so the pills retain their natural width.
+     ============================================================ */
+
+  .team-root .team-mobile-tabbar {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Negative margin lets the bar bleed to the screen edge so the last pill
+       isn't clipped by container padding. */
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 0 16px !important;
+  }
+  .team-root .team-mobile-tabbar::-webkit-scrollbar { display: none; }
+  .team-root .team-mobile-tabbar > * { flex-shrink: 0 !important; }
+
+  /* ============================================================
+     STACK ROW — opt-in via .team-stack-row. Used to flip a flex row
+     of [content][actions] into a column on mobile, with actions as a
+     full-width row underneath.
+     ============================================================ */
+
+  .team-root .team-stack-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .team-root .team-stack-row > .team-row-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .team-root .team-stack-row > .team-row-actions > * {
+    flex-shrink: 0;
+  }
+
+  /* ============================================================
+     SAFE-OVERFLOW: stop any inline-style table/grid from busting
+     past the viewport. Containers are tagged with .team-no-overflow
+     so we don't accidentally clip dropdowns elsewhere.
+     ============================================================ */
+
+  .team-root .team-no-overflow { max-width: 100% !important; overflow-x: hidden; }
+
+  /* ============================================================
+     TEAM EMPLOYEE ROWS — reflow grid into a 2-row mobile card with
+     the actions cluster pinned at the right of the second row.
+     Hide the desktop table header on mobile.
+     ============================================================ */
+
+  .team-root .team-employee-header { display: none !important; }
+  .team-root .team-employee-row {
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "name actions"
+      "email actions"
+      "role joined" !important;
+    align-items: start !important;
+    gap: 6px 12px !important;
+    padding: 14px 16px !important;
+  }
+  .team-root .team-employee-row > :nth-child(1) { grid-area: name; }
+  .team-root .team-employee-row > :nth-child(2) { grid-area: role; }
+  .team-root .team-employee-row > :nth-child(3) { grid-area: email; }
+  .team-root .team-employee-row > :nth-child(4) { grid-area: joined; justify-self: end; }
+  .team-root .team-employee-row > :nth-child(5) { grid-area: actions; align-self: start; }
+
+  /* ============================================================
+     FILTER BAR — left-align search instead of pushing it right
+     ============================================================ */
+
+  .team-root .team-filter-search { margin-left: 0 !important; width: 100%; }
+  .team-root .team-filter-search input { width: 100% !important; }
+  .team-root .team-filter-bar { align-items: stretch !important; }
+
+  /* ============================================================
+     GOOGLE CALENDAR CARD — stack text + button vertically
+     ============================================================ */
+
+  .team-root .team-google-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .team-root .team-google-card > button {
+    width: 100% !important;
+  }
+
+  /* ============================================================
+     PER-PERSON ROW (Reports overview) — stack name / bar / total
+     ============================================================ */
+
+  .team-root .team-per-person-row {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+  .team-root .team-per-person-row > div:nth-of-type(2) {
+    /* Progress bar — go full width on its own row */
+    width: 100% !important;
+    order: 3;
+  }
+  .team-root .team-per-person-row > div:nth-of-type(3) {
+    /* "31.5h" total — sits next to the chevron */
+    margin-left: auto;
+  }
+
+  /* ============================================================
+     RECORDINGS — single column on mobile so cards keep aspect ratio
+     ============================================================ */
+
+  .team-root .team-recordings-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* Recording watch view: collapse the 2-col layout so the right rail
+     (Share / Linked task / actions) drops below the player. */
+  .team-root .team-watch-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}

@@ -306,6 +306,7 @@ export default function PublicBookingPage() {
       <div style={{ maxWidth: 660, margin: '0 auto', padding: '8px 24px 24px' }}>
         {/* host header — refined with a subtle availability pill. */}
         <div
+          className="team-stack-host"
           style={{
             display: 'flex', alignItems: 'center', gap: 16,
             marginBottom: 36,
@@ -313,6 +314,7 @@ export default function PublicBookingPage() {
             borderRadius: 14,
             border: `1px solid ${palette.border}`,
             backgroundColor: palette.surface,
+            flexWrap: 'wrap',
           }}
         >
           <Avatar initials={host.avatar} size={52} palette={palette} />

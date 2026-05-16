@@ -163,9 +163,11 @@ export default function LeaveCategoryDetailView({ palette, isDark, employeeId, c
       <h3 style={{ fontFamily: serifFont, fontSize: 18, fontWeight: 500, color: palette.text, marginBottom: 14 }}>
         Month-by-month
       </h3>
-      <Card palette={palette} padding={0}>
-        <MonthlyTable palette={palette} category={category} months={cat.monthly} openLeave={openLeave} />
-      </Card>
+      <div className="team-scroll-wrap">
+        <Card palette={palette} padding={0}>
+          <MonthlyTable palette={palette} category={category} months={cat.monthly} openLeave={openLeave} />
+        </Card>
+      </div>
     </div>
   );
 }
@@ -225,6 +227,7 @@ function SummaryTiles({ palette, category, cat }) {
   if (category === 'sick') {
     return (
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
@@ -246,6 +249,7 @@ function SummaryTiles({ palette, category, cat }) {
   if (category === 'paid') {
     return (
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -266,6 +270,7 @@ function SummaryTiles({ palette, category, cat }) {
   // unpaid
   return (
     <div
+      className="team-stack-grid"
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',

@@ -98,6 +98,7 @@ export default function AdminHomeView({ palette, isDark, setView, goToDrilldown,
       />
 
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',

@@ -205,6 +205,7 @@ export default function TaskDetailView({ palette, isDark, taskId, onBack, openRe
 
       {/* Meta grid */}
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',

@@ -197,6 +197,7 @@ export default function EmployeeHomeView({ palette, isDark, user, setView, openT
 
       {/* Weekly tiles */}
       <div
+        className="team-stack-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
